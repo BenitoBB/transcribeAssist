@@ -36,6 +36,7 @@ export const useSpeechRecognition = () => {
   const [error, setError] = useState<string | null>(null);
   const recognitionRef = useRef<ISpeechRecognition | null>(null);
   const finalTranscriptRef = useRef('');
+  const timeoutRef = useRef<NodeJS.Timeout>();
 
   const startListening = useCallback(() => {
     if (recognitionRef.current && !listeningRef.current) {
@@ -44,23 +45,28 @@ export const useSpeechRecognition = () => {
       setError(null);
       try {
         recognitionRef.current.start();
-        setIsListening(true);
         listeningRef.current = true;
+        setIsListening(true);
       } catch (err) {
         console.error("Error starting speech recognition:", err);
+        listeningRef.current = false;
+        setIsListening(false);
       }
     }
   }, []);
 
   const stopListening = useCallback(() => {
+    if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+    }
     if (recognitionRef.current && listeningRef.current) {
+      listeningRef.current = false;
       try {
         recognitionRef.current.stop();
       } catch (err) {
         console.error("Error stopping speech recognition:", err);
       }
       setIsListening(false);
-      listeningRef.current = false;
     }
   }, []);
 
@@ -92,28 +98,47 @@ export const useSpeechRecognition = () => {
 
     recognition.onerror = (event) => {
       setError(`Speech recognition error: ${event.error}`);
-      stopListening();
+      listeningRef.current = false;
+      setIsListening(false);
     };
 
     recognition.onend = () => {
       if (listeningRef.current) {
-        try {
-          recognition.start();
-        } catch (err) {
-          console.error("Error restarting speech recognition:", err);
-          stopListening();
-        }
+        // The service ended, but we want to keep listening.
+        // We use a small timeout to avoid a potential race condition
+        // where the service stops and starts too quickly.
+        timeoutRef.current = setTimeout(() => {
+          try {
+            recognitionRef.current?.start();
+          } catch (err) {
+            console.error("Error restarting speech recognition:", err);
+            listeningRef.current = false;
+            setIsListening(false);
+          }
+        }, 100);
+      } else {
+        // If it ended and we didn't want to listen anymore, ensure UI is up to date
+        setIsListening(false);
       }
     };
     
     recognitionRef.current = recognition;
 
     return () => {
+      if(timeoutRef.current) clearTimeout(timeoutRef.current);
       if(recognitionRef.current) {
-        recognitionRef.current.stop();
+        recognitionRef.current.onresult = null;
+        recognitionRef.current.onerror = null;
+        recognitionRef.current.onend = null;
+        if(listeningRef.current) {
+           recognitionRef.current.stop();
+        }
+        recognitionRef.current = null;
       }
+      listeningRef.current = false;
+      setIsListening(false);
     };
-  }, [stopListening]);
+  }, []);
 
   return {
     isListening,
