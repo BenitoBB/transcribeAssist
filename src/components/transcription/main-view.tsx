@@ -9,7 +9,7 @@ import type { TranscriptionSession } from '@/app/types';
 import { useToast } from '@/hooks/use-toast';
 import { identifySpeakers } from '@/ai/flows/identify-speakers';
 import { summarizeLecture } from '@/ai/flows/summarize-lecture';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertTriangle } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export function MainView() {
   const [activeSession, setActiveSession] = useState<TranscriptionSession | null>(null);
@@ -199,6 +200,15 @@ export function MainView() {
                 {isProcessingAI === 'speakers' ? 'Identifying speakers...' : 'Generating summary...'}
             </span>
           </div>
+        )}
+        {!hasRecognitionSupport && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Browser Not Supported</AlertTitle>
+            <AlertDescription>
+              The speech recognition feature is not supported in your current browser. Please try Chrome or Edge.
+            </AlertDescription>
+          </Alert>
         )}
         <TranscriptionControls 
           isListening={isListening}
