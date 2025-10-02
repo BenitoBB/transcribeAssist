@@ -190,7 +190,15 @@ export function MainView() {
   const updateContent = (newContent: string) => {
       setCurrentContent(newContent);
       if (activeSession && !isListening) {
-          setActiveSession(prev => prev ? {...prev, content: newContent} : null);
+          const newSession = {...activeSession, content: newContent};
+          setActiveSession(newSession);
+          setSessions(prev => {
+              const newSessions = prev.map(s => s.id === newSession.id ? newSession : s);
+              try {
+                localStorage.setItem('transcription-sessions', JSON.stringify(newSessions));
+              } catch(e) { console.error(e); }
+              return newSessions;
+          });
       }
   }
 

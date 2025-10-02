@@ -22,8 +22,10 @@ type TranscriptionEditorProps = {
 
 export function TranscriptionEditor({ content, onContentChange, isReadOnly, session }: TranscriptionEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef(content);
 
   useEffect(() => {
+    contentRef.current = content;
     if (editorRef.current && content !== editorRef.current.innerHTML) {
       editorRef.current.innerHTML = content;
     }
@@ -31,12 +33,16 @@ export function TranscriptionEditor({ content, onContentChange, isReadOnly, sess
 
   const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
     if (!isReadOnly) {
-      onContentChange(e.currentTarget.innerHTML);
+      const newContent = e.currentTarget.innerHTML;
+      if(contentRef.current !== newContent) {
+        onContentChange(newContent);
+        contentRef.current = newContent;
+      }
     }
   };
 
   const handleHighlight = () => {
-    if (!isReadOnly && document.queryCommandSupported('hiliteColor')) {
+    if (document.queryCommandSupported('hiliteColor')) {
       document.execCommand('hiliteColor', false, 'hsl(var(--accent))');
       if (editorRef.current) {
         onContentChange(editorRef.current.innerHTML);
@@ -57,7 +63,7 @@ export function TranscriptionEditor({ content, onContentChange, isReadOnly, sess
                           </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-2">
-                          <Button onClick={handleHighlight}>Highlight Selected Text</Button>
+                          <Button onClick={handleHighlight} disabled={isReadOnly}>Highlight Selected Text</Button>
                       </PopoverContent>
                   </Popover>
                 </div>
