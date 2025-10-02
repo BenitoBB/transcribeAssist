@@ -30,6 +30,7 @@ export function MainView() {
   const [isProcessingAI, setIsProcessingAI] = useState<string | null>(null);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [sessionTitle, setSessionTitle] = useState('');
+  const [currentContent, setCurrentContent] = useState('');
 
   const { toast } = useToast();
   const {
@@ -65,7 +66,7 @@ export function MainView() {
 
   useEffect(() => {
     if (isListening) {
-      setTranscript(transcript);
+      setCurrentContent(transcript);
     }
   }, [transcript, isListening]);
   
@@ -78,6 +79,7 @@ export function MainView() {
       notes: [],
     };
     setActiveSession(newSession);
+    setCurrentContent('');
     setTranscript('');
     startListening();
   };
@@ -85,8 +87,8 @@ export function MainView() {
   const handleStop = () => {
     stopListening();
     if(activeSession) {
-        const currentContent = transcript;
-        setActiveSession(prev => prev ? {...prev, content: currentContent} : null);
+        setActiveSession(prev => prev ? {...prev, content: transcript} : null);
+        setCurrentContent(transcript);
         setShowSaveDialog(true);
         setSessionTitle(`Lecture - ${new Date().toLocaleDateString()}`);
     }
@@ -98,6 +100,7 @@ export function MainView() {
     const finalSession: TranscriptionSession = {
       ...activeSession,
       title: sessionTitle || activeSession.title,
+      content: transcript,
     };
     
     setSessions(prev => {
@@ -127,6 +130,7 @@ export function MainView() {
   const handleSelectSession = (session: TranscriptionSession) => {
     if (isListening) stopListening();
     setActiveSession(session);
+    setCurrentContent(session.content);
     setTranscript(session.content);
   };
 
@@ -140,18 +144,23 @@ export function MainView() {
     });
     if (activeSession?.id === sessionId) {
       setActiveSession(null);
+      setCurrentContent('');
       setTranscript('');
     }
     toast({ title: 'Session deleted.' });
   };
 
   const handleIdentifySpeakers = async () => {
-    if (!activeSession?.content) return;
+    const contentToProcess = activeSession?.content;
+    if (!contentToProcess) return;
+
     setIsProcessingAI('speakers');
     try {
-      const { identifiedTranscription } = await identifySpeakers({ transcription: activeSession.content });
-      setTranscript(identifiedTranscription);
-      setActiveSession({ ...activeSession, content: identifiedTranscription });
+      const { identifiedTranscription } = await identifySpeakers({ transcription: contentToProcess });
+      setCurrentContent(identifiedTranscription);
+      if (activeSession) {
+          setActiveSession({ ...activeSession, content: identifiedTranscription });
+      }
       toast({ title: 'Speakers Identified!', description: 'Transcription updated with speaker labels.' });
     } catch (e) {
       toast({ variant: 'destructive', title: 'AI Error', description: 'Could not identify speakers.' });
@@ -161,11 +170,15 @@ export function MainView() {
   };
 
   const handleSummarize = async () => {
-    if (!activeSession?.content) return;
+    const contentToProcess = activeSession?.content;
+    if (!contentToProcess) return;
+
     setIsProcessingAI('summary');
     try {
-        const { summary } = await summarizeLecture({ transcription: activeSession.content });
-        setActiveSession({ ...activeSession, summary });
+        const { summary } = await summarizeLecture({ transcription: contentToProcess });
+        if (activeSession) {
+            setActiveSession({ ...activeSession, summary });
+        }
         toast({ title: 'Summary Generated!' });
     } catch (e) {
         toast({ variant: 'destructive', title: 'AI Error', description: 'Could not generate summary.' });
@@ -175,8 +188,8 @@ export function MainView() {
   };
 
   const updateContent = (newContent: string) => {
-      setTranscript(newContent);
-      if (activeSession) {
+      setCurrentContent(newContent);
+      if (activeSession && !isListening) {
           setActiveSession(prev => prev ? {...prev, content: newContent} : null);
       }
   }
@@ -222,7 +235,7 @@ export function MainView() {
         />
         <TranscriptionEditor
           key={activeSession?.id ?? 'no-session'}
-          content={isListening ? transcript : (activeSession?.content ?? '')}
+          content={currentContent}
           onContentChange={updateContent}
           isReadOnly={isListening}
           session={activeSession}
