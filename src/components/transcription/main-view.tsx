@@ -68,8 +68,13 @@ export function MainView() {
     } catch (e) {
       console.error("Failed to load data from local storage", e);
     }
-    
-    setShowBrowserUnsupportedAlert(!hasRecognitionSupport);
+  }, []);
+
+  useEffect(() => {
+    // Only check for support on the client-side
+    if (typeof window !== 'undefined') {
+      setShowBrowserUnsupportedAlert(!hasRecognitionSupport);
+    }
   }, [hasRecognitionSupport]);
 
   useEffect(() => {
