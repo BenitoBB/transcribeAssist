@@ -31,6 +31,8 @@ export function MainView() {
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [sessionTitle, setSessionTitle] = useState('');
   const [currentContent, setCurrentContent] = useState('');
+  const [apiKey, setApiKey] = useState('');
+  const [showBrowserUnsupportedAlert, setShowBrowserUnsupportedAlert] = useState(false);
 
   const { toast } = useToast();
   const {
@@ -59,10 +61,16 @@ export function MainView() {
       if (savedSessions) {
         setSessions(JSON.parse(savedSessions));
       }
+      const savedApiKey = localStorage.getItem('google-ai-api-key');
+      if (savedApiKey) {
+        setApiKey(savedApiKey);
+      }
     } catch (e) {
-      console.error("Failed to load sessions from local storage", e);
+      console.error("Failed to load data from local storage", e);
     }
-  }, []);
+    
+    setShowBrowserUnsupportedAlert(!hasRecognitionSupport);
+  }, [hasRecognitionSupport]);
 
   useEffect(() => {
     if (isListening) {
@@ -149,6 +157,17 @@ export function MainView() {
     }
     toast({ title: 'Session deleted.' });
   };
+  
+  const handleApiKeyChange = (newApiKey: string) => {
+    setApiKey(newApiKey);
+    try {
+        localStorage.setItem('google-ai-api-key', newApiKey);
+        toast({ title: 'API Key Saved', description: 'Your Google AI API Key has been saved locally.' });
+    } catch(e) {
+        console.error(e);
+        toast({ variant: 'destructive', title: 'Error Saving Key', description: 'Could not save API key to local storage.' });
+    }
+  }
 
   const handleIdentifySpeakers = async () => {
     const contentToProcess = activeSession?.content;
@@ -156,14 +175,14 @@ export function MainView() {
 
     setIsProcessingAI('speakers');
     try {
-      const { identifiedTranscription } = await identifySpeakers({ transcription: contentToProcess });
+      const { identifiedTranscription } = await identifySpeakers({ transcription: contentToProcess, apiKey });
       setCurrentContent(identifiedTranscription);
       if (activeSession) {
           setActiveSession({ ...activeSession, content: identifiedTranscription });
       }
       toast({ title: 'Speakers Identified!', description: 'Transcription updated with speaker labels.' });
-    } catch (e) {
-      toast({ variant: 'destructive', title: 'AI Error', description: 'Could not identify speakers.' });
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'AI Error', description: e.message || 'Could not identify speakers.' });
     } finally {
       setIsProcessingAI(null);
     }
@@ -175,13 +194,13 @@ export function MainView() {
 
     setIsProcessingAI('summary');
     try {
-        const { summary } = await summarizeLecture({ transcription: contentToProcess });
+        const { summary } = await summarizeLecture({ transcription: contentToProcess, apiKey });
         if (activeSession) {
             setActiveSession({ ...activeSession, summary });
         }
         toast({ title: 'Summary Generated!' });
-    } catch (e) {
-        toast({ variant: 'destructive', title: 'AI Error', description: 'Could not generate summary.' });
+    } catch (e: any) {
+        toast({ variant: 'destructive', title: 'AI Error', description: e.message || 'Could not generate summary.' });
     } finally {
         setIsProcessingAI(null);
     }
@@ -210,6 +229,8 @@ export function MainView() {
           activeSessionId={activeSession?.id}
           onSelectSession={handleSelectSession}
           onDeleteSession={handleDeleteSession}
+          apiKey={apiKey}
+          onApiKeyChange={handleApiKeyChange}
         />
       </aside>
       <div className="relative flex min-h-[calc(100vh-8rem)] flex-col gap-4 rounded-lg border bg-card p-4 shadow-sm">
@@ -222,7 +243,7 @@ export function MainView() {
             </span>
           </div>
         )}
-        {!hasRecognitionSupport && (
+        {showBrowserUnsupportedAlert && (
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>Browser Not Supported</AlertTitle>
@@ -240,6 +261,7 @@ export function MainView() {
           isProcessingAI={!!isProcessingAI}
           hasActiveSession={!!activeSession}
           hasRecognitionSupport={hasRecognitionSupport}
+          apiKeySet={!!apiKey}
         />
         <TranscriptionEditor
           key={activeSession?.id ?? 'no-session'}

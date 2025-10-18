@@ -1,7 +1,20 @@
-import {genkit} from 'genkit';
-import {googleAI} from '@genkit-ai/google-genai';
+import {genkit, GenerationOptions, ModelReference} from 'genkit';
+import {googleAI, GoogleAIGenerativeAI} from '@genkit-ai/google-genai';
 
-export const ai = genkit({
-  plugins: [googleAI()],
-  model: 'googleai/gemini-2.5-flash-image-preview',
-});
+type AiClientParams = {
+  apiKey?: string | undefined;
+  options?: GenerationOptions | undefined;
+  model?: ModelReference<GoogleAIGenerativeAI>;
+};
+
+export const getAiClient = ({
+  apiKey,
+  options,
+  model,
+}: AiClientParams) => {
+  return genkit({
+    plugins: [googleAI({apiKey})],
+    model: model ?? 'googleai/gemini-2.5-flash-image-preview',
+    ...options,
+  });
+};

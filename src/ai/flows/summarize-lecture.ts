@@ -8,13 +8,14 @@
  * - SummarizeLectureOutput - The return type for the summarizeLecture function.
  */
 
-import {ai} from '@/ai/genkit';
+import {getAiClient} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const SummarizeLectureInputSchema = z.object({
   transcription: z
     .string()
     .describe('The full transcription of the lecture to summarize.'),
+  apiKey: z.string().optional().describe('The user provided API key for Google AI.'),
 });
 export type SummarizeLectureInput = z.infer<typeof SummarizeLectureInputSchema>;
 
@@ -27,24 +28,18 @@ export async function summarizeLecture(input: SummarizeLectureInput): Promise<Su
   return summarizeLectureFlow(input);
 }
 
-const prompt = ai.definePrompt({
-  name: 'summarizeLecturePrompt',
-  input: {schema: SummarizeLectureInputSchema},
-  output: {schema: SummarizeLectureOutputSchema},
-  prompt: `You are an expert summarizer of lectures.
+const summarizeLectureFlow = async (input: SummarizeLectureInput) => {
+    const ai = getAiClient({apiKey: input.apiKey});
+    const prompt = ai.definePrompt({
+        name: 'summarizeLecturePrompt',
+        input: {schema: SummarizeLectureInputSchema},
+        output: {schema: SummarizeLectureOutputSchema},
+        prompt: `You are an expert summarizer of lectures.
+    
+      Please provide a concise summary of the lecture transcript below, focusing on the key points and main topics covered.
+      Transcription: {{{transcription}}}`,
+    });
 
-  Please provide a concise summary of the lecture transcript below, focusing on the key points and main topics covered.
-  Transcription: {{{transcription}}}`,
-});
-
-const summarizeLectureFlow = ai.defineFlow(
-  {
-    name: 'summarizeLectureFlow',
-    inputSchema: SummarizeLectureInputSchema,
-    outputSchema: SummarizeLectureOutputSchema,
-  },
-  async input => {
     const {output} = await prompt(input);
     return output!;
-  }
-);
+}

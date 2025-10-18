@@ -19,6 +19,7 @@ type TranscriptionControlsProps = {
   isProcessingAI: boolean;
   hasActiveSession: boolean;
   hasRecognitionSupport: boolean;
+  apiKeySet: boolean;
 };
 
 export function TranscriptionControls({
@@ -29,9 +30,10 @@ export function TranscriptionControls({
   onSummarize,
   isProcessingAI,
   hasActiveSession,
-  hasRecognitionSupport
+  hasRecognitionSupport,
+  apiKeySet
 }: TranscriptionControlsProps) {
-  const buttonDisabled = isProcessingAI || isListening;
+  const aiButtonsDisabled = isProcessingAI || isListening || !hasActiveSession || !apiKeySet;
 
   return (
     <TooltipProvider>
@@ -66,23 +68,23 @@ export function TranscriptionControls({
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button onClick={onIdentifySpeakers} variant="outline" disabled={buttonDisabled || !hasActiveSession}>
+            <Button onClick={onIdentifySpeakers} variant="outline" disabled={aiButtonsDisabled}>
               <BrainCircuit className="h-5 w-5" />
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Identify Speakers (AI)</p>
+            <p>{apiKeySet ? 'Identify Speakers (AI)' : 'API Key required'}</p>
           </TooltipContent>
         </Tooltip>
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button onClick={onSummarize} variant="outline" disabled={buttonDisabled || !hasActiveSession}>
+            <Button onClick={onSummarize} variant="outline" disabled={aiButtonsDisabled}>
               <FileText className="h-5 w-5" />
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Summarize Lecture (AI)</p>
+            <p>{apiKeySet ? 'Summarize Lecture (AI)' : 'API Key required'}</p>
           </TooltipContent>
         </Tooltip>
       </div>

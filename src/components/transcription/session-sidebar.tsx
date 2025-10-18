@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { TranscriptionSession } from "@/app/types";
 import { cn } from "@/lib/utils";
-import { FileClock, Trash2 } from "lucide-react";
+import { FileClock, Trash2, KeyRound, HelpCircle } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,22 +15,31 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useState } from "react";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 type SessionSidebarProps = {
   sessions: TranscriptionSession[];
   activeSessionId?: string;
   onSelectSession: (session: TranscriptionSession) => void;
   onDeleteSession: (sessionId: string) => void;
+  apiKey: string;
+  onApiKeyChange: (apiKey: string) => void;
 };
 
-export function SessionSidebar({ sessions, activeSessionId, onSelectSession, onDeleteSession }: SessionSidebarProps) {
+export function SessionSidebar({ sessions, activeSessionId, onSelectSession, onDeleteSession, apiKey, onApiKeyChange }: SessionSidebarProps) {
   const [sessionToDelete, setSessionToDelete] = useState<TranscriptionSession | null>(null);
   
   return (
-    <Card className="h-full">
+    <Card className="flex h-full flex-col">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
             <FileClock className="h-5 w-5" />
@@ -38,7 +47,7 @@ export function SessionSidebar({ sessions, activeSessionId, onSelectSession, onD
         </CardTitle>
         <CardDescription>Review your past transcription sessions.</CardDescription>
       </CardHeader>
-      <CardContent className="h-[calc(100%-6.5rem)] p-0">
+      <CardContent className="flex-1 p-0">
         <ScrollArea className="h-full">
           {sessions.length > 0 ? (
             <div className="flex flex-col gap-1 p-2">
@@ -77,6 +86,34 @@ export function SessionSidebar({ sessions, activeSessionId, onSelectSession, onD
           )}
         </ScrollArea>
       </CardContent>
+
+      <div className="border-t p-4 space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="api-key" className="flex items-center gap-2 text-sm font-medium">
+            <KeyRound className="h-4 w-4" />
+            Google AI API Key
+            <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">
+                            <HelpCircle className="h-4 w-4" />
+                        </a>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>Get your API key from Google AI Studio. <br/> Required for AI features.</p>
+                    </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
+          </Label>
+          <Input 
+            id="api-key"
+            type="password"
+            value={apiKey}
+            onChange={(e) => onApiKeyChange(e.target.value)}
+            placeholder="Enter your API key"
+          />
+        </div>
+      </div>
       
       <AlertDialog open={!!sessionToDelete} onOpenChange={(open) => !open && setSessionToDelete(null)}>
         <AlertDialogContent>
