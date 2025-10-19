@@ -5,17 +5,15 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
-import {env, pipeline, Pipeline, AutomaticSpeechRecognitionPipeline} from '@xenova/transformers';
 
-// Skip local model check
-env.allowLocalModels = false;
-
-type WhisperOptions = {
-    model?: string;
-    multilingual?: boolean;
-    quantized?: boolean;
-    subtask?: 'transcribe' | 'translate';
-    language?: string;
+// Dynamically import transformers.js
+let transformers: any;
+if (typeof window !== 'undefined') {
+    import('@xenova/transformers').then(mod => {
+        transformers = mod;
+        // Skip local model check
+        transformers.env.allowLocalModels = false;
+    });
 }
 
 type Transcript = {
@@ -23,34 +21,29 @@ type Transcript = {
     text: string;
 };
 
-type UseWhisperConfig = {
-    apiKey?: string;
-    autoStart?: boolean;
-    autoTranscribe?: boolean;
-    mode?: 'transcriptions' | 'translations';
-    nonStop?: boolean;
-    removeSilence?: boolean;
-    stopTimeout?: number;
-    streaming?: boolean;
-    timeSlice?: number;
-    whisperConfig?: WhisperOptions;
-    onTranscribe?: (blob: Blob) => Promise<Transcript>;
-};
-
-const stopTimeout = 5_000;
 const timeSlice = 1_000;
 
 class WhisperPipeline {
-    static instance: AutomaticSpeechRecognitionPipeline | null = null;
+    static instance: any | null = null;
     static loading: boolean = false;
     static async getInstance(progress_callback?: Function) {
       if (this.instance === null && !this.loading) {
         this.loading = true;
-        this.instance = await pipeline(
+        if (!transformers) {
+            await new Promise<void>((resolve) => {
+                const interval = setInterval(() => {
+                    if(transformers) {
+                        clearInterval(interval);
+                        resolve();
+                    }
+                }, 100);
+            });
+        }
+        this.instance = await transformers.pipeline(
             'automatic-speech-recognition',
             'Xenova/whisper-tiny.en',
             { progress_callback }
-        ) as AutomaticSpeechRecognitionPipeline;
+        );
         this.loading = false;
       }
       return this.instance;
@@ -65,9 +58,8 @@ export function useWhisperTranscription() {
     const stream = useRef<MediaStream | null>(null);
     const recorder = useRef<MediaRecorder | null>(null);
     const lastSlice = useRef<Blob | null>(null);
-    const stopTimer = useRef<NodeJS.Timeout | null>(null);
     
-    const model = useRef<AutomaticSpeechRecognitionPipeline | null>(null);
+    const model = useRef<any | null>(null);
     const chunks = useRef<Blob[]>([]);
 
     useEffect(() => {
@@ -86,7 +78,7 @@ export function useWhisperTranscription() {
     }, []);
 
     const onStop = useCallback(async () => {
-        if (recorder.current && lastSlice.current) {
+        if (recorder.current && chunks.current.length > 0) {
             const blob = new Blob(chunks.current, {
                 type: recorder.current.mimeType,
             });
@@ -115,13 +107,17 @@ export function useWhisperTranscription() {
 
     const startRecording = useCallback(async () => {
         if (!isModelLoading && model.current) {
-            stream.current = await navigator.mediaDevices.getUserMedia({ audio: true });
-            const rec = new MediaRecorder(stream.current);
-            rec.addEventListener('dataavailable', onDataAvailable);
-            rec.addEventListener('stop', onStop);
-            rec.start(timeSlice);
-            recorder.current = rec;
-            setIsTranscribing(true);
+            try {
+                stream.current = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const rec = new MediaRecorder(stream.current);
+                rec.addEventListener('dataavailable', onDataAvailable);
+                rec.addEventListener('stop', onStop);
+                rec.start(timeSlice);
+                recorder.current = rec;
+                setIsTranscribing(true);
+            } catch(e) {
+                console.error("Could not start recording", e);
+            }
         }
     }, [isModelLoading, onDataAvailable, onStop]);
 
@@ -131,9 +127,6 @@ export function useWhisperTranscription() {
             recorder.current.stop();
             stream.current?.getTracks().forEach((track) => track.stop());
             setIsTranscribing(false);
-            if(stopTimer.current) {
-                clearTimeout(stopTimer.current);
-            }
         }
     }, [isTranscribing]);
 
@@ -148,11 +141,9 @@ export function useWhisperTranscription() {
 
     useEffect(() => {
       let interval: NodeJS.Timeout | null = null;
-      if (isTranscribing) {
+      if (isTranscribing && recorder.current) {
         interval = setInterval(() => {
-          if (recorder.current) {
-            recorder.current.requestData();
-          }
+          recorder.current?.requestData();
         }, timeSlice);
       } else if (interval) {
         clearInterval(interval);
@@ -171,6 +162,9 @@ export function useWhisperTranscription() {
         if (!lastSlice.current || !model.current) {
             return;
         }
+        const sliceToProcess = lastSlice.current;
+        lastSlice.current = null;
+
         const audioCTX = new AudioContext({ sampleRate: 16000 });
         const reader = new FileReader();
         reader.onload = async () => {
@@ -181,7 +175,7 @@ export function useWhisperTranscription() {
               stride_length_s: 5,
             });
             const newTranscript: Transcript = {
-              blob: lastSlice.current!,
+              blob: sliceToProcess,
               text: output.text,
             };
              setTranscript((prev) => {
@@ -198,11 +192,9 @@ export function useWhisperTranscription() {
              });
           } catch (e) {
             console.error(e);
-          } finally {
-            lastSlice.current = null;
           }
         };
-        reader.readAsArrayBuffer(lastSlice.current);
+        reader.readAsArrayBuffer(sliceToProcess);
       };
   
       const interval = setInterval(transcribe, timeSlice);
@@ -210,7 +202,7 @@ export function useWhisperTranscription() {
       return () => {
         clearInterval(interval);
       };
-    }, [lastSlice, model]);
+    }, [model]);
 
     return {
         isTranscribing,
