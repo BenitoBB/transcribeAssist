@@ -4,17 +4,7 @@
 
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
-
-// Dynamically import transformers.js
-let transformers: any;
-if (typeof window !== 'undefined') {
-    import('@xenova/transformers').then(mod => {
-        transformers = mod;
-        // Skip local model check
-        transformers.env.allowLocalModels = false;
-    });
-}
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 type Transcript = {
     blob?: Blob;
@@ -29,17 +19,11 @@ class WhisperPipeline {
     static async getInstance(progress_callback?: Function) {
       if (this.instance === null && !this.loading) {
         this.loading = true;
-        if (!transformers) {
-            await new Promise<void>((resolve) => {
-                const interval = setInterval(() => {
-                    if(transformers) {
-                        clearInterval(interval);
-                        resolve();
-                    }
-                }, 100);
-            });
-        }
-        this.instance = await transformers.pipeline(
+        
+        const { pipeline, env } = await import('@xenova/transformers');
+        env.allowLocalModels = false;
+        
+        this.instance = await pipeline(
             'automatic-speech-recognition',
             'Xenova/whisper-tiny.en',
             { progress_callback }
