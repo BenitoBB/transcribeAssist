@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useSpeechRecognition } from '@/hooks/use-speech-recognition';
+import { useWhisperTranscription } from '@/hooks/use-whisper-transcription';
 import { TranscriptionEditor } from './transcription-editor';
 import { TranscriptionControls } from './transcription-controls';
 import { SessionSidebar } from './session-sidebar';
@@ -9,7 +9,7 @@ import type { TranscriptionSession } from '@/app/types';
 import { useToast } from '@/hooks/use-toast';
 import { identifySpeakers } from '@/ai/flows/identify-speakers';
 import { summarizeLecture } from '@/ai/flows/summarize-lecture';
-import { Loader2, AlertTriangle } from 'lucide-react';
+import { Loader2, AlertTriangle, Info } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,29 +32,16 @@ export function MainView() {
   const [sessionTitle, setSessionTitle] = useState('');
   const [currentContent, setCurrentContent] = useState('');
   const [apiKey, setApiKey] = useState('');
-  const [showBrowserUnsupportedAlert, setShowBrowserUnsupportedAlert] = useState(false);
 
   const { toast } = useToast();
   const {
     transcript,
-    setTranscript,
-    startListening,
-    stopListening,
-    isListening,
-    error,
-    hasRecognitionSupport
-  } = useSpeechRecognition();
+    isModelLoading,
+    isTranscribing,
+    startTranscription,
+    stopTranscription,
+  } = useWhisperTranscription();
 
-  useEffect(() => {
-    if (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Speech Recognition Error',
-        description: error,
-      });
-    }
-  }, [error, toast]);
-  
   useEffect(() => {
     try {
       const savedSessions = localStorage.getItem('transcription-sessions');
@@ -71,18 +58,11 @@ export function MainView() {
   }, []);
 
   useEffect(() => {
-    // Only check for support on the client-side
-    if (typeof window !== 'undefined') {
-      setShowBrowserUnsupportedAlert(!hasRecognitionSupport);
+    if (isTranscribing) {
+      setCurrentContent(transcript.map(t => t.text).join(''));
     }
-  }, [hasRecognitionSupport]);
+  }, [transcript, isTranscribing]);
 
-  useEffect(() => {
-    if (isListening) {
-      setCurrentContent(transcript);
-    }
-  }, [transcript, isListening]);
-  
   const handleStart = () => {
     const newSession: TranscriptionSession = {
       id: Date.now().toString(),
@@ -93,15 +73,15 @@ export function MainView() {
     };
     setActiveSession(newSession);
     setCurrentContent('');
-    setTranscript('');
-    startListening();
+    startTranscription();
   };
 
   const handleStop = () => {
-    stopListening();
+    stopTranscription();
     if(activeSession) {
-        setActiveSession(prev => prev ? {...prev, content: transcript} : null);
-        setCurrentContent(transcript);
+        const finalContent = transcript.map(t => t.text).join('');
+        setActiveSession(prev => prev ? {...prev, content: finalContent} : null);
+        setCurrentContent(finalContent);
         setShowSaveDialog(true);
         setSessionTitle(`Lecture - ${new Date().toLocaleDateString()}`);
     }
@@ -110,10 +90,11 @@ export function MainView() {
   const handleSaveSession = () => {
     if (!activeSession) return;
     
+    const finalContent = currentContent;
     const finalSession: TranscriptionSession = {
       ...activeSession,
       title: sessionTitle || activeSession.title,
-      content: transcript,
+      content: finalContent,
     };
     
     setSessions(prev => {
@@ -141,10 +122,9 @@ export function MainView() {
   };
   
   const handleSelectSession = (session: TranscriptionSession) => {
-    if (isListening) stopListening();
+    if (isTranscribing) stopTranscription();
     setActiveSession(session);
     setCurrentContent(session.content);
-    setTranscript(session.content);
   };
 
   const handleDeleteSession = (sessionId: string) => {
@@ -158,7 +138,6 @@ export function MainView() {
     if (activeSession?.id === sessionId) {
       setActiveSession(null);
       setCurrentContent('');
-      setTranscript('');
     }
     toast({ title: 'Session deleted.' });
   };
@@ -183,7 +162,9 @@ export function MainView() {
       const { identifiedTranscription } = await identifySpeakers({ transcription: contentToProcess, apiKey });
       setCurrentContent(identifiedTranscription);
       if (activeSession) {
-          setActiveSession({ ...activeSession, content: identifiedTranscription });
+          const updatedSession = { ...activeSession, content: identifiedTranscription };
+          setActiveSession(updatedSession);
+          setSessions(prev => prev.map(s => s.id === updatedSession.id ? updatedSession : s));
       }
       toast({ title: 'Speakers Identified!', description: 'Transcription updated with speaker labels.' });
     } catch (e: any) {
@@ -201,7 +182,9 @@ export function MainView() {
     try {
         const { summary } = await summarizeLecture({ transcription: contentToProcess, apiKey });
         if (activeSession) {
-            setActiveSession({ ...activeSession, summary });
+            const updatedSession = { ...activeSession, summary };
+            setActiveSession(updatedSession);
+            setSessions(prev => prev.map(s => s.id === updatedSession.id ? updatedSession : s));
         }
         toast({ title: 'Summary Generated!' });
     } catch (e: any) {
@@ -213,7 +196,7 @@ export function MainView() {
 
   const updateContent = (newContent: string) => {
       setCurrentContent(newContent);
-      if (activeSession && !isListening) {
+      if (activeSession && !isTranscribing) {
           const newSession = {...activeSession, content: newContent};
           setActiveSession(newSession);
           setSessions(prev => {
@@ -225,6 +208,11 @@ export function MainView() {
           });
       }
   }
+
+  const showOverlay = isModelLoading || isProcessingAI;
+  const overlayText = isModelLoading 
+    ? "Preparing AI model for the first time. This might take a minute..." 
+    : (isProcessingAI === 'speakers' ? 'Identifying speakers...' : 'Generating summary...');
 
   return (
     <div className="container mx-auto grid h-full flex-1 grid-cols-1 gap-8 p-4 md:grid-cols-[320px_1fr]">
@@ -239,40 +227,28 @@ export function MainView() {
         />
       </aside>
       <div className="relative flex min-h-[calc(100vh-8rem)] flex-col gap-4 rounded-lg border bg-card p-4 shadow-sm">
-        {isProcessingAI && (
+        {showOverlay && (
           <div className="absolute inset-0 z-20 flex flex-col items-center justify-center rounded-lg bg-background/80 backdrop-blur-sm">
             <Loader2 className="h-8 w-8 animate-spin text-primary-foreground" />
             <span className="mt-2 font-semibold text-primary-foreground">AI is working its magic...</span>
-            <span className="text-sm text-primary-foreground/80">
-                {isProcessingAI === 'speakers' ? 'Identifying speakers...' : 'Generating summary...'}
-            </span>
+            <span className="text-sm text-primary-foreground/80">{overlayText}</span>
           </div>
         )}
-        {showBrowserUnsupportedAlert && (
-          <Alert variant="destructive">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Browser Not Supported</AlertTitle>
-            <AlertDescription>
-              The speech recognition feature is not supported in your current browser. Please try Chrome or Edge.
-            </AlertDescription>
-          </Alert>
-        )}
         <TranscriptionControls 
-          isListening={isListening}
+          isListening={isTranscribing}
           onStart={handleStart}
           onStop={handleStop}
           onIdentifySpeakers={handleIdentifySpeakers}
           onSummarize={handleSummarize}
-          isProcessingAI={!!isProcessingAI}
+          isProcessingAI={!!isProcessingAI || isModelLoading}
           hasActiveSession={!!activeSession}
-          hasRecognitionSupport={hasRecognitionSupport}
           apiKeySet={!!apiKey}
         />
         <TranscriptionEditor
           key={activeSession?.id ?? 'no-session'}
           content={currentContent}
           onContentChange={updateContent}
-          isReadOnly={isListening}
+          isReadOnly={isTranscribing}
           session={activeSession}
         />
       </div>

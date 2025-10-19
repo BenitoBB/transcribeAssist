@@ -18,7 +18,6 @@ type TranscriptionControlsProps = {
   onSummarize: () => void;
   isProcessingAI: boolean;
   hasActiveSession: boolean;
-  hasRecognitionSupport: boolean;
   apiKeySet: boolean;
 };
 
@@ -30,7 +29,6 @@ export function TranscriptionControls({
   onSummarize,
   isProcessingAI,
   hasActiveSession,
-  hasRecognitionSupport,
   apiKeySet
 }: TranscriptionControlsProps) {
   const aiButtonsDisabled = isProcessingAI || isListening || !hasActiveSession || !apiKeySet;
@@ -41,13 +39,13 @@ export function TranscriptionControls({
         {!isListening ? (
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button onClick={onStart} disabled={!hasRecognitionSupport || isProcessingAI} size="lg" className="bg-[#4CAF50] hover:bg-[#45a049] text-white">
+              <Button onClick={onStart} disabled={isProcessingAI} size="lg" className="bg-[#4CAF50] hover:bg-[#45a049] text-white">
                 <Mic className="mr-2 h-5 w-5" />
                 Start Transcription
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>{hasRecognitionSupport ? 'Begin real-time transcription' : 'Speech recognition not supported'}</p>
+              <p>Begin real-time transcription</p>
             </TooltipContent>
           </Tooltip>
         ) : (
