@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useState, useContext, ReactNode, useCallback, useEffect, useRef } from 'react';
-import { getFirestore, doc, setDoc, onSnapshot, getDoc, updateDoc, deleteDoc, serverTimestamp, collection, addDoc, onSnapshot as onCollectionSnapshot } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, onSnapshot, getDoc, updateDoc, deleteDoc, serverTimestamp, collection, addDoc, onSnapshot as onCollectionSnapshot, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import { firebaseApp } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 
@@ -48,6 +48,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
   
   const setupPeerConnection = useCallback((currentSessionId: string, currentRole: Role) => {
+    if (pc.current) {
+        pc.current.close();
+    }
     const peerConnection = new RTCPeerConnection(ICE_SERVERS);
 
     peerConnection.onicecandidate = async (event) => {
@@ -63,16 +66,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
         toast({ title: 'Conexión establecida' });
       } else if (['disconnected', 'failed', 'closed'].includes(peerConnection.connectionState)) {
         setIsPeerConnected(false);
-        toast({ title: 'Conexión perdida', variant: 'destructive' });
+        if (peerConnection.connectionState !== 'closed') {
+          toast({ title: 'Conexión perdida', variant: 'destructive' });
+        }
       }
     };
     
     if (currentRole === 'teacher') {
       const channel = peerConnection.createDataChannel('transcript');
+      channel.onopen = () => setIsPeerConnected(true);
+      channel.onclose = () => setIsPeerConnected(false);
       setDataChannel(channel);
     } else {
       peerConnection.ondatachannel = (event) => {
         const receiveChannel = event.channel;
+        receiveChannel.onopen = () => setIsPeerConnected(true);
+        receiveChannel.onclose = () => setIsPeerConnected(false);
         setDataChannel(receiveChannel);
       };
     }
@@ -122,27 +131,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     if (docSnap.exists()) {
       const { offer } = docSnap.data();
-      await pc.current!.setRemoteDescription(new RTCSessionDescription(offer));
+      if (pc.current?.signalingState !== 'closed') {
+        await pc.current!.setRemoteDescription(new RTCSessionDescription(offer));
 
-      const answerDescription = await pc.current!.createAnswer();
-      await pc.current!.setLocalDescription(answerDescription);
+        const answerDescription = await pc.current!.createAnswer();
+        await pc.current!.setLocalDescription(answerDescription);
 
-      const answer = {
-        sdp: answerDescription.sdp,
-        type: answerDescription.type,
-      };
+        const answer = {
+          sdp: answerDescription.sdp,
+          type: answerDescription.type,
+        };
 
-      await updateDoc(sessionRef, { answer });
-      
-      const teacherCandidatesCollection = collection(db, 'sessions', id, 'teacherCandidates');
-      onCollectionSnapshot(teacherCandidatesCollection, (snapshot) => {
-          snapshot.docChanges().forEach((change) => {
-              if (change.type === "added") {
-                  const candidate = new RTCIceCandidate(change.doc.data());
-                  pc.current!.addIceCandidate(candidate);
-              }
-          });
-      });
+        await updateDoc(sessionRef, { answer });
+        
+        const teacherCandidatesCollection = collection(db, 'sessions', id, 'teacherCandidates');
+        onCollectionSnapshot(teacherCandidatesCollection, (snapshot) => {
+            snapshot.docChanges().forEach((change) => {
+                if (change.type === "added" && pc.current?.signalingState !== 'closed') {
+                    const candidate = new RTCIceCandidate(change.doc.data());
+                    pc.current!.addIceCandidate(candidate);
+                }
+            });
+        });
+      }
     } else {
       toast({
         variant: 'destructive',
@@ -153,15 +164,46 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [db, setupPeerConnection, toast]);
 
+  // This effect handles cleanup when the component unmounts.
   useEffect(() => {
-    return () => {
+    const cleanup = async () => {
       if (sessionId && role === 'teacher') {
-        const sessionRef = doc(db, 'sessions', sessionId);
-        deleteDoc(sessionRef);
+        try {
+          const sessionRef = doc(db, 'sessions', sessionId);
+          // Delete subcollections first
+          const teacherCandidatesRef = collection(db, 'sessions', sessionId, 'teacherCandidates');
+          const studentCandidatesRef = collection(db, 'sessions', sessionId, 'studentCandidates');
+          
+          const batch = writeBatch(db);
+
+          const teacherCands = await getDocs(teacherCandidatesRef);
+          teacherCands.forEach(doc => batch.delete(doc.ref));
+
+          const studentCands = await getDocs(studentCandidatesRef);
+          studentCands.forEach(doc => batch.delete(doc.ref));
+
+          await batch.commit();
+
+          // Then delete the main session document
+          await deleteDoc(sessionRef);
+
+        } catch (error) {
+            console.error("Error cleaning up session:", error)
+        }
       }
-      pc.current?.close();
+      if (pc.current) {
+        pc.current.close();
+        pc.current = null;
+      }
     };
-  }, [sessionId, role, db]);
+
+    // This is the key change: we return the cleanup function from a useEffect
+    // that runs only once, so it's only called on unmount.
+    return () => {
+      cleanup();
+    };
+  }, [sessionId, role, db]); // Rerun cleanup logic if session/role changes
+
 
   const value = {
     role,
