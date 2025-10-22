@@ -8,7 +8,6 @@ type Pipeline = (...args: any[]) => any;
 type AutomaticSpeechRecognitionPipeline = any;
 type Env = {
   allowLocalModels: boolean;
-  allowRemoteModels: boolean;
 };
 
 const CHUNK_LENGTH_SECONDS = 30;
@@ -29,22 +28,6 @@ export function useWhisperTranscription() {
   // Transformers.js instance
   const transformersRef = useRef<any>(null);
 
-  // This effect runs once on the client to set up the environment
-  useEffect(() => {
-    const setupEnv = async () => {
-      try {
-        if (!transformersRef.current) {
-          const trans = await import('@xenova/transformers');
-          (trans.env as Env).allowLocalModels = false;
-          transformersRef.current = trans;
-        }
-      } catch (e) {
-        console.error('Failed to load transformers library', e);
-      }
-    };
-    setupEnv();
-  }, []);
-
   // Function to load the model on demand
   const loadModel = useCallback(async () => {
     if (modelRef.current) {
@@ -57,8 +40,8 @@ export function useWhisperTranscription() {
             description: 'Esto puede tardar un momento. Solo se hará una vez.',
         });
         
+        // Dynamically import transformers.js only when needed
         if (!transformersRef.current) {
-          // This should have been set by the useEffect, but as a fallback:
           const trans = await import('@xenova/transformers');
           (trans.env as Env).allowLocalModels = false;
           transformersRef.current = trans;
