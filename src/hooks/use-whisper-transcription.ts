@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
 
 // Define types dynamically to avoid direct import issues on server
@@ -29,6 +29,22 @@ export function useWhisperTranscription() {
   // Transformers.js instance
   const transformersRef = useRef<any>(null);
 
+  // This effect runs once on the client to set up the environment
+  useEffect(() => {
+    const setupEnv = async () => {
+      try {
+        if (!transformersRef.current) {
+          const trans = await import('@xenova/transformers');
+          (trans.env as Env).allowLocalModels = false;
+          transformersRef.current = trans;
+        }
+      } catch (e) {
+        console.error('Failed to load transformers library', e);
+      }
+    };
+    setupEnv();
+  }, []);
+
   // Function to load the model on demand
   const loadModel = useCallback(async () => {
     if (modelRef.current) {
@@ -41,11 +57,11 @@ export function useWhisperTranscription() {
             description: 'Esto puede tardar un momento. Solo se hará una vez.',
         });
         
-        // Dynamically import transformers.js
         if (!transformersRef.current) {
-            const trans = await import('@xenova/transformers');
-            (trans.env as Env).allowLocalModels = false;
-            transformersRef.current = trans;
+          // This should have been set by the useEffect, but as a fallback:
+          const trans = await import('@xenova/transformers');
+          (trans.env as Env).allowLocalModels = false;
+          transformersRef.current = trans;
         }
 
         const pipeline = transformersRef.current.pipeline;
