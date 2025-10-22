@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
@@ -32,31 +33,17 @@ export function useWhisperTranscription() {
   // Dynamically import transformers
   const transformers = useRef<any>(null);
 
-  useEffect(() => {
-    async function loadTransformers() {
-      if (typeof window !== 'undefined') {
-        try {
-          const trans = await import('@xenova/transformers');
-          (trans.env as Env).allowLocalModels = false;
-          (trans.env as Env).allowRemoteModels = true;
-          transformers.current = trans;
-        } catch (e) {
-          console.error('Failed to load transformers.js', e);
-          toast({
-            variant: 'destructive',
-            title: 'Error',
-            description: 'Could not load the transcription library.',
-          });
-        }
-      }
-    }
-    loadTransformers();
-  }, []);
-
   const loadModel = useCallback(async () => {
-    if (loading || ready || !transformers.current) return;
+    if (loading || ready) return;
     setLoading(true);
     try {
+      if (!transformers.current) {
+         const trans = await import('@xenova/transformers');
+        (trans.env as Env).allowLocalModels = false;
+        (trans.env as Env).allowRemoteModels = true;
+        transformers.current = trans;
+      }
+
       const pipeline = transformers.current.pipeline;
       const pipe = await pipeline('automatic-speech-recognition', 'openai/whisper-base');
       setModel(() => pipe);
@@ -85,6 +72,8 @@ export function useWhisperTranscription() {
       });
       return;
     }
+    if (recorder.current) return;
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
@@ -98,12 +87,13 @@ export function useWhisperTranscription() {
         const audioBlob = new Blob(audioChunks.current, { type: 'audio/wav' });
         audioChunks.current = [];
         await transcribe(audioBlob);
-        if (isTranscribing) {
-           // If still transcribing, start a new recording chunk
-           recorder.current?.start(CHUNK_LENGTH_SECONDS * 1000);
+        
+        // If we are still in transcribing mode, start recording again.
+        if (recorder.current) {
+           recorder.current.start(CHUNK_LENGTH_SECONDS * 1000);
         }
       };
-
+      
       mediaRecorder.start(CHUNK_LENGTH_SECONDS * 1000); // Record in chunks
       setIsTranscribing(true);
       setTranscript('');
@@ -116,27 +106,26 @@ export function useWhisperTranscription() {
         description: 'Could not access microphone.',
       });
     }
-  }, [ready, isTranscribing]);
+  }, [ready]);
 
   const stopTranscription = useCallback(() => {
-    if (recorder.current && recorder.current.state === 'recording') {
-      recorder.current.onstop = async () => {
-         const audioBlob = new Blob(audioChunks.current, { type: 'audio/wav' });
-         audioChunks.current = [];
-         await transcribe(audioBlob);
-
-         // This is the final stop, so don't restart.
-         setIsTranscribing(false);
-         toast({ title: 'Recording Stopped' });
-      }
-      recorder.current.stop();
-    } else {
-        setIsTranscribing(false);
+    if (recorder.current) {
+        recorder.current.onstop = async () => {
+            const audioBlob = new Blob(audioChunks.current, { type: 'audio/wav' });
+            audioChunks.current = [];
+            await transcribe(audioBlob); // Process the final chunk
+            
+            // Final stop
+            setIsTranscribing(false);
+            recorder.current = null;
+            toast({ title: 'Recording Stopped' });
+        };
+        recorder.current.stop();
     }
   }, []);
 
   const transcribe = useCallback(async (audioBlob: Blob) => {
-    if (!model) return;
+    if (!model || audioBlob.size === 0) return;
 
     try {
         const audioContext = new AudioContext({
