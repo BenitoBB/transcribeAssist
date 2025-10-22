@@ -1,10 +1,8 @@
-
 'use client';
 
 import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { toast } from '@/hooks/use-toast';
 
-// Define types dynamically to avoid direct import issues on server
 type Pipeline = (...args: any[]) => any;
 type AutomaticSpeechRecognitionPipeline = any;
 type Env = {
@@ -12,33 +10,26 @@ type Env = {
   allowRemoteModels: boolean;
 };
 
-// Define the processor options
 const CHUNK_LENGTH_SECONDS = 30;
-const BATCH_SIZE = 6;
 
 export function useWhisperTranscription() {
-  // Model loading
   const [model, setModel] = useState<AutomaticSpeechRecognitionPipeline | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [ready, setReady] = useState(false);
+  const [loadingModel, setLoadingModel] = useState(false);
+  const [modelReady, setModelReady] = useState(false);
 
-  // Transcription state
   const [transcript, setTranscript] = useState('');
   const [isTranscribing, setIsTranscribing] = useState(false);
 
-  // Media recorder
   const recorder = useRef<MediaRecorder | null>(null);
   const audioChunks = useRef<Blob[]>([]);
-
-  // Dynamically import transformers
   const transformers = useRef<any>(null);
 
   const loadModel = useCallback(async () => {
-    if (loading || ready) return;
-    setLoading(true);
+    if (loadingModel || modelReady) return;
+    setLoadingModel(true);
     try {
       if (!transformers.current) {
-         const trans = await import('@xenova/transformers');
+        const trans = await import('@xenova/transformers');
         (trans.env as Env).allowLocalModels = false;
         (trans.env as Env).allowRemoteModels = true;
         transformers.current = trans;
@@ -47,28 +38,58 @@ export function useWhisperTranscription() {
       const pipeline = transformers.current.pipeline;
       const pipe = await pipeline('automatic-speech-recognition', 'openai/whisper-base');
       setModel(() => pipe);
-      setReady(true);
+      setModelReady(true);
       toast({
-        title: 'Model Ready',
-        description: 'The transcription model is loaded and ready.',
+        title: 'Modelo de IA Cargado',
+        description: 'El motor de transcripción está listo para usarse.',
       });
     } catch (e) {
       console.error('Failed to load model', e);
       toast({
         variant: 'destructive',
-        title: 'Model Load Failed',
-        description: 'Could not load the Whisper model.',
+        title: 'Error al Cargar el Modelo',
+        description: 'No se pudo cargar el modelo de IA de Whisper.',
       });
     } finally {
-      setLoading(false);
+      setLoadingModel(false);
     }
-  }, [loading, ready]);
+  }, [loadingModel, modelReady, toast]);
 
+  useEffect(() => {
+    loadModel();
+  }, [loadModel]);
+
+  const transcribe = useCallback(
+    async (audioBlob: Blob) => {
+      if (!model || audioBlob.size === 0) return;
+
+      try {
+        const audioContext = new AudioContext({ sampleRate: 16000 });
+        const arrayBuffer = await audioBlob.arrayBuffer();
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+        const pcmData = audioBuffer.getChannelData(0);
+
+        const result = await model(pcmData, {
+          chunk_length_s: CHUNK_LENGTH_SECONDS,
+          language: 'spanish',
+          task: 'transcribe',
+        });
+        
+        if (result && typeof result === 'object' && 'text' in result && typeof result.text === 'string') {
+          setTranscript(prev => prev + result.text);
+        }
+      } catch (e) {
+        console.error('Transcription error', e);
+      }
+    },
+    [model]
+  );
+  
   const startTranscription = useCallback(async () => {
-    if (!ready) {
+    if (!modelReady) {
       toast({
-        title: 'Model not ready',
-        description: 'Please load the model before starting transcription.',
+        title: 'Modelo no listo',
+        description: 'Por favor, espera a que el modelo de IA se cargue.',
       });
       return;
     }
@@ -76,95 +97,49 @@ export function useWhisperTranscription() {
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
       recorder.current = mediaRecorder;
 
       mediaRecorder.ondataavailable = (event) => {
-        audioChunks.current.push(event.data);
-      };
-
-      mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunks.current, { type: 'audio/wav' });
-        audioChunks.current = [];
-        await transcribe(audioBlob);
-        
-        // If we are still in transcribing mode, start recording again.
-        if (recorder.current) {
-           recorder.current.start(CHUNK_LENGTH_SECONDS * 1000);
+        if(event.data.size > 0) {
+            audioChunks.current.push(event.data);
+            const audioBlob = new Blob(audioChunks.current, { type: 'audio/webm' });
+            transcribe(audioBlob);
+            audioChunks.current = [];
         }
       };
-      
-      mediaRecorder.start(CHUNK_LENGTH_SECONDS * 1000); // Record in chunks
+
+      mediaRecorder.start(5000); // Process audio every 5 seconds
       setIsTranscribing(true);
       setTranscript('');
-      toast({ title: 'Recording Started', description: 'Transcription has begun.' });
+      toast({ title: 'Grabación iniciada', description: 'La transcripción ha comenzado.' });
     } catch (e) {
       console.error('Failed to start recording', e);
       toast({
         variant: 'destructive',
-        title: 'Recording Error',
-        description: 'Could not access microphone.',
+        title: 'Error de Micrófono',
+        description: 'No se pudo acceder al micrófono. Revisa los permisos.',
       });
     }
-  }, [ready]);
+  }, [modelReady, transcribe, toast]);
 
   const stopTranscription = useCallback(() => {
-    if (recorder.current) {
-        recorder.current.onstop = async () => {
-            const audioBlob = new Blob(audioChunks.current, { type: 'audio/wav' });
-            audioChunks.current = [];
-            await transcribe(audioBlob); // Process the final chunk
-            
-            // Final stop
-            setIsTranscribing(false);
-            recorder.current = null;
-            toast({ title: 'Recording Stopped' });
-        };
-        recorder.current.stop();
+    if (recorder.current && recorder.current.state === 'recording') {
+      recorder.current.stop();
+      recorder.current.stream.getTracks().forEach(track => track.stop());
+      recorder.current = null;
+      setIsTranscribing(false);
+      toast({ title: 'Grabación detenida' });
     }
-  }, []);
+  }, [toast]);
 
-  const transcribe = useCallback(async (audioBlob: Blob) => {
-    if (!model || audioBlob.size === 0) return;
-
-    try {
-        const audioContext = new AudioContext({
-            sampleRate: 16000
-        });
-        const arrayBuffer = await audioBlob.arrayBuffer();
-        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-        const pcmData = audioBuffer.getChannelData(0);
-        
-        const result = await model(pcmData, {
-            chunk_length_s: CHUNK_LENGTH_SECONDS,
-            batch_size: BATCH_SIZE,
-            language: 'spanish',
-            task: 'transcribe',
-        });
-
-        if (result && typeof result === 'object' && 'text' in result) {
-            setTranscript(prev => prev + result.text + ' ');
-        }
-    } catch (e) {
-        console.error('Transcription error', e);
-        toast({
-            variant: 'destructive',
-            title: 'Transcription Error',
-            description: 'Could not process the audio chunk.',
-        });
-    }
-  }, [model]);
-  
-
-  const memoizedValues = useMemo(() => ({
+  return {
     transcript,
+    setTranscript, // For student view
     isTranscribing,
-    loadingModel: loading,
-    modelReady: ready,
-    loadModel,
+    loadingModel,
+    modelReady,
     startTranscription,
     stopTranscription,
-  }), [transcript, isTranscribing, loading, ready, loadModel, startTranscription, stopTranscription]);
-
-  return memoizedValues;
+  };
 }
