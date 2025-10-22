@@ -4,6 +4,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { useApp } from '@/context/app-context';
 import TranscriptionPanel from './transcription/transcription-panel';
+import { TranscriptionProvider } from '@/context/transcription-context';
 
 export function StudentView() {
   const { setSessionId, sessionId, role } = useApp();
@@ -35,18 +36,20 @@ export function StudentView() {
   }
 
   return (
-    <div className="h-full flex flex-col">
-       <div className="bg-gray-100 p-3 border-b">
-        <div className="container mx-auto flex justify-between items-center">
-           <span className="font-semibold">Conectado a la sesión: {sessionId}</span>
+    <TranscriptionProvider>
+      <div className="h-full flex flex-col">
+        <div className="bg-gray-100 p-3 border-b">
+          <div className="container mx-auto flex justify-between items-center">
+            <span className="font-semibold">Conectado a la sesión: {sessionId}</span>
+          </div>
         </div>
-      </div>
-       <div className="flex-1 bg-white relative">
-        <div className="absolute inset-0 flex items-center justify-center">
-          <p className="text-gray-300 text-4xl font-bold">Esperando Transcripción...</p>
+        <div className="flex-1 bg-white relative">
+          <div className="absolute inset-0 flex items-center justify-center">
+            <p className="text-gray-300 text-4xl font-bold">Esperando Transcripción...</p>
+          </div>
         </div>
+        <TranscriptionPanel />
       </div>
-      <TranscriptionPanel />
-    </div>
+    </TranscriptionProvider>
   );
 }

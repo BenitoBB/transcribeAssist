@@ -1,6 +1,6 @@
 'use client';
 import { useWhisperTranscription } from '@/hooks/use-whisper-transcription';
-import React, { createContext, useContext, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, ReactNode, useEffect, useState } from 'react';
 import { useApp } from './app-context';
 
 interface TranscriptionContextType {
@@ -16,17 +16,18 @@ export function TranscriptionProvider({ children }: { children: ReactNode }) {
     const { role, dataChannel } = useApp();
     const { 
         transcript, 
-        setTranscript, 
         isTranscribing, 
         startTranscription, 
         stopTranscription,
         fullTranscript
     } = useWhisperTranscription();
+    
+    // Accumulate transcript for student from data channel
+    const [studentTranscript, setStudentTranscript] = useState('');
 
     // Effect for teacher to send transcript
     useEffect(() => {
         if (role === 'teacher' && dataChannel && dataChannel.readyState === 'open' && transcript) {
-            // Send only the latest part of the transcript
             dataChannel.send(transcript);
         }
     }, [transcript, role, dataChannel]);
@@ -35,15 +36,14 @@ export function TranscriptionProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         if (role === 'student' && dataChannel) {
             dataChannel.onmessage = (event) => {
-                // Student receives the new chunk and appends it
-                setTranscript(prev => prev + event.data);
+                setStudentTranscript(prev => prev + event.data);
             };
         }
-    }, [role, dataChannel, setTranscript]);
+    }, [role, dataChannel]);
 
 
     const value = {
-        transcript: role === 'teacher' ? fullTranscript : transcript,
+        transcript: role === 'teacher' ? fullTranscript : studentTranscript,
         isTranscribing,
         startTranscription: role === 'teacher' ? startTranscription : () => {},
         stopTranscription: role === 'teacher' ? stopTranscription : () => {},
