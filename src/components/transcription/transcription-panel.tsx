@@ -6,9 +6,11 @@ import { useApp } from '@/context/app-context';
 import { Button } from '../ui/button';
 import { Download, Mic, Settings, Square } from 'lucide-react';
 import { Badge } from '../ui/badge';
+import { useTranscription } from '@/context/transcription-context';
 
 export default function TranscriptionPanel() {
-  const { role, transcript, isTranscribing, startTranscription, stopTranscription, isPeerConnected } = useApp();
+  const { role, isPeerConnected } = useApp();
+  const { transcript, isTranscribing, startTranscription, stopTranscription } = useTranscription();
 
   const handleDownload = () => {
     const blob = new Blob([transcript], { type: 'text/plain' });

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState, useEffect } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { toast } from '@/hooks/use-toast';
 
 // Define types dynamically to avoid direct import issues on server
@@ -16,6 +16,7 @@ export function useWhisperTranscription() {
   // Model state
   const [modelReady, setModelReady] = useState(false);
   const modelRef = useRef<AutomaticSpeechRecognitionPipeline | null>(null);
+  const transformersRef = useRef<any>(null);
 
   // Transcription state
   const [transcript, setTranscript] = useState('');
@@ -24,9 +25,6 @@ export function useWhisperTranscription() {
   // MediaRecorder state
   const recorderRef = useRef<MediaRecorder | null>(null);
   const audioChunks = useRef<Blob[]>([]);
-  
-  // Transformers.js instance
-  const transformersRef = useRef<any>(null);
 
   // Function to load the model on demand
   const loadModel = useCallback(async () => {
