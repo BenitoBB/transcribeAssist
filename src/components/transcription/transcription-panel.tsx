@@ -81,7 +81,7 @@ export default function TranscriptionPanel() {
         </header>
         <Textarea
           value={transcript}
-          readOnly={role === 'student'}
+          readOnly
           className="flex-grow text-lg leading-relaxed p-4 border-0 rounded-none resize-none focus-visible:ring-0"
           placeholder={role === 'teacher' ? "La transcripción aparecerá aquí..." : "Esperando transcripción del maestro..."}
         />
