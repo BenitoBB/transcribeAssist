@@ -3,8 +3,14 @@ import { useState } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { useApp } from '@/context/app-context';
-import TranscriptionPanel from './transcription/transcription-panel';
 import { TranscriptionProvider } from '@/context/transcription-context';
+import dynamic from 'next/dynamic';
+
+const TranscriptionPanel = dynamic(() => import('./transcription/transcription-panel'), {
+  ssr: false,
+  loading: () => <p className="text-center">Cargando panel de transcripción...</p>
+});
+
 
 export function StudentView() {
   const { setSessionId, sessionId, role } = useApp();

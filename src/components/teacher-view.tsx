@@ -1,13 +1,19 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { Button } from './ui/button';
 import { useApp } from '@/context/app-context';
 import { nanoid } from 'nanoid';
 import { Copy } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import TranscriptionPanel from './transcription/transcription-panel';
 import { TranscriptionProvider } from '@/context/transcription-context';
+import dynamic from 'next/dynamic';
+
+const TranscriptionPanel = dynamic(() => import('./transcription/transcription-panel'), {
+  ssr: false,
+  loading: () => <p className="text-center">Cargando panel de transcripción...</p>
+});
+
 
 export function TeacherView() {
   const { setSessionId, sessionId, role } = useApp();

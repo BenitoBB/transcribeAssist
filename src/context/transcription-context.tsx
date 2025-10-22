@@ -28,6 +28,7 @@ export function TranscriptionProvider({ children }: { children: ReactNode }) {
     // Effect for teacher to send transcript
     useEffect(() => {
         if (role === 'teacher' && dataChannel && dataChannel.readyState === 'open' && transcript) {
+            // Send only the new part of the transcript
             dataChannel.send(transcript);
         }
     }, [transcript, role, dataChannel]);
@@ -35,9 +36,14 @@ export function TranscriptionProvider({ children }: { children: ReactNode }) {
     // Effect for student to receive transcript
     useEffect(() => {
         if (role === 'student' && dataChannel) {
-            dataChannel.onmessage = (event) => {
+            const handleMessage = (event: MessageEvent) => {
                 setStudentTranscript(prev => prev + event.data);
             };
+            dataChannel.addEventListener('message', handleMessage);
+
+            return () => {
+                dataChannel.removeEventListener('message', handleMessage);
+            }
         }
     }, [role, dataChannel]);
 
