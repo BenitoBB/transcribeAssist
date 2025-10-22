@@ -1,8 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { toast } from '@/hooks/use-toast';
 
+// Define types dynamically to avoid direct import issues on server
 type Pipeline = (...args: any[]) => any;
 type AutomaticSpeechRecognitionPipeline = any;
 type Env = {
@@ -13,92 +14,96 @@ type Env = {
 const CHUNK_LENGTH_SECONDS = 30;
 
 export function useWhisperTranscription() {
-  const [model, setModel] = useState<AutomaticSpeechRecognitionPipeline | null>(null);
-  const [loadingModel, setLoadingModel] = useState(false);
+  // Model state
   const [modelReady, setModelReady] = useState(false);
+  const modelRef = useRef<AutomaticSpeechRecognitionPipeline | null>(null);
 
+  // Transcription state
   const [transcript, setTranscript] = useState('');
   const [isTranscribing, setIsTranscribing] = useState(false);
 
-  const recorder = useRef<MediaRecorder | null>(null);
+  // MediaRecorder state
+  const recorderRef = useRef<MediaRecorder | null>(null);
   const audioChunks = useRef<Blob[]>([]);
-  const transformers = useRef<any>(null);
+  
+  // Transformers.js instance
+  const transformersRef = useRef<any>(null);
 
+  // Function to load the model on demand
   const loadModel = useCallback(async () => {
-    if (loadingModel || modelReady) return;
-    setLoadingModel(true);
-    try {
-      if (!transformers.current) {
-        const trans = await import('@xenova/transformers');
-        (trans.env as Env).allowLocalModels = false;
-        (trans.env as Env).allowRemoteModels = true;
-        transformers.current = trans;
-      }
-
-      const pipeline = transformers.current.pipeline;
-      const pipe = await pipeline('automatic-speech-recognition', 'openai/whisper-base');
-      setModel(() => pipe);
-      setModelReady(true);
-      toast({
-        title: 'Modelo de IA Cargado',
-        description: 'El motor de transcripción está listo para usarse.',
-      });
-    } catch (e) {
-      console.error('Failed to load model', e);
-      toast({
-        variant: 'destructive',
-        title: 'Error al Cargar el Modelo',
-        description: 'No se pudo cargar el modelo de IA de Whisper.',
-      });
-    } finally {
-      setLoadingModel(false);
+    if (modelRef.current) {
+        return modelRef.current;
     }
-  }, [loadingModel, modelReady, toast]);
 
-  useEffect(() => {
-    loadModel();
-  }, [loadModel]);
-
-  const transcribe = useCallback(
-    async (audioBlob: Blob) => {
-      if (!model || audioBlob.size === 0) return;
-
-      try {
-        const audioContext = new AudioContext({ sampleRate: 16000 });
-        const arrayBuffer = await audioBlob.arrayBuffer();
-        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-        const pcmData = audioBuffer.getChannelData(0);
-
-        const result = await model(pcmData, {
-          chunk_length_s: CHUNK_LENGTH_SECONDS,
-          language: 'spanish',
-          task: 'transcribe',
+    try {
+        toast({
+            title: 'Cargando modelo de IA...',
+            description: 'Esto puede tardar un momento. Solo se hará una vez.',
         });
         
-        if (result && typeof result === 'object' && 'text' in result && typeof result.text === 'string') {
-          setTranscript(prev => prev + result.text);
+        // Dynamically import transformers.js
+        if (!transformersRef.current) {
+            const trans = await import('@xenova/transformers');
+            (trans.env as Env).allowLocalModels = false;
+            transformersRef.current = trans;
         }
-      } catch (e) {
-        console.error('Transcription error', e);
-      }
-    },
-    [model]
-  );
-  
-  const startTranscription = useCallback(async () => {
-    if (!modelReady) {
-      toast({
-        title: 'Modelo no listo',
-        description: 'Por favor, espera a que el modelo de IA se cargue.',
-      });
-      return;
+
+        const pipeline = transformersRef.current.pipeline;
+        const pipe = await pipeline('automatic-speech-recognition', 'openai/whisper-base');
+        
+        modelRef.current = pipe;
+        setModelReady(true);
+        toast({
+            title: 'Modelo de IA Cargado',
+            description: 'El motor de transcripción está listo para usarse.',
+        });
+        return pipe;
+    } catch (e) {
+        console.error('Failed to load model', e);
+        toast({
+            variant: 'destructive',
+            title: 'Error al Cargar el Modelo',
+            description: 'No se pudo cargar el modelo de IA de Whisper.',
+        });
+        return null;
     }
-    if (recorder.current) return;
+  }, []);
+
+  const transcribe = useCallback(async (audioBlob: Blob) => {
+    if (!modelRef.current || audioBlob.size === 0) return;
+
+    try {
+      const audioContext = new AudioContext({ sampleRate: 16000 });
+      const arrayBuffer = await audioBlob.arrayBuffer();
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+      const pcmData = audioBuffer.getChannelData(0);
+
+      const result = await modelRef.current(pcmData, {
+        chunk_length_s: CHUNK_LENGTH_SECONDS,
+        language: 'spanish',
+        task: 'transcribe',
+      });
+      
+      if (result && typeof result === 'object' && 'text' in result && typeof result.text === 'string') {
+        setTranscript(prev => prev + result.text);
+      }
+    } catch (e) {
+      console.error('Transcription error', e);
+    }
+  }, []);
+
+  const startTranscription = useCallback(async () => {
+    const model = await loadModel();
+    if (!model) {
+        return;
+    }
+
+    if (recorderRef.current) return;
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-      recorder.current = mediaRecorder;
+      recorderRef.current = mediaRecorder;
 
       mediaRecorder.ondataavailable = (event) => {
         if(event.data.size > 0) {
@@ -121,23 +126,22 @@ export function useWhisperTranscription() {
         description: 'No se pudo acceder al micrófono. Revisa los permisos.',
       });
     }
-  }, [modelReady, transcribe, toast]);
+  }, [loadModel, transcribe]);
 
   const stopTranscription = useCallback(() => {
-    if (recorder.current && recorder.current.state === 'recording') {
-      recorder.current.stop();
-      recorder.current.stream.getTracks().forEach(track => track.stop());
-      recorder.current = null;
+    if (recorderRef.current && recorderRef.current.state === 'recording') {
+      recorderRef.current.stop();
+      recorderRef.current.stream.getTracks().forEach(track => track.stop());
+      recorderRef.current = null;
       setIsTranscribing(false);
       toast({ title: 'Grabación detenida' });
     }
-  }, [toast]);
+  }, []);
 
   return {
     transcript,
-    setTranscript, // For student view
+    setTranscript, // For student view to receive data
     isTranscribing,
-    loadingModel,
     modelReady,
     startTranscription,
     stopTranscription,
