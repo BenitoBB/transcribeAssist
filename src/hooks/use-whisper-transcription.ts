@@ -139,12 +139,11 @@ export function useWhisperTranscription() {
   }, []);
 
   return {
-    transcript,
-    fullTranscript,
-    setTranscript: setFullTranscript, // For student view to receive and accumulate data
-    isTranscribing,
-    modelReady,
+    transcript, // This is the new chunk
+    fullTranscript, // This is the accumulated text
     startTranscription,
     stopTranscription,
+    isTranscribing,
+    modelReady,
   };
 }

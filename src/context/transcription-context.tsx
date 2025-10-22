@@ -15,25 +15,21 @@ const TranscriptionContext = createContext<TranscriptionContextType | undefined>
 export function TranscriptionProvider({ children }: { children: ReactNode }) {
     const { role, dataChannel } = useApp();
     const { 
-        transcript, 
+        transcript: newTranscriptChunk, 
         isTranscribing, 
         startTranscription, 
         stopTranscription,
         fullTranscript
     } = useWhisperTranscription();
     
-    // Accumulate transcript for student from data channel
     const [studentTranscript, setStudentTranscript] = useState('');
 
-    // Effect for teacher to send transcript
     useEffect(() => {
-        if (role === 'teacher' && dataChannel && dataChannel.readyState === 'open' && transcript) {
-            // Send only the new part of the transcript
-            dataChannel.send(transcript);
+        if (role === 'teacher' && dataChannel && dataChannel.readyState === 'open' && newTranscriptChunk) {
+            dataChannel.send(newTranscriptChunk);
         }
-    }, [transcript, role, dataChannel]);
+    }, [newTranscriptChunk, role, dataChannel]);
 
-    // Effect for student to receive transcript
     useEffect(() => {
         if (role === 'student' && dataChannel) {
             const handleMessage = (event: MessageEvent) => {
@@ -46,7 +42,6 @@ export function TranscriptionProvider({ children }: { children: ReactNode }) {
             }
         }
     }, [role, dataChannel]);
-
 
     const value = {
         transcript: role === 'teacher' ? fullTranscript : studentTranscript,
