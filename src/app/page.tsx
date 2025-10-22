@@ -1,10 +1,15 @@
+import MainView from '@/components/transcription/main-view';
+
 export default function Home() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24">
-      <h1 className="text-4xl font-bold">Welcome to Firebase Studio</h1>
-      <p className="mt-4 text-lg text-muted-foreground">
-        Tell me what you want to build!
-      </p>
-    </main>
+    <div className="flex flex-col min-h-screen">
+      <header className="bg-gray-800 text-white p-4">
+        <h1 className="text-2xl font-bold">TranscrineAssist</h1>
+        <p className="text-sm">Transcripción Inclusiva para la Educación Superior</p>
+      </header>
+      <main className="flex-1 p-4">
+        <MainView />
+      </main>
+    </div>
   );
 }
