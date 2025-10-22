@@ -1,7 +1,7 @@
 'use client';
 
-import React, { createContext, useState, useContext, ReactNode, useCallback, useEffect } from 'react';
-import { getFirestore, doc, setDoc, onSnapshot, getDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import React, { createContext, useState, useContext, ReactNode, useCallback, useEffect, useRef } from 'react';
+import { getFirestore, doc, setDoc, onSnapshot, getDoc, updateDoc, deleteDoc, serverTimestamp, collection, addDoc, onSnapshot as onCollectionSnapshot } from 'firebase/firestore';
 import { firebaseApp } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 
@@ -13,7 +13,6 @@ interface AppContextType {
   sessionId: string | null;
   setSessionId: (id: string, role: Role) => void;
   isPeerConnected: boolean;
-  peerConnection: RTCPeerConnection | null;
   dataChannel: RTCDataChannel | null;
 }
 
@@ -30,107 +29,139 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [role, setRoleState] = useState<Role | null>(null);
   const [sessionId, setSessionIdState] = useState<string | null>(null);
   const [isPeerConnected, setIsPeerConnected] = useState(false);
-  const [peerConnection, setPeerConnection] = useState<RTCPeerConnection | null>(null);
+  const pc = useRef<RTCPeerConnection | null>(null);
   const [dataChannel, setDataChannel] = useState<RTCDataChannel | null>(null);
-
-  const { toast } = useToast();
   const db = getFirestore(firebaseApp);
+  const { toast } = useToast();
 
   const setRole = (role: Role) => {
     setRoleState(role);
   };
 
-  const createPeerConnection = useCallback(() => {
-    const pc = new RTCPeerConnection(ICE_SERVERS);
+  const setSessionId = (id: string, currentRole: Role) => {
+    setSessionIdState(id);
+    if (currentRole === 'teacher') {
+        setupAsTeacher(id);
+    } else {
+        setupAsStudent(id);
+    }
+  };
+  
+  const setupPeerConnection = useCallback((currentSessionId: string, currentRole: Role) => {
+    const peerConnection = new RTCPeerConnection(ICE_SERVERS);
 
-    pc.onicecandidate = (event) => {
-      if (event.candidate && sessionId) {
-        const candidatesCollection = doc(db, 'sessions', sessionId, role === 'teacher' ? 'teacherCandidates' : 'studentCandidates', event.candidate.sdpMid!);
-        updateDoc(candidatesCollection, { candidate: JSON.stringify(event.candidate) });
+    peerConnection.onicecandidate = async (event) => {
+      if (event.candidate) {
+        const candidatesCollectionRef = collection(db, 'sessions', currentSessionId, currentRole === 'teacher' ? 'teacherCandidates' : 'studentCandidates');
+        await addDoc(candidatesCollectionRef, event.candidate.toJSON());
+      }
+    };
+
+    peerConnection.onconnectionstatechange = () => {
+      if (peerConnection.connectionState === 'connected') {
+        setIsPeerConnected(true);
+        toast({ title: 'Conexión establecida' });
+      } else if (['disconnected', 'failed', 'closed'].includes(peerConnection.connectionState)) {
+        setIsPeerConnected(false);
+        toast({ title: 'Conexión perdida', variant: 'destructive' });
       }
     };
     
-    pc.ondatachannel = (event) => {
-      const receiveChannel = event.channel;
-      setDataChannel(receiveChannel);
-    };
+    if (currentRole === 'teacher') {
+      const channel = peerConnection.createDataChannel('transcript');
+      setDataChannel(channel);
+    } else {
+      peerConnection.ondatachannel = (event) => {
+        const receiveChannel = event.channel;
+        setDataChannel(receiveChannel);
+      };
+    }
 
-    pc.onconnectionstatechange = () => {
-      if (pc.connectionState === 'connected') {
-        setIsPeerConnected(true);
-      } else if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
-        setIsPeerConnected(false);
-      }
-    };
-
-    setPeerConnection(pc);
-    return pc;
-  }, [db, role, sessionId]);
+    pc.current = peerConnection;
+  }, [db, toast]);
 
 
-  const setSessionId = useCallback(async (id: string, currentRole: Role) => {
-    setSessionIdState(id);
-    const pc = createPeerConnection();
+  const setupAsTeacher = useCallback(async (id: string) => {
+    setupPeerConnection(id, 'teacher');
     const sessionRef = doc(db, 'sessions', id);
 
-    if (currentRole === 'teacher') {
-      const channel = pc.createDataChannel('transcript');
-      setDataChannel(channel);
+    const offerDescription = await pc.current!.createOffer();
+    await pc.current!.setLocalDescription(offerDescription);
 
-      const offerDescription = await pc.createOffer();
-      await pc.setLocalDescription(offerDescription);
+    const offer = {
+      sdp: offerDescription.sdp,
+      type: offerDescription.type,
+    };
 
-      const offer = {
-        sdp: offerDescription.sdp,
-        type: offerDescription.type,
+    await setDoc(sessionRef, { offer, createdAt: serverTimestamp() });
+
+    onSnapshot(sessionRef, (snapshot) => {
+      const data = snapshot.data();
+      if (data?.answer && !pc.current?.currentRemoteDescription) {
+        const answerDescription = new RTCSessionDescription(data.answer);
+        pc.current!.setRemoteDescription(answerDescription);
+      }
+    });
+
+    const studentCandidatesCollection = collection(db, 'sessions', id, 'studentCandidates');
+    onCollectionSnapshot(studentCandidatesCollection, (snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+            if (change.type === "added") {
+                const candidate = new RTCIceCandidate(change.doc.data());
+                pc.current!.addIceCandidate(candidate);
+            }
+        });
+    });
+
+  }, [db, setupPeerConnection]);
+
+  const setupAsStudent = useCallback(async (id: string) => {
+    setupPeerConnection(id, 'student');
+    const sessionRef = doc(db, 'sessions', id);
+    const docSnap = await getDoc(sessionRef);
+
+    if (docSnap.exists()) {
+      const { offer } = docSnap.data();
+      await pc.current!.setRemoteDescription(new RTCSessionDescription(offer));
+
+      const answerDescription = await pc.current!.createAnswer();
+      await pc.current!.setLocalDescription(answerDescription);
+
+      const answer = {
+        sdp: answerDescription.sdp,
+        type: answerDescription.type,
       };
 
-      await setDoc(sessionRef, { offer, createdAt: serverTimestamp() });
-
-      onSnapshot(sessionRef, (snapshot) => {
-        const data = snapshot.data();
-        if (data?.answer && !pc.currentRemoteDescription) {
-          const answerDescription = new RTCSessionDescription(data.answer);
-          pc.setRemoteDescription(answerDescription);
-        }
+      await updateDoc(sessionRef, { answer });
+      
+      const teacherCandidatesCollection = collection(db, 'sessions', id, 'teacherCandidates');
+      onCollectionSnapshot(teacherCandidatesCollection, (snapshot) => {
+          snapshot.docChanges().forEach((change) => {
+              if (change.type === "added") {
+                  const candidate = new RTCIceCandidate(change.doc.data());
+                  pc.current!.addIceCandidate(candidate);
+              }
+          });
       });
-    } else { // Student role
-      const docSnap = await getDoc(sessionRef);
-      if (docSnap.exists()) {
-        const { offer } = docSnap.data();
-        await pc.setRemoteDescription(new RTCSessionDescription(offer));
-
-        const answerDescription = await pc.createAnswer();
-        await pc.setLocalDescription(answerDescription);
-
-        const answer = {
-          sdp: answerDescription.sdp,
-          type: answerDescription.type,
-        };
-
-        await updateDoc(sessionRef, { answer });
-      } else {
-        toast({
-          variant: 'destructive',
-          title: 'Error de Sesión',
-          description: 'El código de sesión no es válido o ha expirado.'
-        });
-        setSessionIdState(null);
-      }
+    } else {
+      toast({
+        variant: 'destructive',
+        title: 'Error de Sesión',
+        description: 'El código de sesión no es válido o ha expirado.'
+      });
+      setSessionIdState(null);
     }
-  }, [createPeerConnection, db, toast]);
-  
-  // Cleanup session on component unmount
+  }, [db, setupPeerConnection, toast]);
+
   useEffect(() => {
     return () => {
       if (sessionId && role === 'teacher') {
         const sessionRef = doc(db, 'sessions', sessionId);
         deleteDoc(sessionRef);
       }
-      peerConnection?.close();
+      pc.current?.close();
     };
-  }, [sessionId, role, db, peerConnection]);
-
+  }, [sessionId, role, db]);
 
   const value = {
     role,
@@ -138,7 +169,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     sessionId,
     setSessionId,
     isPeerConnected,
-    peerConnection,
     dataChannel
   };
 

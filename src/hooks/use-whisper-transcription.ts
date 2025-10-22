@@ -20,6 +20,7 @@ export function useWhisperTranscription() {
 
   // Transcription state
   const [transcript, setTranscript] = useState('');
+  const [fullTranscript, setFullTranscript] = useState('');
   const [isTranscribing, setIsTranscribing] = useState(false);
 
   // MediaRecorder state
@@ -82,7 +83,8 @@ export function useWhisperTranscription() {
       });
       
       if (result && typeof result === 'object' && 'text' in result && typeof result.text === 'string') {
-        setTranscript(prev => prev + result.text);
+        setTranscript(result.text); // This will hold the latest chunk for sending via WebRTC
+        setFullTranscript(prev => prev + result.text); // This accumulates the whole text for the teacher's view
       }
     } catch (e) {
       console.error('Transcription error', e);
@@ -114,6 +116,7 @@ export function useWhisperTranscription() {
       mediaRecorder.start(5000); // Process audio every 5 seconds
       setIsTranscribing(true);
       setTranscript('');
+      setFullTranscript('');
       toast({ title: 'Grabación iniciada', description: 'La transcripción ha comenzado.' });
     } catch (e) {
       console.error('Failed to start recording', e);
@@ -137,7 +140,8 @@ export function useWhisperTranscription() {
 
   return {
     transcript,
-    setTranscript, // For student view to receive data
+    fullTranscript,
+    setTranscript: setFullTranscript, // For student view to receive and accumulate data
     isTranscribing,
     modelReady,
     startTranscription,

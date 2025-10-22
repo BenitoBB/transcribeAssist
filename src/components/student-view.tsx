@@ -10,7 +10,7 @@ export function StudentView() {
   const [inputSessionId, setInputSessionId] = useState('');
 
   const handleJoinSession = () => {
-    if (inputSessionId.trim()) {
+    if (inputSessionId.trim() && role) {
       setSessionId(inputSessionId.trim().toUpperCase(), role);
     }
   };

@@ -1,38 +1,38 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { useApp } from '@/context/app-context';
 import { nanoid } from 'nanoid';
-import { Copy, Mic, Square } from 'lucide-react';
+import { Copy } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import TranscriptionPanel from './transcription/transcription-panel';
 
 export function TeacherView() {
-  const { setSessionId, role } = useApp();
-  const [localSessionId, setLocalSessionId] = useState('');
+  const { setSessionId, sessionId, role } = useApp();
   const { toast } = useToast();
 
-  const handleStartSession = () => {
-    const newSessionId = nanoid(6).toUpperCase();
-    setLocalSessionId(newSessionId);
-    setSessionId(newSessionId, role);
-  };
+  useEffect(() => {
+    if (role === 'teacher' && !sessionId) {
+      const newSessionId = nanoid(6).toUpperCase();
+      setSessionId(newSessionId, role);
+    }
+  }, [role, sessionId, setSessionId]);
 
   const copySessionId = () => {
-    navigator.clipboard.writeText(localSessionId);
-    toast({
-      title: 'Copiado',
-      description: 'El código de la sesión ha sido copiado al portapapeles.',
-    });
+    if (sessionId) {
+      navigator.clipboard.writeText(sessionId);
+      toast({
+        title: 'Copiado',
+        description: 'El código de la sesión ha sido copiado al portapapeles.',
+      });
+    }
   };
 
-  if (!localSessionId) {
+  if (!sessionId) {
     return (
       <div className="flex items-center justify-center h-full -mt-16">
-        <Button onClick={handleStartSession} size="lg">
-          Iniciar Nueva Sesión de Clase
-        </Button>
+        <p>Generando sesión...</p>
       </div>
     );
   }
@@ -44,7 +44,7 @@ export function TeacherView() {
           <div className="flex items-center gap-4">
             <span className="font-semibold">Código de Sesión:</span>
             <div className="flex items-center gap-2 px-4 py-2 bg-white border rounded-md font-mono text-lg">
-              <span>{localSessionId}</span>
+              <span>{sessionId}</span>
               <Button onClick={copySessionId} variant="ghost" size="icon">
                 <Copy className="h-5 w-5" />
               </Button>

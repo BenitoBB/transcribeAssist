@@ -19,7 +19,8 @@ export function TranscriptionProvider({ children }: { children: ReactNode }) {
         setTranscript, 
         isTranscribing, 
         startTranscription, 
-        stopTranscription 
+        stopTranscription,
+        fullTranscript
     } = useWhisperTranscription();
 
     // Effect for teacher to send transcript
@@ -34,15 +35,15 @@ export function TranscriptionProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         if (role === 'student' && dataChannel) {
             dataChannel.onmessage = (event) => {
-                // Student receives the full transcript every time
-                setTranscript(event.data);
+                // Student receives the new chunk and appends it
+                setTranscript(prev => prev + event.data);
             };
         }
     }, [role, dataChannel, setTranscript]);
 
 
     const value = {
-        transcript,
+        transcript: role === 'teacher' ? fullTranscript : transcript,
         isTranscribing,
         startTranscription: role === 'teacher' ? startTranscription : () => {},
         stopTranscription: role === 'teacher' ? stopTranscription : () => {},
