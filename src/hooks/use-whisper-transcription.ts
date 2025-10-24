@@ -1,98 +1,73 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
 
-// Define types dynamically to avoid direct import issues on server
-type Pipeline = (...args: any[]) => any;
-type AutomaticSpeechRecognitionPipeline = any;
-
-const CHUNK_LENGTH_SECONDS = 30;
-
 export function useWhisperTranscription() {
-  // Model state
-  const [modelReady, setModelReady] = useState(false);
-  const modelRef = useRef<AutomaticSpeechRecognitionPipeline | null>(null);
-  
-  // Using a ref for transformers library to ensure it's only loaded once.
-  const transformersRef = useRef<any>(null);
-
   // Transcription state
   const [transcript, setTranscript] = useState('');
   const [fullTranscript, setFullTranscript] = useState('');
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const [modelReady, setModelReady] = useState(false);
 
   // MediaRecorder state
   const recorderRef = useRef<MediaRecorder | null>(null);
   const audioChunks = useRef<Blob[]>([]);
+  
+  // Web Worker reference
+  const workerRef = useRef<Worker | null>(null);
 
-  // Function to load the model on demand
-  const loadModel = useCallback(async () => {
-    if (modelRef.current) {
-        return modelRef.current;
+  // Initialize the Web Worker
+  useEffect(() => {
+    if (!workerRef.current) {
+        workerRef.current = new Worker(new URL('@/lib/transcription-worker.ts', import.meta.url), {
+            type: 'module'
+        });
     }
 
-    try {
-        toast({
-            title: 'Cargando modelo de IA...',
-            description: 'Esto puede tardar un momento. Solo se hará una vez.',
-        });
-        
-        // Dynamically import transformers.js only when needed
-        if (!transformersRef.current) {
-          const trans = await import('@xenova/transformers');
-          transformersRef.current = trans;
+    const onMessageReceived = (e: MessageEvent) => {
+        switch (e.data.status) {
+            case 'loading':
+                toast({
+                    title: 'Cargando modelo de IA...',
+                    description: 'Esto puede tardar un momento. Solo se hará una vez.',
+                });
+                break;
+            case 'ready':
+                setModelReady(true);
+                toast({
+                    title: 'Modelo de IA Cargado',
+                    description: 'El motor de transcripción está listo para usarse.',
+                });
+                break;
+            case 'result':
+                const newText = e.data.output.text;
+                setTranscript(newText); // This will hold the latest chunk for sending via WebRTC
+                setFullTranscript(prev => prev + newText); // This accumulates the whole text for the teacher's view
+                break;
+            case 'error':
+                 toast({
+                    variant: 'destructive',
+                    title: 'Error de Transcripción',
+                    description: e.data.data,
+                });
+                break;
         }
+    };
 
-        const pipeline = transformersRef.current.pipeline;
-        const pipe = await pipeline('automatic-speech-recognition', 'openai/whisper-base');
-        
-        modelRef.current = pipe;
-        setModelReady(true);
-        toast({
-            title: 'Modelo de IA Cargado',
-            description: 'El motor de transcripción está listo para usarse.',
-        });
-        return pipe;
-    } catch (e) {
-        console.error('Failed to load model', e);
-        toast({
-            variant: 'destructive',
-            title: 'Error al Cargar el Modelo',
-            description: 'No se pudo cargar el modelo de IA de Whisper.',
-        });
-        return null;
-    }
-  }, []);
+    workerRef.current.addEventListener('message', onMessageReceived);
 
-  const transcribe = useCallback(async (audioBlob: Blob) => {
-    if (!modelRef.current || audioBlob.size === 0) return;
-
-    try {
-      const audioContext = new AudioContext({ sampleRate: 16000 });
-      const arrayBuffer = await audioBlob.arrayBuffer();
-      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-      const pcmData = audioBuffer.getChannelData(0);
-
-      const result = await modelRef.current(pcmData, {
-        chunk_length_s: CHUNK_LENGTH_SECONDS,
-        language: 'spanish',
-        task: 'transcribe',
-      });
-      
-      if (result && typeof result === 'object' && 'text' in result && typeof result.text === 'string') {
-        setTranscript(result.text); // This will hold the latest chunk for sending via WebRTC
-        setFullTranscript(prev => prev + result.text); // This accumulates the whole text for the teacher's view
-      }
-    } catch (e) {
-      console.error('Transcription error', e);
-    }
+    // Clean up
+    return () => workerRef.current?.removeEventListener('message', onMessageReceived);
   }, []);
 
   const startTranscription = useCallback(async () => {
-    const model = await loadModel();
-    if (!model) {
-        return;
+    if (!workerRef.current) return;
+    
+    // First, message the worker to load the model if it hasn't already.
+    // The worker will manage the ready state.
+    if (!modelReady) {
+       workerRef.current.postMessage({ type: 'load' });
     }
 
     if (recorderRef.current) return;
@@ -108,9 +83,15 @@ export function useWhisperTranscription() {
         }
       };
 
-      mediaRecorder.onstop = () => {
+      mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunks.current, { type: 'audio/webm' });
-        transcribe(audioBlob);
+        const arrayBuffer = await audioBlob.arrayBuffer();
+        const audio = {
+            // @ts-ignore
+            buffer: arrayBuffer,
+            sampling_rate: 16000 // Whisper expects 16kHz
+        };
+        workerRef.current?.postMessage({ type: 'transcribe', audio: audio });
         audioChunks.current = [];
         if (isTranscribing) { // If still transcribing, start it again
             recorderRef.current?.start(5000);
@@ -130,7 +111,7 @@ export function useWhisperTranscription() {
         description: 'No se pudo acceder al micrófono. Revisa los permisos.',
       });
     }
-  }, [loadModel, transcribe, isTranscribing]);
+  }, [isTranscribing, modelReady]);
 
   const stopTranscription = useCallback(() => {
     if (recorderRef.current && recorderRef.current.state === 'recording') {
