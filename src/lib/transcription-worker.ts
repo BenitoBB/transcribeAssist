@@ -25,6 +25,14 @@ class TranscriptionPipeline {
     }
 }
 
+// Function to decode audio and resample if necessary
+async function decodeAndResample(audioData: ArrayBuffer): Promise<Float32Array> {
+    const audioContext = new AudioContext({ sampleRate: 16000 });
+    const decodedAudio = await audioContext.decodeAudioData(audioData);
+    return decodedAudio.getChannelData(0);
+}
+
+
 self.onmessage = async (event) => {
     const { type, audio } = event.data;
     
@@ -38,8 +46,9 @@ self.onmessage = async (event) => {
         if (!transcriber) return;
 
         try {
-            // Convert the ArrayBuffer to a Float32Array
-            const pcmData = new Float32Array(audio.buffer);
+             // The audio buffer is from a Blob, which is likely a webm or ogg file.
+            // We need to decode it to PCM Float32Array.
+            const pcmData = await decodeAndResample(audio.buffer);
             
             // Transcribe
             const output = await transcriber(pcmData, {
