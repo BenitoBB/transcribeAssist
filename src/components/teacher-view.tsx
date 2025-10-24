@@ -6,8 +6,8 @@ import { useApp } from '@/context/app-context';
 import { nanoid } from 'nanoid';
 import { Copy } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { TranscriptionProvider } from '@/context/transcription-context';
 import dynamic from 'next/dynamic';
+import { TranscriptionProvider } from '@/context/transcription-context';
 
 const TranscriptionPanel = dynamic(() => import('./transcription/transcription-panel'), {
   ssr: false,
@@ -45,31 +45,31 @@ export function TeacherView() {
   }
 
   return (
-    <TranscriptionProvider>
-      <div className="h-full flex flex-col">
-        <div className="bg-gray-100 p-3 border-b">
-          <div className="container mx-auto flex justify-between items-center">
-            <div className="flex items-center gap-4">
-              <span className="font-semibold">Código de Sesión:</span>
-              <div className="flex items-center gap-2 px-4 py-2 bg-white border rounded-md font-mono text-lg">
-                <span>{sessionId}</span>
-                <Button onClick={copySessionId} variant="ghost" size="icon">
-                  <Copy className="h-5 w-5" />
-                </Button>
-              </div>
-            </div>
-            <div>
-              {/* Connection status can go here */}
+    <div className="h-full flex flex-col">
+      <div className="bg-gray-100 p-3 border-b">
+        <div className="container mx-auto flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <span className="font-semibold">Código de Sesión:</span>
+            <div className="flex items-center gap-2 px-4 py-2 bg-white border rounded-md font-mono text-lg">
+              <span>{sessionId}</span>
+              <Button onClick={copySessionId} variant="ghost" size="icon">
+                <Copy className="h-5 w-5" />
+              </Button>
             </div>
           </div>
-        </div>
-        <div className="flex-1 bg-white relative">
-          <div className="absolute inset-0 flex items-center justify-center">
-            <p className="text-gray-300 text-4xl font-bold">Pizarrón</p>
+          <div>
+            {/* Connection status can go here */}
           </div>
         </div>
-        <TranscriptionPanel />
       </div>
-    </TranscriptionProvider>
+      <div className="flex-1 bg-white relative">
+        <div className="absolute inset-0 flex items-center justify-center">
+          <p className="text-gray-300 text-4xl font-bold">Pizarrón</p>
+        </div>
+      </div>
+      <TranscriptionProvider>
+        <TranscriptionPanel />
+      </TranscriptionProvider>
+    </div>
   );
 }

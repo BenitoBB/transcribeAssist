@@ -107,11 +107,17 @@ export function useWhisperTranscription() {
       mediaRecorder.ondataavailable = (event) => {
         if(event.data.size > 0) {
             audioChunks.current.push(event.data);
-            const audioBlob = new Blob(audioChunks.current, { type: 'audio/webm' });
-            transcribe(audioBlob);
-            audioChunks.current = [];
         }
       };
+
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunks.current, { type: 'audio/webm' });
+        transcribe(audioBlob);
+        audioChunks.current = [];
+        if (isTranscribing) { // If still transcribing, start it again
+            recorderRef.current?.start(5000);
+        }
+      }
 
       mediaRecorder.start(5000); // Process audio every 5 seconds
       setIsTranscribing(true);
@@ -126,7 +132,7 @@ export function useWhisperTranscription() {
         description: 'No se pudo acceder al micrófono. Revisa los permisos.',
       });
     }
-  }, [loadModel, transcribe]);
+  }, [loadModel, transcribe, isTranscribing]);
 
   const stopTranscription = useCallback(() => {
     if (recorderRef.current && recorderRef.current.state === 'recording') {

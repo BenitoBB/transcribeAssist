@@ -3,8 +3,8 @@ import { useState } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { useApp } from '@/context/app-context';
-import { TranscriptionProvider } from '@/context/transcription-context';
 import dynamic from 'next/dynamic';
+import { TranscriptionProvider } from '@/context/transcription-context';
 
 const TranscriptionPanel = dynamic(() => import('./transcription/transcription-panel'), {
   ssr: false,
@@ -42,20 +42,20 @@ export function StudentView() {
   }
 
   return (
-    <TranscriptionProvider>
-      <div className="h-full flex flex-col">
-        <div className="bg-gray-100 p-3 border-b">
-          <div className="container mx-auto flex justify-between items-center">
-            <span className="font-semibold">Conectado a la sesión: {sessionId}</span>
-          </div>
+    <div className="h-full flex flex-col">
+      <div className="bg-gray-100 p-3 border-b">
+        <div className="container mx-auto flex justify-between items-center">
+          <span className="font-semibold">Conectado a la sesión: {sessionId}</span>
         </div>
-        <div className="flex-1 bg-white relative">
-          <div className="absolute inset-0 flex items-center justify-center">
-            <p className="text-gray-300 text-4xl font-bold">Esperando Transcripción...</p>
-          </div>
-        </div>
-        <TranscriptionPanel />
       </div>
-    </TranscriptionProvider>
+      <div className="flex-1 bg-white relative">
+        <div className="absolute inset-0 flex items-center justify-center">
+          <p className="text-gray-300 text-4xl font-bold">Esperando Transcripción...</p>
+        </div>
+      </div>
+      <TranscriptionProvider>
+        <TranscriptionPanel />
+      </TranscriptionProvider>
+    </div>
   );
 }

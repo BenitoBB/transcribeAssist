@@ -26,9 +26,20 @@ export function TranscriptionProvider({ children }: { children: ReactNode }) {
 
     useEffect(() => {
         if (role === 'teacher' && dataChannel && dataChannel.readyState === 'open' && newTranscriptChunk) {
-            dataChannel.send(newTranscriptChunk);
+            // Send only the latest chunk
+            const fullSentText = newTranscriptChunk;
+            const lastChunk = fullSentText.replace(fullTranscript, '');
+            if(lastChunk) {
+                dataChannel.send(lastChunk);
+            }
         }
-    }, [newTranscriptChunk, role, dataChannel]);
+    }, [newTranscriptChunk, role, dataChannel, fullTranscript]);
+    
+    useEffect(() => {
+        if (role === 'teacher' && dataChannel && dataChannel.readyState === 'open' && fullTranscript) {
+            dataChannel.send(fullTranscript);
+        }
+    }, [fullTranscript, role, dataChannel]);
 
     useEffect(() => {
         if (role === 'student' && dataChannel) {
