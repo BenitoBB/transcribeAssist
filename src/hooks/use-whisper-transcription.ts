@@ -6,9 +6,6 @@ import { toast } from '@/hooks/use-toast';
 // Define types dynamically to avoid direct import issues on server
 type Pipeline = (...args: any[]) => any;
 type AutomaticSpeechRecognitionPipeline = any;
-type Env = {
-  allowLocalModels: boolean;
-};
 
 const CHUNK_LENGTH_SECONDS = 30;
 
@@ -16,6 +13,8 @@ export function useWhisperTranscription() {
   // Model state
   const [modelReady, setModelReady] = useState(false);
   const modelRef = useRef<AutomaticSpeechRecognitionPipeline | null>(null);
+  
+  // Using a ref for transformers library to ensure it's only loaded once.
   const transformersRef = useRef<any>(null);
 
   // Transcription state
@@ -42,7 +41,6 @@ export function useWhisperTranscription() {
         // Dynamically import transformers.js only when needed
         if (!transformersRef.current) {
           const trans = await import('@xenova/transformers');
-          (trans.env as Env).allowLocalModels = false;
           transformersRef.current = trans;
         }
 
