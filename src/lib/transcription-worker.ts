@@ -1,10 +1,11 @@
 /// <reference lib="webworker" />
 
-import { pipeline, env, RawImage } from '@xenova/transformers';
+import { pipeline, env } from '@xenova/transformers';
 
-// Since we're in a worker, we can safely set the environment variables.
-env.allowLocalModels = false;
-env.allowBrowser = false;
+// Al estar en un worker, podemos configurar el entorno de forma segura.
+// NOTA: No es necesario configurar `allowLocalModels` a `false`. 
+// La configuración por defecto ya prioriza los modelos remotos, que es lo que queremos.
+// Añadir `env.allowLocalModels = false;` puede causar problemas en algunos entornos de navegador.
 
 class TranscriptionPipeline {
     static task = 'automatic-speech-recognition';
@@ -25,8 +26,9 @@ class TranscriptionPipeline {
     }
 }
 
-// Function to decode audio and resample if necessary
+// Función para decodificar y remuestrear el audio a 16kHz
 async function decodeAndResample(audioData: ArrayBuffer): Promise<Float32Array> {
+    // La clave es crear el AudioContext con la sampleRate que Whisper espera.
     const audioContext = new AudioContext({ sampleRate: 16000 });
     const decodedAudio = await audioContext.decodeAudioData(audioData);
     return decodedAudio.getChannelData(0);
@@ -37,6 +39,7 @@ self.onmessage = async (event) => {
     const { type, audio } = event.data;
     
     if (type === 'load') {
+        // Carga el modelo la primera vez que se solicita.
         await TranscriptionPipeline.getInstance();
         return;
     }
@@ -46,11 +49,10 @@ self.onmessage = async (event) => {
         if (!transcriber) return;
 
         try {
-             // The audio buffer is from a Blob, which is likely a webm or ogg file.
-            // We need to decode it to PCM Float32Array.
+            // 1. Decodificar el buffer de audio (probablemente webm/ogg) a PCM Float32Array a 16kHz.
             const pcmData = await decodeAndResample(audio.buffer);
             
-            // Transcribe
+            // 2. Realizar la transcripción.
             const output = await transcriber(pcmData, {
                 chunk_length_s: 30,
                 language: 'spanish',
@@ -58,6 +60,7 @@ self.onmessage = async (event) => {
             });
 
             if (output) {
+                // 3. Enviar el resultado de vuelta al hilo principal.
                 postMessage({ status: 'result', output });
             }
         } catch (error: any) {
