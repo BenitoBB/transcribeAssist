@@ -18,7 +18,7 @@ export default function Home() {
             </p>
           </div>
         </header>
-        <main className="flex-1">
+        <main className="flex-1 flex flex-col items-center justify-center">
           {!role && <RoleSelector />}
           {role === 'teacher' && <TeacherView />}
           {role === 'student' && <StudentView />}
