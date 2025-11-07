@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { AccessibleButton } from '@/components/ui/AccessibleButton';
+import { Button } from '@/components/ui/button';
 
 export default function Home() {
   return (
@@ -15,23 +15,23 @@ export default function Home() {
         </p>
         <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-x-6">
           <Link href="/teacher" passHref>
-            <AccessibleButton
+            <Button
               size="lg"
               aria-label="Acceder a la vista de maestro"
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto text-lg h-12 px-10"
             >
               Entrar como Maestro
-            </AccessibleButton>
+            </Button>
           </Link>
           <Link href="/student" passHref>
-            <AccessibleButton
+            <Button
               size="lg"
               variant="outline"
               aria-label="Acceder a la vista de alumno"
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto text-lg h-12 px-10"
             >
               Entrar como Alumno
-            </AccessibleButton>
+            </Button>
           </Link>
         </div>
       </div>

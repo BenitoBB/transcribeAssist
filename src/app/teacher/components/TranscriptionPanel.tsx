@@ -11,6 +11,7 @@ import {
   ArrowBigRight,
   GripVertical,
   Maximize,
+  Copy,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -92,6 +93,14 @@ export function TranscriptionPanel() {
           <div className="flex items-center gap-2">
             <CardTitle className="text-base font-semibold">Transcripción</CardTitle>
           </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            aria-label="Copiar transcripción"
+          >
+            <Copy className="h-4 w-4" />
+          </Button>
         </CardHeader>
         <CardContent className="p-0 flex-grow">
           <ScrollArea className="h-full p-4">
@@ -136,6 +145,14 @@ export function TranscriptionPanel() {
               <CardTitle className="text-base font-semibold">Transcripción</CardTitle>
             </div>
             <div className="flex items-center gap-1">
+               <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                aria-label="Copiar transcripción"
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
               <Button
                 variant="ghost"
                 size="icon"
