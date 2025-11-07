@@ -10,6 +10,7 @@ import {
   ArrowBigLeft,
   ArrowBigRight,
   GripVertical,
+  Maximize,
 } from 'lucide-react';
 
 type Position = 'top' | 'bottom' | 'left' | 'right' | 'free';
@@ -28,12 +29,18 @@ export function TranscriptionPanel() {
         width: parentRef.current.offsetWidth,
         height: parentRef.current.offsetHeight,
       });
+      // Set initial position based on parent size
+      setPos({ 
+        x: (parentRef.current.offsetWidth - 500) / 2, 
+        y: (parentRef.current.offsetHeight - 300) / 2 
+      });
     }
   }, []);
 
   const handleSetPosition = (newPosition: Position) => {
     setPosition(newPosition);
-    const { width: parentW, height: parentH } = parentSize;
+    if (!parentRef.current) return;
+    const { offsetWidth: parentW, offsetHeight: parentH } = parentRef.current;
 
     switch (newPosition) {
       case 'top':
@@ -88,7 +95,7 @@ export function TranscriptionPanel() {
          enableResizing={!isDocked}
          disableDragging={isDocked}
        >
-         <Card className="h-full w-full flex flex-col shadow-2xl">
+         <Card className="h-full w-full flex flex-col shadow-2xl" onDoubleClick={() => isDocked && handleSetPosition('free')}>
            <CardHeader className="flex flex-row items-center justify-between p-3 border-b drag-handle cursor-move">
              <div className="flex items-center gap-2">
                <GripVertical className="text-muted-foreground" />
@@ -130,6 +137,15 @@ export function TranscriptionPanel() {
                  aria-label="Anclar derecha"
                >
                  <ArrowBigRight className="h-4 w-4" />
+               </Button>
+               <Button
+                 variant="ghost"
+                 size="icon"
+                 className="h-7 w-7"
+                 onClick={() => handleSetPosition('free')}
+                 aria-label="Posición inicial"
+               >
+                 <Maximize className="h-4 w-4" />
                </Button>
              </div>
            </CardHeader>
