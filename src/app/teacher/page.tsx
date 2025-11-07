@@ -1,19 +1,28 @@
+'use client';
+
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
+import { TranscriptionPanel } from './components/TranscriptionPanel';
 
 export default function TeacherPage() {
   return (
-    <div className="flex flex-col min-h-screen items-center justify-center bg-gray-50 relative p-4">
-      <Link href="/" className="absolute top-8 left-8">
-        <Button variant="outline" size="icon">
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-      </Link>
-      <h1 className="text-3xl font-bold">Vista del Maestro</h1>
-      <p className="text-gray-600 mt-2">
-        Aquí se mostrará el contenido para el maestro.
-      </p>
+    <div className="relative h-screen w-screen overflow-hidden bg-gray-50">
+      <div className="absolute top-8 left-8 z-20">
+        <Link href="/">
+          <Button variant="outline" size="icon">
+            <ArrowLeft className="h-4 w-4" />
+            <span className="sr-only">Volver</span>
+          </Button>
+        </Link>
+      </div>
+      <div className="p-4 h-full w-full">
+        <h1 className="text-3xl font-bold text-center">Vista del Maestro</h1>
+        <p className="text-gray-600 mt-2 text-center">
+          Aquí puedes mover y redimensionar el panel de transcripción.
+        </p>
+        <TranscriptionPanel />
+      </div>
     </div>
   );
 }
