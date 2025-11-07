@@ -1,7 +1,7 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { AccessibleButton } from '@/components/ui/AccessibleButton';
 
 export default function Home() {
   return (
@@ -14,13 +14,24 @@ export default function Home() {
           Elige si quieres acceder como maestro o como alumno.
         </p>
         <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-x-6">
-          <Link href="/teacher" className="w-full sm:w-auto">
-            <Button size="lg" className="w-full">Entrar como Maestro</Button>
+          <Link href="/teacher" passHref>
+            <AccessibleButton
+              size="lg"
+              aria-label="Acceder a la vista de maestro"
+              className="w-full sm:w-auto"
+            >
+              Entrar como Maestro
+            </AccessibleButton>
           </Link>
-          <Link href="/student" className="w-full sm:w-auto">
-            <Button size="lg" variant="outline" className="w-full">
+          <Link href="/student" passHref>
+            <AccessibleButton
+              size="lg"
+              variant="outline"
+              aria-label="Acceder a la vista de alumno"
+              className="w-full sm:w-auto"
+            >
               Entrar como Alumno
-            </Button>
+            </AccessibleButton>
           </Link>
         </div>
       </div>
