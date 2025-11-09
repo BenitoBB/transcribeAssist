@@ -5,6 +5,11 @@ import { Rnd } from 'react-rnd';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import {
   ArrowBigUp,
   ArrowBigDown,
   ArrowBigLeft,
@@ -153,51 +158,86 @@ export function TranscriptionPanel() {
             </div>
             <div className="flex items-center gap-1">
                <SettingsButton />
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => handleSetPosition('top')}
-                aria-label="Anclar arriba"
-              >
-                <ArrowBigUp className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => handleSetPosition('bottom')}
-                aria-label="Anclar abajo"
-              >
-                <ArrowBigDown className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => handleSetPosition('left')}
-                aria-label="Anclar izquierda"
-              >
-                <ArrowBigLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => handleSetPosition('right')}
-                aria-label="Anclar derecha"
-              >
-                <ArrowBigRight className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => handleSetPosition('free')}
-                aria-label="Posición inicial"
-              >
-                <Maximize className="h-4 w-4" />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => handleSetPosition('top')}
+                    aria-label="Anclar arriba"
+                  >
+                    <ArrowBigUp className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Anclar arriba</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => handleSetPosition('bottom')}
+                    aria-label="Anclar abajo"
+                  >
+                    <ArrowBigDown className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Anclar abajo</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => handleSetPosition('left')}
+                    aria-label="Anclar izquierda"
+                  >
+                    <ArrowBigLeft className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Anclar a la izquierda</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => handleSetPosition('right')}
+                    aria-label="Anclar derecha"
+                  >
+                    <ArrowBigRight className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Anclar a la derecha</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => handleSetPosition('free')}
+                    aria-label="Posición inicial"
+                  >
+                    <Maximize className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Modo flotante</p>
+                </TooltipContent>
+              </Tooltip>
             </div>
           </CardHeader>
           <CardContent className="p-0 flex-grow">

@@ -5,6 +5,7 @@ import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { TranscriptionProvider } from '@/context/TranscriptionContext';
 import { StyleProvider, useStyle } from '@/context/StyleContext';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -33,7 +34,9 @@ export default function RootLayout({
   return (
     <StyleProvider>
       <TranscriptionProvider>
-        <ThemedLayout>{children}</ThemedLayout>
+        <TooltipProvider>
+          <ThemedLayout>{children}</ThemedLayout>
+        </TooltipProvider>
       </TranscriptionProvider>
     </StyleProvider>
   );

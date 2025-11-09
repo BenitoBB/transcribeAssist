@@ -20,6 +20,11 @@ import { useTranscription } from '@/hooks/use-transcription';
 import { useStyle } from '@/context/StyleContext';
 import { useToast } from '@/hooks/use-toast';
 import { SettingsButton } from '@/components/settings/SettingsButton';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 export default function StudentPage() {
   const { transcription } = useTranscription();
@@ -54,10 +59,17 @@ export default function StudentPage() {
     <div className="flex min-h-screen flex-col items-center justify-center p-4">
       <div className="absolute top-4 left-4 sm:top-8 sm:left-8 flex items-center gap-4">
         <Link href="/">
-          <Button variant="outline" size="icon">
-            <ArrowLeft className="h-4 w-4" />
-            <span className="sr-only">Volver</span>
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="outline" size="icon">
+                <ArrowLeft className="h-4 w-4" />
+                <span className="sr-only">Volver</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Volver a la página principal</p>
+            </TooltipContent>
+          </Tooltip>
         </Link>
       </div>
 
@@ -76,12 +88,19 @@ export default function StudentPage() {
           <div className="flex items-center gap-2">
             <SettingsButton />
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <MoreVertical className="h-4 w-4" />
-                  <span className="sr-only">Más opciones</span>
-                </Button>
-              </DropdownMenuTrigger>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <MoreVertical className="h-4 w-4" />
+                      <span className="sr-only">Más opciones</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Más opciones</p>
+                </TooltipContent>
+              </Tooltip>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onSelect={handleCopy}>
                   <Copy className="mr-2 h-4 w-4" />
