@@ -11,14 +11,17 @@ import {
   ArrowBigRight,
   GripVertical,
   Maximize,
-  Copy,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useTranscription } from '@/hooks/use-transcription';
+import { useStyle } from '@/context/StyleContext';
 
 type Position = 'top' | 'bottom' | 'left' | 'right' | 'free';
 
 export function TranscriptionPanel() {
+  const { transcription } = useTranscription();
+  const { style, themeClass } = useStyle();
+
   const [position, setPosition] = useState<Position>('free');
   const [size, setSize] = useState({ width: 500, height: 300 });
   const [pos, setPos] = useState({ x: 100, y: 100 });
@@ -86,29 +89,34 @@ export function TranscriptionPanel() {
 
   const isDocked = position !== 'free';
 
+  const renderContent = () => (
+    <ScrollArea className="h-full">
+      <div
+        className="p-4 prose"
+        style={{
+          fontSize: `${style.fontSize}px`,
+          lineHeight: style.lineHeight,
+          letterSpacing: `${style.letterSpacing}px`,
+          fontFamily: style.fontFamily,
+          color: 'var(--custom-text-color)',
+          backgroundColor: 'var(--custom-background-color)',
+          height: '100%',
+        }}
+      >
+        <p>{isDocked && !isMobile ? "Haz doble clic en la barra superior para liberar el panel." : transcription}</p>
+      </div>
+    </ScrollArea>
+  );
+
   if (isMobile) {
     return (
-      <Card className="fixed bottom-0 left-0 right-0 h-[40vh] w-full flex flex-col shadow-2xl rounded-b-none border-t">
+      <Card className={`fixed bottom-0 left-0 right-0 h-[40vh] w-full flex flex-col shadow-2xl rounded-b-none border-t ${themeClass}`}>
         <CardHeader className="flex flex-row items-center justify-between p-3 border-b">
           <div className="flex items-center gap-2">
             <CardTitle className="text-base font-semibold">Transcripción</CardTitle>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7"
-            aria-label="Copiar transcripción"
-          >
-            <Copy className="h-4 w-4" />
-          </Button>
         </CardHeader>
-        <CardContent className="p-0 flex-grow">
-          <ScrollArea className="h-full p-4">
-             <p className="text-sm text-muted-foreground">
-              El texto de la transcripción aparecerá aquí...
-             </p>
-          </ScrollArea>
-        </CardContent>
+        <CardContent className="p-0 flex-grow">{renderContent()}</CardContent>
       </Card>
     );
   }
@@ -138,21 +146,13 @@ export function TranscriptionPanel() {
         enableResizing={!isDocked}
         disableDragging={isDocked}
       >
-        <Card className="h-full w-full flex flex-col shadow-2xl" onDoubleClick={() => isDocked && handleSetPosition('free')}>
+        <Card className={`h-full w-full flex flex-col shadow-2xl ${themeClass}`} onDoubleClick={() => isDocked && handleSetPosition('free')}>
           <CardHeader className="flex flex-row items-center justify-between p-3 border-b drag-handle cursor-move">
             <div className="flex items-center gap-2">
               <GripVertical className="text-muted-foreground" />
               <CardTitle className="text-base font-semibold">Transcripción</CardTitle>
             </div>
             <div className="flex items-center gap-1">
-               <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                aria-label="Copiar transcripción"
-              >
-                <Copy className="h-4 w-4" />
-              </Button>
               <Button
                 variant="ghost"
                 size="icon"
@@ -201,11 +201,7 @@ export function TranscriptionPanel() {
             </div>
           </CardHeader>
           <CardContent className="p-0 flex-grow">
-            <ScrollArea className="h-full p-4">
-              <p className="text-sm text-muted-foreground">
-                {isDocked ? "Haz doble clic en la barra superior para liberar el panel." : "El texto de la transcripción aparecerá aquí..."}
-              </p>
-            </ScrollArea>
+            {renderContent()}
           </CardContent>
         </Card>
       </Rnd>

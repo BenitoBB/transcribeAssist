@@ -3,6 +3,8 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { TranscriptionProvider } from '@/context/TranscriptionContext';
+import { StyleProvider } from '@/context/StyleContext';
+import { SettingsButton } from '@/components/settings/SettingsButton';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -19,10 +21,15 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <TranscriptionProvider>
-          {children}
-          <Toaster />
-        </TranscriptionProvider>
+        <StyleProvider>
+          <TranscriptionProvider>
+            {children}
+            <Toaster />
+            <div className="absolute bottom-4 right-4 z-50">
+              <SettingsButton />
+            </div>
+          </TranscriptionProvider>
+        </StyleProvider>
       </body>
     </html>
   );
