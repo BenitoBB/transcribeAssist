@@ -10,10 +10,10 @@ import { useStyle } from '@/context/StyleContext';
 
 export default function StudentPage() {
   const { transcription } = useTranscription();
-  const { style, themeClass } = useStyle();
+  const { style } = useStyle();
 
   return (
-    <div className={`flex min-h-screen flex-col items-center justify-center p-4 ${themeClass}`}>
+    <div className="flex min-h-screen flex-col items-center justify-center p-4">
       <Link href="/" className="absolute top-4 left-4 sm:top-8 sm:left-8">
         <Button variant="outline" size="icon">
           <ArrowLeft className="h-4 w-4" />
@@ -34,15 +34,14 @@ export default function StudentPage() {
         <CardContent className="p-0 flex-grow">
           <ScrollArea className="h-full w-full">
             <div
-              className="p-4 prose"
+              className="p-4 prose bg-transparent"
               style={{
                 fontSize: `${style.fontSize}px`,
                 lineHeight: style.lineHeight,
                 letterSpacing: `${style.letterSpacing}px`,
                 fontFamily: style.fontFamily,
-                color: 'var(--custom-text-color)',
-                backgroundColor: 'var(--custom-background-color)',
                 height: '100%',
+                color: 'inherit',
               }}
             >
               <p>{transcription}</p>

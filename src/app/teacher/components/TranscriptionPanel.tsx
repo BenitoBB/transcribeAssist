@@ -20,7 +20,7 @@ type Position = 'top' | 'bottom' | 'left' | 'right' | 'free';
 
 export function TranscriptionPanel() {
   const { transcription } = useTranscription();
-  const { style, themeClass } = useStyle();
+  const { style } = useStyle();
 
   const [position, setPosition] = useState<Position>('free');
   const [size, setSize] = useState({ width: 500, height: 300 });
@@ -92,15 +92,14 @@ export function TranscriptionPanel() {
   const renderContent = () => (
     <ScrollArea className="h-full">
       <div
-        className="p-4 prose"
+        className="p-4 prose bg-transparent"
         style={{
           fontSize: `${style.fontSize}px`,
           lineHeight: style.lineHeight,
           letterSpacing: `${style.letterSpacing}px`,
           fontFamily: style.fontFamily,
-          color: 'var(--custom-text-color)',
-          backgroundColor: 'var(--custom-background-color)',
           height: '100%',
+          color: 'inherit',
         }}
       >
         <p>{isDocked && !isMobile ? "Haz doble clic en la barra superior para liberar el panel." : transcription}</p>
@@ -110,7 +109,7 @@ export function TranscriptionPanel() {
 
   if (isMobile) {
     return (
-      <Card className={`fixed bottom-0 left-0 right-0 h-[40vh] w-full flex flex-col shadow-2xl rounded-b-none border-t ${themeClass}`}>
+      <Card className="fixed bottom-0 left-0 right-0 h-[40vh] w-full flex flex-col shadow-2xl rounded-b-none border-t">
         <CardHeader className="flex flex-row items-center justify-between p-3 border-b">
           <div className="flex items-center gap-2">
             <CardTitle className="text-base font-semibold">Transcripción</CardTitle>
@@ -146,7 +145,7 @@ export function TranscriptionPanel() {
         enableResizing={!isDocked}
         disableDragging={isDocked}
       >
-        <Card className={`h-full w-full flex flex-col shadow-2xl ${themeClass}`} onDoubleClick={() => isDocked && handleSetPosition('free')}>
+        <Card className="h-full w-full flex flex-col shadow-2xl" onDoubleClick={() => isDocked && handleSetPosition('free')}>
           <CardHeader className="flex flex-row items-center justify-between p-3 border-b drag-handle cursor-move">
             <div className="flex items-center gap-2">
               <GripVertical className="text-muted-foreground" />

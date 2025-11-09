@@ -4,13 +4,11 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { TranscriptionPanel } from './components/TranscriptionPanel';
-import { useStyle } from '@/context/StyleContext';
 
 export default function TeacherPage() {
-  const { themeClass } = useStyle();
 
   return (
-    <div className={`relative h-screen w-screen overflow-hidden ${themeClass}`}>
+    <div className="relative h-screen w-screen overflow-hidden">
       <div className="absolute top-4 left-4 sm:top-8 sm:left-8 z-20">
         <Link href="/">
           <Button variant="outline" size="icon">

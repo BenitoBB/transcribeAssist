@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useState, useContext, ReactNode, useMemo, useEffect } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 
 // Tipos de temas
 export type Theme = 'light' | 'dark' | 'protanopia' | 'deuteranopia' | 'tritanopia' | 'accessible';
@@ -19,7 +19,6 @@ interface StyleContextType {
   setStyle: React.Dispatch<React.SetStateAction<CustomStyle>>;
   theme: Theme;
   setTheme: React.Dispatch<React.SetStateAction<Theme>>;
-  themeClass: string;
 }
 
 // Estilos por defecto
@@ -41,62 +40,20 @@ interface StyleProviderProps {
 export const StyleProvider: React.FC<StyleProviderProps> = ({ children }) => {
   const [style, setStyle] = useState<CustomStyle>(defaultStyle);
   const [theme, setTheme] = useState<Theme>('light');
-
-  // Genera las clases y variables CSS basadas en el tema actual
-  const themeClass = useMemo(() => {
-    return `theme-${theme}`;
-  }, [theme]);
-
-  useEffect(() => {
-    // This code now runs only on the client
-    let customProperties = {};
-    switch (theme) {
-      case 'dark':
-        customProperties = { '--custom-background-color': '#1a1a1a', '--custom-text-color': '#e0e0e0' };
-        break;
-      case 'protanopia': // Rojo débil
-        customProperties = { '--custom-background-color': '#f0f0f0', '--custom-text-color': '#005a9e' };
-        break;
-      case 'deuteranopia': // Verde débil
-        customProperties = { '--custom-background-color': '#f2f2f2', '--custom-text-color': '#575757' };
-        break;
-      case 'tritanopia': // Azul débil
-        customProperties = { '--custom-background-color': '#fffbe6', '--custom-text-color': '#ff0000' };
-        break;
-      case 'accessible': // Alto contraste
-        customProperties = { '--custom-background-color': '#000000', '--custom-text-color': '#ffff00' };
-        break;
-      case 'light':
-      default:
-        customProperties = { '--custom-background-color': '#ffffff', '--custom-text-color': '#000000' };
-        break;
-    }
-    
-    let styleTag = document.getElementById('custom-theme-styles');
-    if (!styleTag) {
-      styleTag = document.createElement('style');
-      styleTag.id = 'custom-theme-styles';
-      document.head.appendChild(styleTag);
-    }
-    const css = `:root { ${Object.entries(customProperties).map(([key, value]) => `${key}: ${value};`).join(' ')} }`;
-    styleTag.innerHTML = css;
-
-  }, [theme]);
   
   useEffect(() => {
-    // This code also now runs only on the client
+    // Cargar la fuente Open Dyslexic dinámicamente si es necesario
     let fontLink = document.querySelector('link[href*="fonts.googleapis.com"]');
     if (!fontLink) {
         fontLink = document.createElement('link');
-        (fontLink as HTMLLinkElement).href = "https://fonts.googleapis.com/css2?family=Open+Sans&family=Roboto&family=Inter&display=swap";
+        (fontLink as HTMLLinkElement).href = "https://fonts.googleapis.com/css2?family=Open+Sans&family=Roboto&family=Inter&family=Open+Dyslexic&display=swap";
         (fontLink as HTMLLinkElement).rel = "stylesheet";
         document.head.appendChild(fontLink);
     }
-    // Open Dyslexic es más dificil de encontrar en CDNs, se recomienda tenerla local
   }, []);
 
 
-  const value = { style, setStyle, theme, setTheme, themeClass };
+  const value = { style, setStyle, theme, setTheme };
 
   return <StyleContext.Provider value={value}>{children}</StyleContext.Provider>;
 };
