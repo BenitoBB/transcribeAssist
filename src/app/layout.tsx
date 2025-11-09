@@ -1,12 +1,10 @@
 'use client';
 
-import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { TranscriptionProvider } from '@/context/TranscriptionContext';
 import { StyleProvider, useStyle } from '@/context/StyleContext';
-import { SettingsButton } from '@/components/settings/SettingsButton';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -22,9 +20,6 @@ function ThemedLayout({ children }: { children: React.ReactNode }) {
       <body className={inter.className}>
         {children}
         <Toaster />
-        <div className="absolute bottom-4 right-4 z-50">
-          <SettingsButton />
-        </div>
       </body>
     </html>
   );

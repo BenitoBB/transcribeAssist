@@ -15,6 +15,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useTranscription } from '@/hooks/use-transcription';
 import { useStyle } from '@/context/StyleContext';
+import { SettingsButton } from '@/components/settings/SettingsButton';
 
 type Position = 'top' | 'bottom' | 'left' | 'right' | 'free';
 
@@ -102,7 +103,7 @@ export function TranscriptionPanel() {
           color: 'inherit',
         }}
       >
-        <p>{isDocked && !isMobile ? "Haz doble clic en la barra superior para liberar el panel." : transcription}</p>
+        <p>{transcription}</p>
       </div>
     </ScrollArea>
   );
@@ -111,9 +112,8 @@ export function TranscriptionPanel() {
     return (
       <Card className="fixed bottom-0 left-0 right-0 h-[40vh] w-full flex flex-col shadow-2xl rounded-b-none border-t">
         <CardHeader className="flex flex-row items-center justify-between p-3 border-b">
-          <div className="flex items-center gap-2">
-            <CardTitle className="text-base font-semibold">Transcripción</CardTitle>
-          </div>
+          <CardTitle className="text-base font-semibold">Transcripción</CardTitle>
+          <SettingsButton />
         </CardHeader>
         <CardContent className="p-0 flex-grow">{renderContent()}</CardContent>
       </Card>
@@ -152,6 +152,7 @@ export function TranscriptionPanel() {
               <CardTitle className="text-base font-semibold">Transcripción</CardTitle>
             </div>
             <div className="flex items-center gap-1">
+               <SettingsButton />
               <Button
                 variant="ghost"
                 size="icon"

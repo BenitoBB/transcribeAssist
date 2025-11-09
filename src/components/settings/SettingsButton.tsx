@@ -15,8 +15,8 @@ export function SettingsButton() {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="outline" size="icon" className="rounded-full h-12 w-12 shadow-lg">
-          <Settings className="h-6 w-6" />
+        <Button variant="ghost" size="icon" className="h-8 w-8">
+          <Settings className="h-4 w-4" />
           <span className="sr-only">Abrir ajustes de visualización</span>
         </Button>
       </DialogTrigger>

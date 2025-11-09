@@ -2,24 +2,65 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft } from 'lucide-react';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { ArrowLeft, MoreVertical, Copy, FileDown } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useTranscription } from '@/hooks/use-transcription';
 import { useStyle } from '@/context/StyleContext';
+import { useToast } from '@/hooks/use-toast';
+import { SettingsButton } from '@/components/settings/SettingsButton';
 
 export default function StudentPage() {
   const { transcription } = useTranscription();
   const { style } = useStyle();
+  const { toast } = useToast();
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(transcription);
+    toast({
+      title: 'Copiado',
+      description: 'La transcripción ha sido copiada al portapapeles.',
+    });
+  };
+
+  const handleSave = () => {
+    const blob = new Blob([transcription], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'transcripcion.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast({
+        title: 'Guardado',
+        description: 'La transcripción se está descargando como transcripcion.txt.',
+      });
+  };
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-4">
-      <Link href="/" className="absolute top-4 left-4 sm:top-8 sm:left-8">
-        <Button variant="outline" size="icon">
-          <ArrowLeft className="h-4 w-4" />
-          <span className="sr-only">Volver</span>
-        </Button>
-      </Link>
+      <div className="absolute top-4 left-4 sm:top-8 sm:left-8 flex items-center gap-4">
+        <Link href="/">
+          <Button variant="outline" size="icon">
+            <ArrowLeft className="h-4 w-4" />
+            <span className="sr-only">Volver</span>
+          </Button>
+        </Link>
+      </div>
+
       <div className="text-center mb-6 sm:mb-8">
         <h1 className="text-2xl sm:text-3xl font-bold">Vista del Alumno</h1>
         <p className="mt-2 text-sm sm:text-base">
@@ -29,7 +70,30 @@ export default function StudentPage() {
 
       <Card className="w-full max-w-4xl h-[60vh] flex flex-col shadow-lg">
         <CardHeader className="flex flex-row items-center justify-between p-3 border-b">
-          <CardTitle className="text-base font-semibold">Transcripción</CardTitle>
+          <CardTitle className="text-base font-semibold">
+            Transcripción
+          </CardTitle>
+          <div className="flex items-center gap-2">
+            <SettingsButton />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <MoreVertical className="h-4 w-4" />
+                  <span className="sr-only">Más opciones</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onSelect={handleCopy}>
+                  <Copy className="mr-2 h-4 w-4" />
+                  <span>Copiar al portapapeles</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={handleSave}>
+                  <FileDown className="mr-2 h-4 w-4" />
+                  <span>Guardar como .txt</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </CardHeader>
         <CardContent className="p-0 flex-grow">
           <ScrollArea className="h-full w-full">
