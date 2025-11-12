@@ -1,76 +1,18 @@
 /**
  * ===================================================================================
- * Lógica de Transcripción del Lado del Cliente con @xenova/transformers.js
+ * Lógica de Transcripción del Lado del Cliente con Web Speech API
  * ===================================================================================
  * Este archivo SÓLO debe ser importado en componentes de cliente ('use client').
- * Contiene la lógica para ejecutar un modelo de Whisper directamente en el navegador.
+ * Contiene la lógica para usar la API de reconocimiento de voz nativa del navegador.
  */
 
-import { pipeline } from '@xenova/transformers';
-
-// Este script se ejecutará en un AudioWorklet, un hilo separado para procesar audio.
-const workletCode = `
-class VFSProcessor extends AudioWorkletProcessor {
-  constructor(options) {
-    super();
-    this.bufferSize = options.processorOptions.bufferSize || 4096;
-    this.buffer = new Float32Array(this.bufferSize);
-    this.bufferPos = 0;
-    this.isRecording = false;
-
-    this.port.onmessage = (event) => {
-      if (event.data.isRecording !== undefined) {
-        this.isRecording = event.data.isRecording;
-        if (!this.isRecording) {
-            this.flush();
-        }
-      }
-    };
-  }
-
-  // Envia lo que quede en el buffer
-  flush() {
-    if (this.bufferPos > 0) {
-        const buffer = this.buffer.slice(0, this.bufferPos);
-        this.port.postMessage(buffer);
-        this.bufferPos = 0;
-    }
-  }
-
-  process(inputs, outputs, parameters) {
-    if (!this.isRecording) {
-      return true;
-    }
-
-    const input = inputs[0];
-    if (input && input.length > 0) {
-      const inputData = input[0];
-      for (let i = 0; i < inputData.length; i++) {
-        this.buffer[this.bufferPos++] = inputData[i];
-        if (this.bufferPos === this.bufferSize) {
-          this.port.postMessage(this.buffer);
-          this.bufferPos = 0;
-        }
-      }
-    }
-    return true; // Mantener el procesador activo
-  }
-}
-registerProcessor('vfs-processor', VFSProcessor);
-`;
-
-
-let transcriber: any = null;
-let audioContext: AudioContext | null = null;
-let mediaStream: MediaStream | null = null;
-let processorNode: AudioWorkletNode | null = null;
+let recognition: SpeechRecognition | null = null;
 let isRecording = false;
-let isModelLoading = false;
+let finalTranscription = '';
 
 // Un simple sistema de eventos para notificar a los componentes de React sobre las actualizaciones.
 type TranscriptionCallback = (text: string) => void;
 const listeners: TranscriptionCallback[] = [];
-let fullTranscription = '';
 
 /**
  * Permite a los componentes de React suscribirse a las actualizaciones de la transcripción.
@@ -96,33 +38,6 @@ function notifyListeners(text: string) {
 }
 
 /**
- * Carga el modelo de transcripción si aún no se ha cargado.
- */
-async function loadTranscriber() {
-  if (isModelLoading) {
-     notifyListeners('El modelo ya se está cargando...');
-     return;
-  }
-
-  if (!transcriber) {
-    isModelLoading = true;
-    notifyListeners('Cargando modelo de IA... Esto puede tardar un momento.');
-    try {
-      // Usamos un modelo de Whisper destilado, optimizado para ejecutarse en el navegador.
-      // 'tiny' o 'base' son buenas opciones para empezar.
-      transcriber = await pipeline('automatic-speech-recognition', 'Xenova/whisper-tiny');
-      notifyListeners('Modelo de IA cargado. ¡Listo para transcribir!');
-    } catch (error) {
-      console.error('Error al cargar el modelo:', error);
-      notifyListeners('Error: No se pudo cargar el modelo de IA.');
-      transcriber = null; // Asegurarse de que no intentemos usar un modelo fallido
-    } finally {
-      isModelLoading = false;
-    }
-  }
-}
-
-/**
  * Inicia la captura y el reconocimiento de audio.
  */
 export async function startTranscription(): Promise<void> {
@@ -131,96 +46,74 @@ export async function startTranscription(): Promise<void> {
     return;
   }
 
-  await loadTranscriber();
+  // Comprobar la compatibilidad del navegador
+  const SpeechRecognition =
+    (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
-  if (!transcriber) {
-    console.error('El transcriptor no está cargado. No se puede iniciar la grabación.');
+  if (!SpeechRecognition) {
+    const errorMsg = 'Tu navegador no soporta la API de Reconocimiento de Voz. Prueba con Google Chrome.';
+    notifyListeners(errorMsg);
+    console.error(errorMsg);
     return;
   }
 
-  try {
-    audioContext = new AudioContext({ sampleRate: 16000 });
-    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    
-    // Crear la URL del worklet de forma segura en el cliente
-    const blob = new Blob([workletCode], { type: 'application/javascript' });
-    const workletURL = URL.createObjectURL(blob);
-    await audioContext.audioWorklet.addModule(workletURL);
-    
-    const source = audioContext.createMediaStreamSource(mediaStream);
-    processorNode = new AudioWorkletNode(audioContext, 'vfs-processor', {
-        processorOptions: { bufferSize: 4096 }
-    });
-    
-    processorNode.port.onmessage = async (event) => {
-      const audioData = event.data;
-      if (audioData) {
-         notifyListeners(fullTranscription + '...');
-        const result = await transcriber(audioData, {
-            chunk_length_s: 30,
-            stride_length_s: 5,
-        });
-        if (result && result.text) {
-           fullTranscription += result.text + ' ';
-           notifyListeners(fullTranscription);
-        }
-      }
-    };
-    
-    source.connect(processorNode);
-    processorNode.connect(audioContext.destination);
+  recognition = new SpeechRecognition();
+  recognition.lang = 'es-ES';
+  recognition.interimResults = true; // Queremos resultados mientras hablamos
+  recognition.continuous = true; // Queremos que siga escuchando
 
+  recognition.onstart = () => {
     isRecording = true;
-    fullTranscription = '';
-    processorNode.port.postMessage({ isRecording: true });
+    finalTranscription = ''; // Reiniciar al comenzar
     notifyListeners('🎙️ Grabación iniciada...');
+  };
 
+  recognition.onend = () => {
+    isRecording = false;
+    notifyListeners(finalTranscription || 'Grabación detenida.');
+    recognition = null;
+  };
+
+  recognition.onerror = (event) => {
+    console.error('Error en el reconocimiento de voz:', event.error);
+    notifyListeners(`Error: ${event.error}`);
+  };
+
+  recognition.onresult = (event) => {
+    let interimTranscription = '';
+    for (let i = event.resultIndex; i < event.results.length; ++i) {
+      if (event.results[i].isFinal) {
+        finalTranscription += event.results[i][0].transcript + ' ';
+      } else {
+        interimTranscription += event.results[i][0].transcript;
+      }
+    }
+    notifyListeners(finalTranscription + interimTranscription);
+  };
+
+  try {
+    // Pedir permiso de micrófono (esto ya no es estrictamente necesario para la API,
+    // pero es buena práctica y el navegador lo pedirá de todos modos)
+    await navigator.mediaDevices.getUserMedia({ audio: true });
+    recognition.start();
   } catch (err) {
-    console.error('Error al iniciar la transcripción:', err);
-    notifyListeners(`Error al iniciar: ${err instanceof Error ? err.message : String(err)}`);
-    stopTranscription();
+     const errorMsg = 'No se pudo acceder al micrófono. Por favor, comprueba los permisos en tu navegador.';
+     notifyListeners(errorMsg);
+     console.error(errorMsg, err);
+     if (recognition) {
+         recognition.stop();
+     }
   }
 }
+
 
 /**
  * Detiene el proceso de transcripción.
  */
 export function stopTranscription(): void {
-  if (!isRecording && !isModelLoading) {
-    if (!transcriber) {
-        notifyListeners('La transcripción no está activa.');
-    } else {
-        notifyListeners(fullTranscription || 'Grabación detenida.');
-    }
+  if (!recognition || !isRecording) {
+    console.warn('No hay ninguna grabación activa para detener.');
     return;
   }
-  
-  if (processorNode) {
-    processorNode.port.postMessage({ isRecording: false });
-  }
-
-  isRecording = false;
-
-  setTimeout(() => {
-    // Cierra los recursos de audio
-    if (processorNode) {
-      processorNode.disconnect();
-      processorNode = null;
-    }
-    if (mediaStream) {
-      mediaStream.getTracks().forEach(track => track.stop());
-      mediaStream = null;
-    }
-    if (audioContext) {
-      audioContext.close();
-      audioContext = null;
-    }
-
-    if (fullTranscription) {
-        notifyListeners(fullTranscription);
-    } else {
-        notifyListeners('Grabación detenida. No se transcribió nada.');
-    }
-  }, 500); // Dar un pequeño margen para que el worklet envíe el último buffer
-
+  recognition.stop();
 }
