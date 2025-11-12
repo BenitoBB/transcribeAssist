@@ -15,7 +15,7 @@ import { DrawingToolbar } from './components/DrawingToolbar';
 
 export default function TeacherPage() {
   const [isDrawingMode, setIsDrawingMode] = useState(false);
-  const [brushColor, setBrushColor] = useState('#F00'); // Color por defecto: rojo
+  const [brushColor, setBrushColor] = useState('#FF0000'); // Color por defecto: rojo
   const [clearCanvas, setClearCanvas] = useState(false);
 
   const handleClearCanvas = () => {
@@ -26,8 +26,21 @@ export default function TeacherPage() {
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-background">
+      {/* Funcionalidad de Dibujo - Renderizado primero para estar detrás */}
+      {isDrawingMode && (
+        <>
+          <DrawingCanvas brushColor={brushColor} clear={clearCanvas} />
+          <DrawingToolbar
+            onColorChange={setBrushColor}
+            onClear={handleClearCanvas}
+            onClose={() => setIsDrawingMode(false)}
+            currentColor={brushColor}
+          />
+        </>
+      )}
+
       {/* Controles superiores */}
-      <div className="absolute top-4 left-4 sm:top-8 sm:left-8 z-20 flex gap-2">
+      <div className="absolute top-4 left-4 sm:top-8 sm:left-8 z-30 flex gap-2">
         <Link href="/">
           <Tooltip>
             <TooltipTrigger asChild>
@@ -47,6 +60,7 @@ export default function TeacherPage() {
               variant="outline"
               size="icon"
               onClick={() => setIsDrawingMode(!isDrawingMode)}
+              aria-pressed={isDrawingMode}
             >
               <Pencil className="h-4 w-4" />
               <span className="sr-only">Activar modo dibujo</span>
@@ -59,7 +73,7 @@ export default function TeacherPage() {
       </div>
 
       {/* Contenido principal */}
-      <div className="p-4 h-full w-full">
+      <div className="relative p-4 h-full w-full z-10 pointer-events-none">
         <div className="text-center text-foreground">
           <h1 className="text-2xl sm:text-3xl font-bold">Vista del Maestro</h1>
           <p className="mt-2 text-sm sm:text-base text-muted-foreground">
@@ -69,18 +83,6 @@ export default function TeacherPage() {
         <TranscriptionPanel />
       </div>
 
-      {/* Funcionalidad de Dibujo */}
-      {isDrawingMode && (
-        <>
-          <DrawingCanvas brushColor={brushColor} clear={clearCanvas} />
-          <DrawingToolbar
-            onColorChange={setBrushColor}
-            onClear={handleClearCanvas}
-            onClose={() => setIsDrawingMode(false)}
-            currentColor={brushColor}
-          />
-        </>
-      )}
     </div>
   );
 }

@@ -32,20 +32,21 @@ export function DrawingCanvas({ brushColor, clear }: DrawingCanvasProps) {
     contextRef.current = context;
 
     const handleResize = () => {
+        if (!contextRef.current || !canvasRef.current) return;
         // Guarda el estado actual del canvas
-        const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+        const imageData = contextRef.current.getImageData(0, 0, canvasRef.current.width, canvasRef.current.height);
         // Redimensiona
-        canvas.width = window.innerWidth * 2;
-        canvas.height = window.innerHeight * 2;
-        canvas.style.width = `${window.innerWidth}px`;
-        canvas.style.height = `${window.innerHeight}px`;
-        context.scale(2, 2);
-        context.lineCap = 'round';
-        context.lineWidth = 5;
+        canvasRef.current.width = window.innerWidth * 2;
+        canvasRef.current.height = window.innerHeight * 2;
+        canvasRef.current.style.width = `${window.innerWidth}px`;
+        canvasRef.current.style.height = `${window.innerHeight}px`;
+        contextRef.current.scale(2, 2);
+        contextRef.current.lineCap = 'round';
+        contextRef.current.lineWidth = 5;
         // Restaura la imagen
-        context.putImageData(imageData, 0, 0);
+        contextRef.current.putImageData(imageData, 0, 0);
         // Reaplica el color, ya que se puede perder
-        context.strokeStyle = contextRef.current?.strokeStyle || '#000';
+        contextRef.current.strokeStyle = contextRef.current?.strokeStyle || '#000';
     };
 
     window.addEventListener('resize', handleResize);
@@ -72,21 +73,23 @@ export function DrawingCanvas({ brushColor, clear }: DrawingCanvasProps) {
 
   const startDrawing = ({ nativeEvent }: React.MouseEvent<HTMLCanvasElement>) => {
     const { offsetX, offsetY } = nativeEvent;
-    contextRef.current?.beginPath();
-    contextRef.current?.moveTo(offsetX, offsetY);
+    if (!contextRef.current) return;
+    contextRef.current.beginPath();
+    contextRef.current.moveTo(offsetX, offsetY);
     setIsDrawing(true);
   };
 
   const finishDrawing = () => {
-    contextRef.current?.closePath();
+    if (!contextRef.current) return;
+    contextRef.current.closePath();
     setIsDrawing(false);
   };
 
   const draw = ({ nativeEvent }: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDrawing) return;
+    if (!isDrawing || !contextRef.current) return;
     const { offsetX, offsetY } = nativeEvent;
-    contextRef.current?.lineTo(offsetX, offsetY);
-    contextRef.current?.stroke();
+    contextRef.current.lineTo(offsetX, offsetY);
+    contextRef.current.stroke();
   };
 
   return (
@@ -96,8 +99,7 @@ export function DrawingCanvas({ brushColor, clear }: DrawingCanvasProps) {
       onMouseUp={finishDrawing}
       onMouseMove={draw}
       onMouseLeave={finishDrawing} // Termina de dibujar si el cursor sale del canvas
-      className="absolute top-0 left-0 z-10"
-      // pointer-events-auto para que reciba eventos de ratón
+      className="absolute top-0 left-0 z-0" // Cambiado z-10 a z-0 para que esté detrás
     />
   );
 }
