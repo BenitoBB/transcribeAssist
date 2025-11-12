@@ -1,70 +1,75 @@
 'use client';
 
-import React, { createContext, useState, useCallback, ReactNode } from 'react';
+import React, {
+  createContext,
+  useState,
+  useCallback,
+  ReactNode,
+  useEffect,
+} from 'react';
 import {
-  startTranscription as startTranscriptionService,
-  stopTranscription as stopTranscriptionService,
+  startTranscription,
+  stopTranscription,
+  onTranscriptionUpdate,
 } from '@/lib/transcription';
+import { Keyword } from '@/ai/flows/extract-keywords-flow';
 
-// Define la forma del contexto
 export interface TranscriptionContextType {
   transcription: string;
   isRecording: boolean;
   startRecording: () => void;
   stopRecording: () => void;
+  keywords: Keyword[];
+  setKeywords: React.Dispatch<React.SetStateAction<Keyword[]>>;
 }
 
-// Crea el Contexto con un valor por defecto
-export const TranscriptionContext = createContext<TranscriptionContextType | undefined>(
-  undefined
-);
+export const TranscriptionContext = createContext<
+  TranscriptionContextType | undefined
+>(undefined);
 
 interface TranscriptionProviderProps {
   children: ReactNode;
 }
 
-// Crea el componente Proveedor
 export const TranscriptionProvider: React.FC<TranscriptionProviderProps> = ({
   children,
 }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [transcription, setTranscription] = useState(
-    'El texto de la transcripción aparecerá aquí...'
+    'La transcripción de la clase aparecerá aquí cuando inicies la grabación...'
   );
+  const [keywords, setKeywords] = useState<Keyword[]>([]);
 
-  // En una implementación real, aquí recibirías los eventos del servicio de transcripción
-  // y actualizarías el estado de `transcription`.
-  // Por ejemplo, si usaras WebSockets:
-  // useEffect(() => {
-  //   const socket = new WebSocket('ws://tu-servidor-de-transcripcion');
-  //   socket.onmessage = (event) => {
-  //     const newTranscriptionText = JSON.parse(event.data).text;
-  //     setTranscription(prev => prev + ' ' + newTranscriptionText);
-  //   };
-  //   return () => socket.close();
-  // }, []);
+  useEffect(() => {
+    const handleTranscriptionUpdate = (newText: string) => {
+      setTranscription(newText);
+    };
+
+    const unsubscribe = onTranscriptionUpdate(handleTranscriptionUpdate);
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
   const startRecording = useCallback(async () => {
     try {
-      const response = await startTranscriptionService();
-      if (response.success) {
-        setIsRecording(true);
-        setTranscription('Grabando... '); // Limpia la transcripción anterior
-      }
+      await startTranscription();
+      setIsRecording(true);
+      setTranscription('Iniciando grabación... ');
+      setKeywords([]);
     } catch (error) {
       console.error('Error al iniciar la grabación:', error);
+      setTranscription(
+        'Error: No se pudo acceder al micrófono. Por favor, comprueba los permisos en tu navegador.'
+      );
     }
   }, []);
 
-  const stopRecording = useCallback(async () => {
-    try {
-      const response = await stopTranscriptionService();
-      if (response.success) {
-        setIsRecording(false);
-      }
-    } catch (error) {
-      console.error('Error al detener la grabación:', error);
-    }
+  const stopRecording = useCallback(() => {
+    stopTranscription();
+    setIsRecording(false);
+    // El texto final se actualizará a través del evento onTranscriptionUpdate
   }, []);
 
   const value = {
@@ -72,6 +77,8 @@ export const TranscriptionProvider: React.FC<TranscriptionProviderProps> = ({
     transcription,
     startRecording,
     stopRecording,
+    keywords,
+    setKeywords,
   };
 
   return (

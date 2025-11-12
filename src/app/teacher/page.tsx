@@ -8,15 +8,17 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { ArrowLeft, Pencil } from 'lucide-react';
+import { ArrowLeft, Pencil, Mic, MicOff } from 'lucide-react';
 import { TranscriptionPanel } from './components/TranscriptionPanel';
 import { DrawingCanvas } from './components/DrawingCanvas';
 import { DrawingToolbar } from './components/DrawingToolbar';
+import { useTranscription } from '@/hooks/use-transcription';
 
 export default function TeacherPage() {
   const [isDrawingMode, setIsDrawingMode] = useState(false);
   const [brushColor, setBrushColor] = useState('#FF0000'); // Color por defecto: rojo
   const [clearCanvas, setClearCanvas] = useState(false);
+  const { isRecording, startRecording, stopRecording } = useTranscription();
 
   const handleClearCanvas = () => {
     setClearCanvas(true);
@@ -70,6 +72,40 @@ export default function TeacherPage() {
             <p>Activar/Desactivar Pizarra</p>
           </TooltipContent>
         </Tooltip>
+        
+        {!isRecording ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={startRecording}
+              >
+                <Mic className="h-4 w-4" />
+                <span className="sr-only">Iniciar transcripción</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Iniciar Transcripción</p>
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="destructive"
+                size="icon"
+                onClick={stopRecording}
+              >
+                <MicOff className="h-4 w-4" />
+                <span className="sr-only">Detener transcripción</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Detener Transcripción</p>
+            </TooltipContent>
+          </Tooltip>
+        )}
       </div>
 
       {/* Contenido principal */}
