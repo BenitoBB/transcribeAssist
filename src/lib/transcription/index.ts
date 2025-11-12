@@ -1,15 +1,22 @@
 /**
  * ===================================================================================
- * Lógica de Transcripción del Lado del Cliente
+ * Lógica de Transcripción del Lado del Cliente con Web Speech API
  * ===================================================================================
  * Este archivo SÓLO debe ser importado en componentes de cliente ('use client').
- * Contiene la lógica para interactuar con las APIs de audio del navegador.
+ * Contiene la lógica para interactuar con la API de reconocimiento de voz del navegador.
  */
 
-// Estas variables mantendrán el estado del grabador de audio a través del módulo.
-let mediaRecorder: MediaRecorder | null = null;
-let audioChunks: Blob[] = [];
-let fullTranscription = '';
+// Tipado para el objeto de reconocimiento de voz, que puede no estar en todos los navegadores.
+interface CustomWindow extends Window {
+  SpeechRecognition: any;
+  webkitSpeechRecognition: any;
+}
+
+declare let window: CustomWindow;
+
+let recognition: any | null = null;
+let finalTranscription = '';
+let isStopping = false;
 
 // Un simple sistema de eventos para notificar a los componentes de React sobre las actualizaciones.
 type TranscriptionCallback = (text: string) => void;
@@ -22,7 +29,6 @@ const listeners: TranscriptionCallback[] = [];
  */
 export function onTranscriptionUpdate(callback: TranscriptionCallback) {
   listeners.push(callback);
-  // Devuelve una función de limpieza para que el componente pueda darse de baja.
   return () => {
     const index = listeners.indexOf(callback);
     if (index > -1) {
@@ -36,66 +42,91 @@ export function onTranscriptionUpdate(callback: TranscriptionCallback) {
  * @param text El texto actualizado de la transcripción.
  */
 function notifyListeners(text: string) {
-  fullTranscription = text;
   listeners.forEach(listener => listener(text));
 }
 
 /**
- * Inicia la captura de audio del micrófono del usuario.
- * Pide permiso y configura el MediaRecorder.
+ * Inicia la captura y el reconocimiento de audio.
  */
 export async function startTranscription(): Promise<void> {
-  // Comprueba si el navegador soporta la API de MediaStream
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    throw new Error('La API de MediaStream no es soportada en este navegador.');
+  // Comprueba si la API es compatible con el navegador
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    throw new Error('La API de reconocimiento de voz no es soportada en este navegador.');
   }
 
-  // Detiene cualquier grabación anterior
-  if (mediaRecorder && mediaRecorder.state === 'recording') {
-    mediaRecorder.stop();
+  // Detiene cualquier reconocimiento anterior
+  if (recognition) {
+    recognition.stop();
   }
 
-  // Pide permiso para acceder al micrófono
-  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-  
-  // Inicializa el MediaRecorder
-  mediaRecorder = new MediaRecorder(stream);
-  audioChunks = [];
-  fullTranscription = '';
-  notifyListeners('🎙️ Grabando...');
-
-  mediaRecorder.ondataavailable = event => {
-    audioChunks.push(event.data);
-    // En una implementación real, enviarías estos chunks a tu backend/servicio de transcripción.
-    // console.log('Chunk de audio disponible:', event.data);
-    // Simulamos una transcripción que se actualiza
-    notifyListeners(fullTranscription + ' ...');
-  };
-
-  mediaRecorder.onstop = () => {
-    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-    // En una implementación real, aquí podrías hacer algo con el audio completo,
-    // como ofrecerlo para descarga o enviarlo para un análisis final.
-    console.log('Grabación detenida. Blob de audio completo:', audioBlob);
-    
-    // Limpia el stream y las pistas de audio para liberar el micrófono
+  // Pide permiso para el micrófono (necesario solo si no se ha concedido antes)
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    // Detenemos la pista inmediatamente porque la API de SpeechRecognition la gestiona por su cuenta
     stream.getTracks().forEach(track => track.stop());
+  } catch (err) {
+     console.error("Error al obtener permiso del micrófono:", err);
+     throw new Error("No se pudo acceder al micrófono. Por favor, verifica los permisos.");
+  }
 
-    // Simulación del texto final
-    notifyListeners(fullTranscription.replace(/ \.\.\./g, '') + ' (Transcripción final simulada).');
+
+  recognition = new SpeechRecognition();
+  recognition.lang = 'es-ES'; // Configurar el idioma
+  recognition.interimResults = true; // Queremos resultados provisionales mientras hablamos
+  recognition.continuous = true; // Queremos que siga escuchando
+
+  finalTranscription = '';
+  isStopping = false;
+  notifyListeners('🎙️ Escuchando...');
+
+  recognition.onresult = (event: any) => {
+    let interimTranscription = '';
+    for (let i = event.resultIndex; i < event.results.length; ++i) {
+      if (event.results[i].isFinal) {
+        finalTranscription += event.results[i][0].transcript + '. ';
+      } else {
+        interimTranscription += event.results[i][0].transcript;
+      }
+    }
+    notifyListeners(finalTranscription + interimTranscription);
   };
 
-  // Empieza a grabar. El segundo argumento (timeslice) especifica
-  // que queremos recibir datos cada 2 segundos.
-  mediaRecorder.start(2000); 
+  recognition.onerror = (event: any) => {
+    console.error('Error en el reconocimiento de voz:', event.error);
+    let errorMessage = 'Error en el reconocimiento: ';
+    if (event.error === 'no-speech') {
+      errorMessage += 'No se detectó voz.';
+    } else if (event.error === 'audio-capture') {
+      errorMessage += 'Problema con el micrófono.';
+    } else if (event.error === 'not-allowed') {
+      errorMessage += 'Permiso denegado. Habilita el acceso al micrófono.';
+    } else {
+      errorMessage += event.error;
+    }
+    notifyListeners(errorMessage);
+  };
+
+  recognition.onend = () => {
+    // Si no estamos parando manualmente, reiniciamos el reconocimiento
+    // para que sea verdaderamente continuo.
+    if (!isStopping) {
+      recognition.start();
+    } else {
+        notifyListeners(finalTranscription || "Grabación detenida.");
+    }
+  };
+
+  recognition.start();
 }
 
 /**
  * Detiene el proceso de transcripción.
  */
 export function stopTranscription(): void {
-  if (mediaRecorder && mediaRecorder.state === 'recording') {
-    mediaRecorder.stop();
-    notifyListeners('Procesando grabación...');
+  if (recognition) {
+    isStopping = true;
+    recognition.stop();
+    notifyListeners('Procesando transcripción final...');
   }
 }
