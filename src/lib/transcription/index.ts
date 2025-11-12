@@ -75,6 +75,11 @@ export async function startTranscription(): Promise<void> {
   };
 
   recognition.onerror = (event) => {
+    // El error 'no-speech' se dispara si no se detecta habla, es un comportamiento normal.
+    // Lo ignoramos para no llenar la consola de errores innecesarios.
+    if (event.error === 'no-speech') {
+      return;
+    }
     console.error('Error en el reconocimiento de voz:', event.error);
     notifyListeners(`Error: ${event.error}`);
   };
@@ -92,8 +97,7 @@ export async function startTranscription(): Promise<void> {
   };
 
   try {
-    // Pedir permiso de micrófono (esto ya no es estrictamente necesario para la API,
-    // pero es buena práctica y el navegador lo pedirá de todos modos)
+    // Pedir permiso de micrófono
     await navigator.mediaDevices.getUserMedia({ audio: true });
     recognition.start();
   } catch (err) {
