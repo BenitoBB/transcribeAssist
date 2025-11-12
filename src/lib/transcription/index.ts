@@ -6,7 +6,59 @@
  * Contiene la lógica para ejecutar un modelo de Whisper directamente en el navegador.
  */
 
-import { pipeline, RawImage } from '@xenova/transformers';
+import { pipeline } from '@xenova/transformers';
+
+// Este script se ejecutará en un AudioWorklet, un hilo separado para procesar audio.
+const workletCode = `
+class VFSProcessor extends AudioWorkletProcessor {
+  constructor(options) {
+    super();
+    this.bufferSize = options.processorOptions.bufferSize || 4096;
+    this.buffer = new Float32Array(this.bufferSize);
+    this.bufferPos = 0;
+    this.isRecording = false;
+
+    this.port.onmessage = (event) => {
+      if (event.data.isRecording !== undefined) {
+        this.isRecording = event.data.isRecording;
+        if (!this.isRecording) {
+            this.flush();
+        }
+      }
+    };
+  }
+
+  // Envia lo que quede en el buffer
+  flush() {
+    if (this.bufferPos > 0) {
+        const buffer = this.buffer.slice(0, this.bufferPos);
+        this.port.postMessage(buffer);
+        this.bufferPos = 0;
+    }
+  }
+
+  process(inputs, outputs, parameters) {
+    if (!this.isRecording) {
+      return true;
+    }
+
+    const input = inputs[0];
+    if (input && input.length > 0) {
+      const inputData = input[0];
+      for (let i = 0; i < inputData.length; i++) {
+        this.buffer[this.bufferPos++] = inputData[i];
+        if (this.bufferPos === this.bufferSize) {
+          this.port.postMessage(this.buffer);
+          this.bufferPos = 0;
+        }
+      }
+    }
+    return true; // Mantener el procesador activo
+  }
+}
+registerProcessor('vfs-processor', VFSProcessor);
+`;
+
 
 let transcriber: any = null;
 let audioContext: AudioContext | null = null;
@@ -90,10 +142,15 @@ export async function startTranscription(): Promise<void> {
     audioContext = new AudioContext({ sampleRate: 16000 });
     mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
     
-    await audioContext.audioWorklet.addModule(new URL('./worklet-processor.js', import.meta.url));
+    // Crear la URL del worklet de forma segura en el cliente
+    const blob = new Blob([workletCode], { type: 'application/javascript' });
+    const workletURL = URL.createObjectURL(blob);
+    await audioContext.audioWorklet.addModule(workletURL);
     
     const source = audioContext.createMediaStreamSource(mediaStream);
-    processorNode = new AudioWorkletNode(audioContext, 'vfs-processor');
+    processorNode = new AudioWorkletNode(audioContext, 'vfs-processor', {
+        processorOptions: { bufferSize: 4096 }
+    });
     
     processorNode.port.onmessage = async (event) => {
       const audioData = event.data;
@@ -115,6 +172,7 @@ export async function startTranscription(): Promise<void> {
 
     isRecording = true;
     fullTranscription = '';
+    processorNode.port.postMessage({ isRecording: true });
     notifyListeners('🎙️ Grabación iniciada...');
 
   } catch (err) {
@@ -129,8 +187,6 @@ export async function startTranscription(): Promise<void> {
  */
 export function stopTranscription(): void {
   if (!isRecording && !isModelLoading) {
-    // Si no está grabando y no está cargando, no hay nada que hacer
-    // (excepto si el modelo nunca se cargó)
     if (!transcriber) {
         notifyListeners('La transcripción no está activa.');
     } else {
@@ -138,82 +194,33 @@ export function stopTranscription(): void {
     }
     return;
   }
+  
+  if (processorNode) {
+    processorNode.port.postMessage({ isRecording: false });
+  }
 
   isRecording = false;
 
-  // Cierra los recursos de audio
-  if (processorNode) {
-    processorNode.disconnect();
-    processorNode = null;
-  }
-  if (mediaStream) {
-    mediaStream.getTracks().forEach(track => track.stop());
-    mediaStream = null;
-  }
-  if (audioContext) {
-    audioContext.close();
-    audioContext = null;
-  }
-
-  // Notificar al usuario que la grabación ha finalizado
-  if (fullTranscription) {
-      notifyListeners(fullTranscription);
-  } else {
-      notifyListeners('Grabación detenida. No se transcribió nada.');
-  }
-}
-
-// Este script se ejecutará en un AudioWorklet, un hilo separado para procesar audio.
-// No es un archivo físico, sino que se convierte en una URL de objeto.
-const workletCode = `
-class VFSProcessor extends AudioWorkletProcessor {
-  constructor() {
-    super();
-    this.bufferSize = 2048;
-    this.buffer = new Float32Array(this.bufferSize);
-    this.bufferPos = 0;
-  }
-
-  process(inputs, outputs, parameters) {
-    const input = inputs[0];
-    if (input.length > 0) {
-      const inputData = input[0];
-      // Acumular los datos de audio
-      for (let i = 0; i < inputData.length; i++) {
-        this.buffer[this.bufferPos++] = inputData[i];
-        if (this.bufferPos === this.bufferSize) {
-          // Enviar el buffer completo cuando esté lleno
-          this.port.postMessage(this.buffer);
-          this.bufferPos = 0; // Reiniciar
-        }
-      }
+  setTimeout(() => {
+    // Cierra los recursos de audio
+    if (processorNode) {
+      processorNode.disconnect();
+      processorNode = null;
     }
-    return true; // Mantener el procesador activo
-  }
-}
-registerProcessor('vfs-processor', VFSProcessor);
-`;
+    if (mediaStream) {
+      mediaStream.getTracks().forEach(track => track.stop());
+      mediaStream = null;
+    }
+    if (audioContext) {
+      audioContext.close();
+      audioContext = null;
+    }
 
-// Crear una URL para el worklet a partir del código string.
-// Esto evita la necesidad de tener un archivo JS separado en la carpeta 'public'.
-if (typeof window !== 'undefined') {
-    const blob = new Blob([workletCode], { type: 'application/javascript' });
-    const workletURL = URL.createObjectURL(blob);
-    // Sobrescribimos la URL para que el addModule la encuentre
-    Object.defineProperty(URL, 'createObjectURL', {
-        value: () => workletURL,
-        writable: false
-    });
+    if (fullTranscription) {
+        notifyListeners(fullTranscription);
+    } else {
+        notifyListeners('Grabación detenida. No se transcribió nada.');
+    }
+  }, 500); // Dar un pequeño margen para que el worklet envíe el último buffer
 
-    // Pequeño truco para que `new URL(...)` funcione en el contexto de la creación del worklet
-    const originalURL = window.URL;
-    (window as any).URL = class CustomURL extends originalURL {
-        constructor(url: string, base: string) {
-            if (url.endsWith('worklet-processor.js')) {
-                super(workletURL);
-                return;
-            }
-            super(url, base);
-        }
-    };
 }
