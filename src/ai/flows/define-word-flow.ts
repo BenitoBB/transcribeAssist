@@ -25,7 +25,7 @@ export async function defineWord(
 ): Promise<DefineWordOutput> {
   // Limpia y encuentra la raíz de la palabra.
   const originalWord = input.word.toLowerCase();
-  const rootWord = lemmatizer.lemmatizer(originalWord);
+  const rootWord = lemmatizer(originalWord);
   
   let definition: string;
 
