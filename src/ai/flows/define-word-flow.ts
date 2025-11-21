@@ -2,9 +2,9 @@
 'use server';
 
 /**
- * @fileOverview Flujo para obtener la definición de una palabra desde Wikipedia.
- * - Consulta la API de Wikipedia.
- * - Devuelve el extracto del artículo directamente.
+ * @fileOverview Flujo para obtener la definición de una palabra usando la Free Dictionary API.
+ * - Consulta la API del diccionario para español.
+ * - Devuelve la primera definición encontrada.
  */
 import { z } from 'zod';
 
@@ -14,7 +14,7 @@ const DefineWordInputSchema = z.object({
 export type DefineWordInput = z.infer<typeof DefineWordInputSchema>;
 
 const DefineWordOutputSchema = z.object({
-  definition: z.string().describe('La definición de la palabra obtenida de Wikipedia.'),
+  definition: z.string().describe('La definición de la palabra.'),
 });
 export type DefineWordOutput = z.infer<typeof DefineWordOutputSchema>;
 
@@ -23,41 +23,39 @@ export async function defineWord(
   input: DefineWordInput
 ): Promise<DefineWordOutput> {
   const { word } = input;
-  let wikipediaContent: string;
+  let definition: string;
 
   try {
     const response = await fetch(
-      `https://es.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(word)}`,
-      {
-        headers: {
-          'User-Agent': 'TranscribeAssist/1.0 (https://example.com)',
-        },
-      }
+      `https://api.dictionaryapi.dev/api/v2/entries/es/${encodeURIComponent(word)}`
     );
 
-    // Manejar el caso de 'Not Found' específicamente
+    // Si la palabra no se encuentra, la API devuelve 404
     if (response.status === 404) {
-      wikipediaContent = `No se encontró una entrada para "${word}" en Wikipedia.`;
-      return { definition: wikipediaContent };
+      definition = `No se encontró una definición para "${word}".`;
+      return { definition };
     }
 
     if (!response.ok) {
-      throw new Error(`La API de Wikipedia respondió con el estado: ${response.status}`);
+      throw new Error(`La API del diccionario respondió con el estado: ${response.status}`);
     }
 
     const data = await response.json();
     
-    // Si la respuesta es una página de desambiguación o no hay contenido, lo consideramos no encontrado.
-    if (data.type === 'disambiguation' || !data.extract) {
-       wikipediaContent = `No se encontró una definición clara para "${word}" en Wikipedia. Puede ser una página de desambiguación.`;
+    // Extraer la primera definición de la estructura de la respuesta
+    const firstMeaning = data[0]?.meanings[0];
+    const firstDefinition = firstMeaning?.definitions[0]?.definition;
+
+    if (firstDefinition) {
+      definition = firstDefinition;
     } else {
-       wikipediaContent = data.extract;
+      definition = `No se encontró una definición clara para "${word}".`;
     }
 
   } catch (error) {
-    console.error('Error al contactar la API de Wikipedia:', error);
-    wikipediaContent = `No se pudo obtener información para "${word}" desde Wikipedia.`;
+    console.error('Error al contactar la API del diccionario:', error);
+    definition = `No se pudo obtener la definición para "${word}".`;
   }
 
-  return { definition: wikipediaContent };
+  return { definition };
 }
