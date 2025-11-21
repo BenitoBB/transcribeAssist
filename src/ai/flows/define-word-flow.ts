@@ -20,45 +20,47 @@ const DefineWordOutputSchema = z.object({
 });
 export type DefineWordOutput = z.infer<typeof DefineWordOutputSchema>;
 
-export async function defineWord(
-  input: DefineWordInput
-): Promise<DefineWordOutput> {
-  // Limpia y encuentra la raíz de la palabra.
-  const originalWord = input.word.toLowerCase();
-  const rootWord = lemmatizer(originalWord);
-  
-  let definition: string;
-
+async function fetchDefinition(word: string): Promise<string | null> {
   try {
     const response = await fetch(
-      `https://api.dictionaryapi.dev/api/v2/entries/es/${encodeURIComponent(rootWord)}`
+      `https://api.dictionaryapi.dev/api/v2/entries/es/${encodeURIComponent(word)}`
     );
 
-    // Si la palabra no se encuentra, la API devuelve 404
-    if (response.status === 404) {
-      definition = `No se encontró una definición para "${originalWord}".`;
-      return { definition };
-    }
-
     if (!response.ok) {
-      throw new Error(`La API del diccionario respondió con el estado: ${response.status}`);
+      return null;
     }
 
     const data = await response.json();
-    
-    // Extraer la primera definición de la estructura de la respuesta
     const firstMeaning = data[0]?.meanings[0];
     const firstDefinition = firstMeaning?.definitions[0]?.definition;
 
-    if (firstDefinition) {
-      definition = firstDefinition;
-    } else {
-      definition = `No se encontró una definición clara para "${originalWord}".`;
-    }
-
+    return firstDefinition || null;
   } catch (error) {
-    console.error('Error al contactar la API del diccionario:', error);
-    definition = `No se pudo obtener la definición para "${originalWord}".`;
+    console.error(`Error al buscar la definición de "${word}":`, error);
+    return null;
+  }
+}
+
+export async function defineWord(
+  input: DefineWordInput
+): Promise<DefineWordOutput> {
+  const originalWord = input.word.toLowerCase();
+  
+  // 1. Intentar buscar la palabra original
+  let definition = await fetchDefinition(originalWord);
+
+  // 2. Si no se encuentra, intentar con la raíz de la palabra
+  if (!definition) {
+    const rootWord = lemmatizer(originalWord);
+    // Solo intentar con la raíz si es diferente a la palabra original
+    if (rootWord !== originalWord) {
+      definition = await fetchDefinition(rootWord);
+    }
+  }
+
+  // 3. Si después de ambos intentos no hay definición, informar al usuario.
+  if (!definition) {
+    return { definition: `No se encontró una definición para "${originalWord}".` };
   }
 
   return { definition };
