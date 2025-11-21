@@ -66,7 +66,7 @@ export function WordDefinition({ children, word }: WordDefinitionProps) {
             <p className="text-sm">{definition || 'Haz doble clic para ver la definición.'}</p>
           )}
         </div>
-      </Hove`CardContent>
+      </HoverCardContent>
     </HoverCard>
   );
 }
