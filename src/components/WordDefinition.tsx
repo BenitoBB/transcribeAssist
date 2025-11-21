@@ -33,8 +33,14 @@ export function WordDefinition({ children, word }: WordDefinitionProps) {
 
     setIsLoading(true);
     try {
-      const result = await defineWord({ word: word.replace(/[,.]/g, '') });
-      setDefinition(result.definition);
+      // Limpiamos la palabra de cualquier signo de puntuación o caracter no alfabético.
+      const cleanedWord = word.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ]/g, '');
+      if (cleanedWord) {
+        const result = await defineWord({ word: cleanedWord });
+        setDefinition(result.definition);
+      } else {
+        setDefinition('No es una palabra válida para buscar.');
+      }
     } catch (error) {
       console.error('Error al obtener la definición:', error);
       setDefinition('No se pudo obtener la definición.');
