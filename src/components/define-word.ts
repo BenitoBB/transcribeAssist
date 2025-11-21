@@ -1,7 +1,5 @@
 'use server';
 
-import React from 'react';
-
 // Esta función es una Server Action. Se ejecuta en el servidor.
 export async function defineWord(word: string): Promise<string | null> {
   // Limpia la palabra de cualquier puntuación y la convierte a minúsculas.

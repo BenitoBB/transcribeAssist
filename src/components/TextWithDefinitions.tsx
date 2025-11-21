@@ -2,7 +2,7 @@
 
 import React, { useState, useTransition } from 'react';
 import { DefinitionPopup } from './DefinitionPopup';
-import { defineWord } from './WordWrapper';
+import { defineWord } from './define-word';
 
 interface TextWithDefinitionsProps {
   text: string;
