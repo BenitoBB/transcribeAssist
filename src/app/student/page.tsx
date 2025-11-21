@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -26,7 +25,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { WordDefinition } from '@/components/WordDefinition';
 import React from 'react';
 
 export default function StudentPage() {
@@ -131,11 +129,7 @@ export default function StudentPage() {
               }}
             >
               <p>
-                {transcription.split(' ').map((word, index) => (
-                  <React.Fragment key={index}>
-                    <WordDefinition word={word}>{word}</WordDefinition>{' '}
-                  </React.Fragment>
-                ))}
+                {transcription}
               </p>
             </div>
           </ScrollArea>
