@@ -6,7 +6,7 @@
  * - Primero consulta la API de Wikipedia.
  * - Luego usa un modelo de IA para resumir la definición de forma concisa.
  */
-import { ai } from '@/ai/genkit';
+import { ai } from '../genkit';
 import { z } from 'zod';
 
 const DefineWordInputSchema = z.object({
