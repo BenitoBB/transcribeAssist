@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -25,6 +26,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { WordDefinition } from '@/components/WordDefinition';
+import React from 'react';
 
 export default function StudentPage() {
   const { transcription } = useTranscription();
@@ -127,7 +130,13 @@ export default function StudentPage() {
                 color: 'inherit',
               }}
             >
-              <p>{transcription}</p>
+              <p>
+                {transcription.split(' ').map((word, index) => (
+                  <React.Fragment key={index}>
+                    <WordDefinition word={word}>{word}</WordDefinition>{' '}
+                  </React.Fragment>
+                ))}
+              </p>
             </div>
           </ScrollArea>
         </CardContent>

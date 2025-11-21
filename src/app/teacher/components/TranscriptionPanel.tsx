@@ -1,6 +1,8 @@
+
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import React from 'react';
 import { Rnd } from 'react-rnd';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,6 +23,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useTranscription } from '@/hooks/use-transcription';
 import { useStyle } from '@/context/StyleContext';
 import { SettingsButton } from '@/components/settings/SettingsButton';
+import { WordDefinition } from '@/components/WordDefinition';
 
 type Position = 'top' | 'bottom' | 'left' | 'right' | 'free';
 
@@ -108,7 +111,13 @@ export function TranscriptionPanel() {
           color: 'inherit',
         }}
       >
-        <p>{transcription}</p>
+        <p>
+          {transcription.split(' ').map((word, index) => (
+            <React.Fragment key={index}>
+              <WordDefinition word={word}>{word}</WordDefinition>{' '}
+            </React.Fragment>
+          ))}
+        </p>
       </div>
     </ScrollArea>
   );
