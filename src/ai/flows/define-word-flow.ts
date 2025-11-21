@@ -3,10 +3,12 @@
 
 /**
  * @fileOverview Flujo para obtener la definición de una palabra usando la Free Dictionary API.
- * - Consulta la API del diccionario para español.
+ * - Usa 'lemmatizer' para encontrar la raíz de la palabra.
+ * - Consulta la API del diccionario para español con la palabra raíz.
  * - Devuelve la primera definición encontrada.
  */
 import { z } from 'zod';
+import lemmatizer from 'lemmatizer';
 
 const DefineWordInputSchema = z.object({
   word: z.string().describe('La palabra a definir.'),
@@ -18,21 +20,23 @@ const DefineWordOutputSchema = z.object({
 });
 export type DefineWordOutput = z.infer<typeof DefineWordOutputSchema>;
 
-// Exportamos la función que será llamada desde el cliente.
 export async function defineWord(
   input: DefineWordInput
 ): Promise<DefineWordOutput> {
-  const { word } = input;
+  // Limpia y encuentra la raíz de la palabra.
+  const originalWord = input.word.toLowerCase();
+  const rootWord = lemmatizer.lemmatizer(originalWord);
+  
   let definition: string;
 
   try {
     const response = await fetch(
-      `https://api.dictionaryapi.dev/api/v2/entries/es/${encodeURIComponent(word)}`
+      `https://api.dictionaryapi.dev/api/v2/entries/es/${encodeURIComponent(rootWord)}`
     );
 
     // Si la palabra no se encuentra, la API devuelve 404
     if (response.status === 404) {
-      definition = `No se encontró una definición para "${word}".`;
+      definition = `No se encontró una definición para "${originalWord}".`;
       return { definition };
     }
 
@@ -49,12 +53,12 @@ export async function defineWord(
     if (firstDefinition) {
       definition = firstDefinition;
     } else {
-      definition = `No se encontró una definición clara para "${word}".`;
+      definition = `No se encontró una definición clara para "${originalWord}".`;
     }
 
   } catch (error) {
     console.error('Error al contactar la API del diccionario:', error);
-    definition = `No se pudo obtener la definición para "${word}".`;
+    definition = `No se pudo obtener la definición para "${originalWord}".`;
   }
 
   return { definition };
