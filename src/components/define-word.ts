@@ -1,8 +1,11 @@
 'use server';
 
-// Esta función es una Server Action. Se ejecuta en el servidor.
+/**
+ * Esta Server Action busca la definición de una palabra en español.
+ * @param word La palabra a definir.
+ * @returns La definición como un string, o null si no se encuentra.
+ */
 export async function defineWord(word: string): Promise<string | null> {
-  // Limpia la palabra de cualquier puntuación y la convierte a minúsculas.
   const cleanedWord = word.toLowerCase().replace(/[\p{P}\p{S}]/gu, '').trim();
 
   if (!cleanedWord) {
@@ -14,20 +17,16 @@ export async function defineWord(word: string): Promise<string | null> {
       `https://api.dictionaryapi.dev/api/v2/entries/es/${cleanedWord}`
     );
 
-    // Si la respuesta no es exitosa (ej. 404 Not Found), no hay nada que hacer.
     if (!response.ok) {
-      console.error(`Dictionary API error for "${cleanedWord}": ${response.status}`);
+      // Si la respuesta es 404, la palabra no fue encontrada. Para otros errores,
+      // la consola del servidor mostrará el código de estado.
+      console.error(`Dictionary API error for "${cleanedWord}": Status ${response.status}`);
       return null;
     }
 
     const data = await response.json();
 
-    // La API devuelve un array, incluso si hay un solo resultado.
-    // Buscamos la primera definición en la primera entrada.
-    // data[0] -> Primera entrada para la palabra
-    // .meanings[0] -> El primer grupo de significados (ej. "sustantivo")
-    // .definitions[0] -> La primera definición dentro de ese grupo
-    // .definition -> El texto de la definición
+    // La API devuelve un array. Buscamos la primera definición en la primera entrada.
     const firstDefinition = data?.[0]?.meanings?.[0]?.definitions?.[0]?.definition;
 
     return firstDefinition || null;

@@ -2,6 +2,8 @@
 
 import React, { useState, useTransition } from 'react';
 import { DefinitionPopup } from './DefinitionPopup';
+
+// La Server Action ahora vive en su propio archivo dedicado.
 import { defineWord } from './define-word';
 
 interface TextWithDefinitionsProps {
