@@ -23,6 +23,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useTranscription } from '@/hooks/use-transcription';
 import { useStyle } from '@/context/StyleContext';
 import { SettingsButton } from '@/components/settings/SettingsButton';
+import { WordDefinition } from '@/components/WordDefinition';
 
 type Position = 'top' | 'bottom' | 'left' | 'right' | 'free';
 
@@ -94,6 +95,14 @@ export function TranscriptionPanel() {
         break;
     }
   };
+  
+    const renderTranscription = () => {
+        return transcription.split(/(\s+)/).map((word, index) => (
+          <React.Fragment key={index}>
+            {word.match(/\s+/) ? word : <WordDefinition word={word} />}
+          </React.Fragment>
+        ));
+      };
 
   const isDocked = position !== 'free';
 
@@ -111,7 +120,7 @@ export function TranscriptionPanel() {
         }}
       >
         <p>
-         {transcription}
+         {renderTranscription()}
         </p>
       </div>
     </ScrollArea>
