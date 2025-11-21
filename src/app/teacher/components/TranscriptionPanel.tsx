@@ -23,6 +23,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useTranscription } from '@/hooks/use-transcription';
 import { useStyle } from '@/context/StyleContext';
 import { SettingsButton } from '@/components/settings/SettingsButton';
+import { WordWrapper } from '@/components/WordWrapper';
 
 type Position = 'top' | 'bottom' | 'left' | 'right' | 'free';
 
@@ -110,9 +111,7 @@ export function TranscriptionPanel() {
           color: 'inherit',
         }}
       >
-        <p>
-         {transcription}
-        </p>
+        <WordWrapper text={transcription} />
       </div>
     </ScrollArea>
   );

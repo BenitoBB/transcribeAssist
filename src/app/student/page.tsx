@@ -26,6 +26,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import React from 'react';
+import { WordWrapper } from '@/components/WordWrapper';
 
 export default function StudentPage() {
   const { transcription } = useTranscription();
@@ -77,7 +78,7 @@ export default function StudentPage() {
       <div className="text-center mb-6 sm:mb-8">
         <h1 className="text-2xl sm:text-3xl font-bold">Vista del Alumno</h1>
         <p className="mt-2 text-sm sm:text-base">
-          La transcripción de la clase aparecerá a continuación.
+          Haz doble clic en una palabra para ver su definición.
         </p>
       </div>
 
@@ -128,9 +129,7 @@ export default function StudentPage() {
                 color: 'inherit',
               }}
             >
-              <p>
-                {transcription}
-              </p>
+              <WordWrapper text={transcription} />
             </div>
           </ScrollArea>
         </CardContent>

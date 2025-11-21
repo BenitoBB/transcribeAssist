@@ -110,12 +110,6 @@ export default function TeacherPage() {
 
       {/* Contenido principal */}
       <div className="relative p-4 h-full w-full z-10 pointer-events-none">
-        <div className="text-center text-foreground">
-          <h1 className="text-2xl sm:text-3xl font-bold">Vista del Maestro</h1>
-          <p className="mt-2 text-sm sm:text-base text-muted-foreground">
-            Aquí puedes mover y redimensionar el panel de transcripción.
-          </p>
-        </div>
         <TranscriptionPanel />
       </div>
 
