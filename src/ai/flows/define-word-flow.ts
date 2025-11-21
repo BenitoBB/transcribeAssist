@@ -40,7 +40,7 @@ export async function defineWord(
 
       if (!response.ok) {
         if (response.status === 404) {
-          return { data: null, error: 'not-found' };
+          return { definition: null, error: 'not-found' };
         }
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -52,22 +52,22 @@ export async function defineWord(
         const firstMeaning = data[0].meanings?.[0];
         const firstDefinition = firstMeaning?.definitions?.[0]?.definition;
         if (firstDefinition) {
-          return { data: firstDefinition, error: null };
+          return { definition: firstDefinition, error: null };
         }
       }
-      return { data: null, error: 'no-definition-found' };
+      return { definition: null, error: 'no-definition-found' };
 
     } catch (error) {
       console.error('Error fetching definition:', error);
-      return { data: null, error: 'api-error' };
+      return { definition: null, error: 'api-error' };
     }
   };
 
   // 1. Primer intento: con la palabra original
   let result = await fetchDefinition(word);
 
-  if (result.data) {
-    return { definition: result.data };
+  if (result.definition) {
+    return { definition: result.definition };
   }
   
   // 2. Segundo intento: con una raíz simplificada (si el primer intento falló)
@@ -82,8 +82,8 @@ export async function defineWord(
 
   if (rootWord && rootWord !== word) {
     result = await fetchDefinition(rootWord);
-    if (result.data) {
-      return { definition: result.data };
+    if (result.definition) {
+      return { definition: result.definition };
     }
   }
   
