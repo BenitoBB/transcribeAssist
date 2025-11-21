@@ -26,7 +26,6 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import React from 'react';
-import { WordDefinition } from '@/components/WordDefinition';
 
 export default function StudentPage() {
   const { transcription } = useTranscription();
@@ -56,15 +55,6 @@ export default function StudentPage() {
         description: 'La transcripción se está descargando como transcripcion.txt.',
       });
   };
-
-  const renderTranscription = () => {
-    return transcription.split(/(\s+)/).map((word, index) => (
-      <React.Fragment key={index}>
-        {word.match(/\s+/) ? word : <WordDefinition word={word} />}
-      </React.Fragment>
-    ));
-  };
-
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-4">
@@ -139,7 +129,7 @@ export default function StudentPage() {
               }}
             >
               <p>
-                {renderTranscription()}
+                {transcription}
               </p>
             </div>
           </ScrollArea>
