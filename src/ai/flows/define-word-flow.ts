@@ -35,6 +35,12 @@ export async function defineWord(
       }
     );
 
+    // Manejar el caso de 'Not Found' específicamente
+    if (response.status === 404) {
+      wikipediaContent = `No se encontró una entrada para "${word}" en Wikipedia.`;
+      return { definition: wikipediaContent };
+    }
+
     if (!response.ok) {
       throw new Error(`La API de Wikipedia respondió con el estado: ${response.status}`);
     }
@@ -43,7 +49,7 @@ export async function defineWord(
     
     // Si la respuesta es una página de desambiguación o no hay contenido, lo consideramos no encontrado.
     if (data.type === 'disambiguation' || !data.extract) {
-       wikipediaContent = `No se encontró una entrada directa para "${word}" en Wikipedia.`;
+       wikipediaContent = `No se encontró una definición clara para "${word}" en Wikipedia. Puede ser una página de desambiguación.`;
     } else {
        wikipediaContent = data.extract;
     }
