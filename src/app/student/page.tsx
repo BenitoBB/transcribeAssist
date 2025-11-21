@@ -26,7 +26,8 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import React from 'react';
-import { WordWrapper } from '@/components/WordWrapper';
+import { TextWithDefinitions } from '@/components/TextWithDefinitions';
+
 
 export default function StudentPage() {
   const { transcription } = useTranscription();
@@ -129,7 +130,7 @@ export default function StudentPage() {
                 color: 'inherit',
               }}
             >
-              <WordWrapper text={transcription} />
+              <TextWithDefinitions text={transcription} />
             </div>
           </ScrollArea>
         </CardContent>

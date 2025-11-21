@@ -1,52 +1,32 @@
-'use client';
+'use server';
 
-import React, { useState } from 'react';
-import { DefinitionPopup } from './DefinitionPopup';
+import React from 'react';
 
-interface WordWrapperProps {
-  text: string;
-}
+// Esta función es una Server Action. Se ejecuta en el servidor.
+export async function defineWord(word: string): Promise<string | null> {
+  const cleanedWord = word.toLowerCase().trim();
+  if (!cleanedWord) return null;
 
-export function WordWrapper({ text }: WordWrapperProps) {
-  const [selectedWord, setSelectedWord] = useState<string | null>(null);
+  try {
+    const response = await fetch(
+      `https://api.dictionaryapi.dev/api/v2/entries/es/${cleanedWord}`
+    );
 
-  const handleDoubleClick = (e: React.MouseEvent<HTMLSpanElement>) => {
-    const target = e.target as HTMLSpanElement;
-    const word = target.innerText.trim().replace(/[\p{P}\p{S}]/gu, '');
-
-    if (word) {
-      setSelectedWord(word);
+    if (!response.ok) {
+      // Si la API devuelve un 404 u otro error, la palabra no fue encontrada.
+      console.error(`Dictionary API error for "${cleanedWord}": ${response.status}`);
+      return null;
     }
-  };
 
-  const closePopup = () => {
-    setSelectedWord(null);
-  };
+    const data = await response.json();
 
-  // Divide el texto en palabras y espacios, manteniendo los espacios
-  const elements = text.split(/(\s+)/).map((segment, index) => {
-    // Si no es un espacio en blanco, es una palabra
-    if (segment.trim() !== '') {
-      return (
-        <span
-          key={index}
-          onDoubleClick={handleDoubleClick}
-          className="cursor-pointer hover:bg-yellow-200/50 dark:hover:bg-yellow-700/50 rounded"
-        >
-          {segment}
-        </span>
-      );
-    }
-    // Devuelve el espacio o salto de línea
-    return <React.Fragment key={index}>{segment}</React.Fragment>;
-  });
+    // La API devuelve un array, incluso si hay un solo resultado.
+    // Buscamos la primera definición en la primera entrada.
+    const firstDefinition = data[0]?.meanings[0]?.definitions[0]?.definition;
 
-  return (
-    <>
-      <p>{elements}</p>
-      {selectedWord && (
-        <DefinitionPopup word={selectedWord} onClose={closePopup} />
-      )}
-    </>
-  );
+    return firstDefinition || null;
+  } catch (error) {
+    console.error('Failed to fetch definition:', error);
+    return null;
+  }
 }
