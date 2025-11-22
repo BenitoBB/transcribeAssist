@@ -107,7 +107,6 @@ export function TranscriptionPanel() {
           lineHeight: style.lineHeight,
           letterSpacing: `${style.letterSpacing}px`,
           fontFamily: style.fontFamily,
-          height: '100%',
           color: 'inherit',
         }}
       >
