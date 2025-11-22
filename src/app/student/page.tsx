@@ -117,7 +117,7 @@ export default function StudentPage() {
             </DropdownMenu>
           </div>
         </CardHeader>
-        <CardContent className="p-0 flex-grow">
+        <CardContent className="p-0 flex-grow overflow-hidden">
           <ScrollArea className="h-full w-full">
             <div
               className="p-4 prose bg-transparent"

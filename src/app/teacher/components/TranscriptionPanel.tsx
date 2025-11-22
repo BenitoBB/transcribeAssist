@@ -122,7 +122,7 @@ export function TranscriptionPanel() {
           <CardTitle className="text-base font-semibold">Transcripción</CardTitle>
           <SettingsButton />
         </CardHeader>
-        <CardContent className="p-0 flex-grow">{renderContent()}</CardContent>
+        <CardContent className="p-0 flex-grow overflow-hidden">{renderContent()}</CardContent>
       </Card>
     );
   }
@@ -242,7 +242,7 @@ export function TranscriptionPanel() {
               </Tooltip>
             </div>
           </CardHeader>
-          <CardContent className="p-0 flex-grow">
+          <CardContent className="p-0 flex-grow overflow-hidden">
             {renderContent()}
           </CardContent>
         </Card>
