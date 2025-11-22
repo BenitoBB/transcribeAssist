@@ -26,6 +26,14 @@ export default function TeacherPage() {
     setTimeout(() => setClearCanvas(false), 50);
   };
 
+  const toggleRecording = () => {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
+    }
+  }
+
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-background">
       {/* Funcionalidad de Dibujo - Renderizado primero para estar detrás */}
@@ -73,39 +81,21 @@ export default function TeacherPage() {
           </TooltipContent>
         </Tooltip>
         
-        {!isRecording ? (
-          <Tooltip>
+        <Tooltip>
             <TooltipTrigger asChild>
               <Button
-                variant="outline"
+                variant={isRecording ? 'destructive' : 'outline'}
                 size="icon"
-                onClick={startRecording}
+                onClick={toggleRecording}
               >
-                <Mic className="h-4 w-4" />
-                <span className="sr-only">Iniciar transcripción</span>
+                {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                <span className="sr-only">{isRecording ? 'Detener transcripción' : 'Iniciar transcripción'}</span>
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Iniciar Transcripción</p>
+              <p>{isRecording ? 'Detener Transcripción' : 'Iniciar Transcripción'}</p>
             </TooltipContent>
           </Tooltip>
-        ) : (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="destructive"
-                size="icon"
-                onClick={stopRecording}
-              >
-                <MicOff className="h-4 w-4" />
-                <span className="sr-only">Detener transcripción</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Detener Transcripción</p>
-            </TooltipContent>
-          </Tooltip>
-        )}
       </div>
 
       {/* Contenido principal */}

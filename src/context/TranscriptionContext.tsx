@@ -6,21 +6,26 @@ import React, {
   useCallback,
   ReactNode,
   useEffect,
+  useRef,
 } from 'react';
 import {
-  startTranscription,
-  stopTranscription,
-  onTranscriptionUpdate,
-} from '@/lib/transcription';
-import { Keyword } from '@/ai/flows/extract-keywords-flow';
+  startWebSpeechApi,
+  stopWebSpeechApi,
+} from '@/lib/transcription/web-speech-api';
+import {
+  startGoogleApi,
+  stopGoogleApi,
+} from '@/lib/transcription/google-api';
+
+export type TranscriptionModel = 'web-speech-api' | 'google';
 
 export interface TranscriptionContextType {
   transcription: string;
   isRecording: boolean;
   startRecording: () => void;
   stopRecording: () => void;
-  keywords: Keyword[];
-  setKeywords: React.Dispatch<React.SetStateAction<Keyword[]>>;
+  transcriptionModel: TranscriptionModel;
+  setTranscriptionModel: React.Dispatch<React.SetStateAction<TranscriptionModel>>;
 }
 
 export const TranscriptionContext = createContext<
@@ -38,47 +43,64 @@ export const TranscriptionProvider: React.FC<TranscriptionProviderProps> = ({
   const [transcription, setTranscription] = useState(
     'La transcripción de la clase aparecerá aquí cuando inicies la grabación...'
   );
-  const [keywords, setKeywords] = useState<Keyword[]>([]);
+  const [transcriptionModel, setTranscriptionModel] =
+    useState<TranscriptionModel>('web-speech-api');
 
+  // Usamos una ref para tener siempre el valor más reciente de la transcripción en los callbacks
+  const transcriptionRef = useRef(transcription);
   useEffect(() => {
-    const handleTranscriptionUpdate = (newText: string) => {
+    transcriptionRef.current = transcription;
+  }, [transcription]);
+
+  const handleTranscriptionUpdate = useCallback((newText: string, isFinal: boolean) => {
+    if (isFinal) {
+      // Cuando es final, reemplazamos la transcripción actual
       setTranscription(newText);
-    };
-
-    const unsubscribe = onTranscriptionUpdate(handleTranscriptionUpdate);
-
-    return () => {
-      unsubscribe();
-    };
-  }, []);
-
-  const startRecording = useCallback(async () => {
-    try {
-      await startTranscription();
-      setIsRecording(true);
-      setTranscription('Iniciando grabación... ');
-      setKeywords([]);
-    } catch (error) {
-      console.error('Error al iniciar la grabación:', error);
-      setTranscription(
-        'Error: No se pudo acceder al micrófono. Por favor, comprueba los permisos en tu navegador.'
-      );
+    } else {
+      // Cuando es provisional, la añadimos al final.
+      // Esto funciona mejor para los modelos de servidor que envían trozos completos.
+      // Buscamos si el texto base ya existe para evitar duplicados.
+      const baseText = transcriptionRef.current.endsWith('...') 
+        ? transcriptionRef.current.slice(0, -3) 
+        : transcriptionRef.current;
+      setTranscription(baseText + newText);
     }
   }, []);
 
+  const startRecording = useCallback(async () => {
+    setIsRecording(true);
+    setTranscription('Iniciando grabación... ');
+
+    try {
+      if (transcriptionModel === 'web-speech-api') {
+        await startWebSpeechApi(handleTranscriptionUpdate);
+      } else {
+        await startGoogleApi(handleTranscriptionUpdate);
+      }
+    } catch (error) {
+      console.error('Error al iniciar la grabación:', error);
+      const errorMessage = (error instanceof Error) ? error.message : 'Error desconocido al iniciar grabación.';
+      setTranscription(`Error: ${errorMessage}`);
+      setIsRecording(false);
+    }
+  }, [transcriptionModel, handleTranscriptionUpdate]);
+
   const stopRecording = useCallback(() => {
-    stopTranscription();
+    if (transcriptionModel === 'web-speech-api') {
+      stopWebSpeechApi();
+    } else {
+      stopGoogleApi();
+    }
     setIsRecording(false);
-    // El texto final se actualizará a través del evento onTranscriptionUpdate
-  }, []);
+  }, [transcriptionModel]);
 
   const value = {
     isRecording,
     transcription,
     startRecording,
     stopRecording,
-    keywords,
-    setKeywords,
+    transcriptionModel,
+    setTranscriptionModel,
   };
 
   return (
