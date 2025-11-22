@@ -14,7 +14,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ArrowLeft, MoreVertical, Copy, FileDown } from 'lucide-react';
+import { ArrowLeft, MoreVertical, Copy, FileDown, Book } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useTranscription } from '@/hooks/use-transcription';
 import { useStyle } from '@/context/StyleContext';
@@ -25,21 +25,24 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { TextWithDefinitions } from '@/components/TextWithDefinitions';
+import { DictionaryPanel } from '@/components/dictionary/DictionaryPanel';
 
 export default function StudentPage() {
   const { transcription } = useTranscription();
   const { style } = useStyle();
   const { toast } = useToast();
   const scrollViewportRef = useRef<HTMLDivElement>(null);
+  const [isDictionaryOpen, setIsDictionaryOpen] = useState(false);
+
 
   useEffect(() => {
     if (scrollViewportRef.current) {
-      scrollViewportRef.current.scrollTop = scrollViewportRef.current.scrollHeight;
+      scrollViewportRef.current.scrollTop =
+        scrollViewportRef.current.scrollHeight;
     }
   }, [transcription]);
-
 
   const handleCopy = () => {
     navigator.clipboard.writeText(transcription);
@@ -60,13 +63,17 @@ export default function StudentPage() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     toast({
-        title: 'Guardado',
-        description: 'La transcripción se está descargando como transcripcion.txt.',
-      });
+      title: 'Guardado',
+      description:
+        'La transcripción se está descargando como transcripcion.txt.',
+    });
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center p-4">
+    <div className="relative flex min-h-screen flex-col items-center justify-center p-4">
+      {isDictionaryOpen && (
+        <DictionaryPanel onClose={() => setIsDictionaryOpen(false)} />
+      )}
       <div className="absolute top-4 left-4 sm:top-8 sm:left-8 flex items-center gap-4">
         <Link href="/">
           <Tooltip>
@@ -86,7 +93,7 @@ export default function StudentPage() {
       <div className="text-center mb-6 sm:mb-8">
         <h1 className="text-2xl sm:text-3xl font-bold">Vista del Alumno</h1>
         <p className="mt-2 text-sm sm:text-base">
-          Haz doble clic en una palabra para ver su definición.
+          La transcripción de la clase aparecerá aquí en tiempo real.
         </p>
       </div>
 
@@ -96,6 +103,22 @@ export default function StudentPage() {
             Transcripción
           </CardTitle>
           <div className="flex items-center gap-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setIsDictionaryOpen(true)}
+                >
+                  <Book className="h-4 w-4" />
+                  <span className="sr-only">Abrir diccionario</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Abrir Diccionario</p>
+              </TooltipContent>
+            </Tooltip>
             <SettingsButton />
             <DropdownMenu>
               <Tooltip>
@@ -134,6 +157,7 @@ export default function StudentPage() {
                 letterSpacing: `${style.letterSpacing}px`,
                 fontFamily: style.fontFamily,
                 color: 'inherit',
+                minHeight: '100%',
               }}
             >
               <TextWithDefinitions text={transcription} />
