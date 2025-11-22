@@ -8,17 +8,20 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { ArrowLeft, Pencil, Mic, MicOff } from 'lucide-react';
+import { ArrowLeft, Pencil, Mic, MicOff, BookText } from 'lucide-react';
 import { TranscriptionPanel } from './components/TranscriptionPanel';
 import { DrawingCanvas } from './components/DrawingCanvas';
 import { DrawingToolbar } from './components/DrawingToolbar';
 import { useTranscription } from '@/hooks/use-transcription';
+import { SummaryPanel } from '@/components/summary/SummaryPanel';
 
 export default function TeacherPage() {
   const [isDrawingMode, setIsDrawingMode] = useState(false);
   const [brushColor, setBrushColor] = useState('#FF0000'); // Color por defecto: rojo
   const [clearCanvas, setClearCanvas] = useState(false);
-  const { isRecording, startRecording, stopRecording } = useTranscription();
+  const { isRecording, startRecording, stopRecording, transcription } =
+    useTranscription();
+  const [isSummaryPanelOpen, setIsSummaryPanelOpen] = useState(false);
 
   const handleClearCanvas = () => {
     setClearCanvas(true);
@@ -36,6 +39,14 @@ export default function TeacherPage() {
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-background">
+      {/* Paneles Flotantes */}
+      {isSummaryPanelOpen && (
+        <SummaryPanel
+          textToSummarize={transcription}
+          onClose={() => setIsSummaryPanelOpen(false)}
+        />
+      )}
+
       {/* Funcionalidad de Dibujo - Renderizado primero para estar detrás */}
       {isDrawingMode && (
         <>
@@ -104,6 +115,22 @@ export default function TeacherPage() {
             <p>
               {isRecording ? 'Detener Transcripción' : 'Iniciar Transcripción'}
             </p>
+          </TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setIsSummaryPanelOpen(true)}
+            >
+              <BookText className="h-4 w-4" />
+              <span className="sr-only">Generar resumen</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Generar Resumen</p>
           </TooltipContent>
         </Tooltip>
       </div>

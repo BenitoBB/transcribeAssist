@@ -14,7 +14,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ArrowLeft, MoreVertical, Copy, FileDown } from 'lucide-react';
+import { ArrowLeft, MoreVertical, Copy, FileDown, BookText } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useTranscription } from '@/hooks/use-transcription';
 import { useStyle } from '@/context/StyleContext';
@@ -28,6 +28,7 @@ import {
 import React, { useRef, useEffect, useState } from 'react';
 import { TextWithDefinitions } from '@/components/TextWithDefinitions';
 import { LineHighlighter } from '@/components/LineHighlighter';
+import { SummaryPanel } from '@/components/summary/SummaryPanel';
 
 export default function StudentPage() {
   const { transcription } = useTranscription();
@@ -40,15 +41,27 @@ export default function StudentPage() {
     isVisible: boolean;
   } | null>(null);
   const [contentHeight, setContentHeight] = useState(0);
+  const [isSummaryPanelOpen, setIsSummaryPanelOpen] = useState(false);
 
   useEffect(() => {
     if (scrollViewportRef.current) {
       scrollViewportRef.current.scrollTop =
         scrollViewportRef.current.scrollHeight;
     }
+  }, [transcription]);
+
+  useEffect(() => {
+    const updateContentHeight = () => {
+      if (textContainerRef.current) {
+        setContentHeight(textContainerRef.current.scrollHeight);
+      }
+    };
+    updateContentHeight();
+    const resizeObserver = new ResizeObserver(updateContentHeight);
     if (textContainerRef.current) {
-      setContentHeight(textContainerRef.current.scrollHeight);
+      resizeObserver.observe(textContainerRef.current);
     }
+    return () => resizeObserver.disconnect();
   }, [transcription]);
 
   const handleCopy = () => {
@@ -95,6 +108,12 @@ export default function StudentPage() {
 
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center p-4">
+      {isSummaryPanelOpen && (
+        <SummaryPanel
+          textToSummarize={transcription}
+          onClose={() => setIsSummaryPanelOpen(false)}
+        />
+      )}
       <div className="absolute top-4 left-4 sm:top-8 sm:left-8 flex items-center gap-4">
         <Link href="/">
           <Tooltip>
@@ -124,6 +143,22 @@ export default function StudentPage() {
             Transcripción
           </CardTitle>
           <div className="flex items-center gap-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setIsSummaryPanelOpen(true)}
+                >
+                  <BookText className="h-4 w-4" />
+                  <span className="sr-only">Generar resumen</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Generar resumen</p>
+              </TooltipContent>
+            </Tooltip>
             <SettingsButton />
             <DropdownMenu>
               <Tooltip>
@@ -168,6 +203,7 @@ export default function StudentPage() {
                 letterSpacing: `${style.letterSpacing}px`,
                 fontFamily: style.fontFamily,
                 color: 'inherit',
+                minHeight: '100%',
               }}
             >
               {mousePosition && (
