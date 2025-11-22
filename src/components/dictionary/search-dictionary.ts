@@ -43,9 +43,11 @@ export interface DictionaryEntry {
   
       if (!response.ok) {
         if (response.status === 404) {
+            // La API devuelve un objeto de error específico para 404.
             const errorData: DictionaryAPIError = await response.json();
-            return { data: null, error: errorData.title || "No se encontró la palabra." };
+            return { data: null, error: errorData.title || "No se encontró una definición para esta palabra." };
         }
+        // Para otros errores HTTP (500, etc.)
         return { data: null, error: `Error de la API: ${response.statusText}` };
       }
   
