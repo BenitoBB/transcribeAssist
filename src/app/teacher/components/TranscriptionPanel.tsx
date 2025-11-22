@@ -25,7 +25,6 @@ import { SettingsButton } from '@/components/settings/SettingsButton';
 import { TextWithDefinitions } from '@/components/TextWithDefinitions';
 import { LineHighlighter } from '@/components/LineHighlighter';
 
-
 type Position = 'top' | 'bottom' | 'left' | 'right' | 'free';
 
 export function TranscriptionPanel() {
@@ -33,14 +32,20 @@ export function TranscriptionPanel() {
   const { style } = useStyle();
   const scrollViewportRef = useRef<HTMLDivElement>(null);
   const textContainerRef = useRef<HTMLDivElement>(null);
-  const [mousePosition, setMousePosition] = useState<{ y: number, isVisible: boolean } | null>(null);
+  const [mousePosition, setMousePosition] = useState<{
+    y: number;
+    isVisible: boolean;
+  } | null>(null);
+  const [contentHeight, setContentHeight] = useState(0);
 
   useEffect(() => {
     if (scrollViewportRef.current) {
       scrollViewportRef.current.scrollTop = scrollViewportRef.current.scrollHeight;
     }
+     if (textContainerRef.current) {
+      setContentHeight(textContainerRef.current.scrollHeight);
+    }
   }, [transcription]);
-
 
   const [position, setPosition] = useState<Position>('free');
   const [size, setSize] = useState({ width: 500, height: 300 });
@@ -106,29 +111,36 @@ export function TranscriptionPanel() {
         break;
     }
   };
-  
+
   const isDocked = position !== 'free';
 
-    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (textContainerRef.current) {
       const rect = textContainerRef.current.getBoundingClientRect();
       const y = e.clientY - rect.top;
-      setMousePosition({ y, isVisible: true });
+      // Solo mostramos el resaltador si el cursor está sobre el contenido de texto real
+      if (y < contentHeight) {
+        setMousePosition({ y, isVisible: true });
+      } else {
+        handleMouseLeave();
+      }
     }
   };
 
   const handleMouseLeave = () => {
-    setMousePosition(prev => prev ? { ...prev, isVisible: false } : null);
+    setMousePosition((prev) => (prev ? { ...prev, isVisible: false } : null));
   };
 
-
   const renderContent = () => (
-    <ScrollArea className="h-full" viewportRef={scrollViewportRef}>
+    <ScrollArea
+      className="h-full"
+      viewportRef={scrollViewportRef}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+    >
       <div
         ref={textContainerRef}
-        className="p-4 prose bg-transparent min-h-full relative"
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
+        className="p-4 prose bg-transparent relative"
         style={{
           fontSize: `${style.fontSize}px`,
           lineHeight: style.lineHeight,
@@ -145,7 +157,7 @@ export function TranscriptionPanel() {
           />
         )}
         <div className="relative z-10">
-            <TextWithDefinitions text={transcription} />
+          <TextWithDefinitions text={transcription} />
         </div>
       </div>
     </ScrollArea>
@@ -155,16 +167,23 @@ export function TranscriptionPanel() {
     return (
       <Card className="fixed bottom-0 left-0 right-0 h-[40vh] w-full flex flex-col shadow-2xl rounded-b-none border-t">
         <CardHeader className="flex flex-row items-center justify-between p-3 border-b">
-          <CardTitle className="text-base font-semibold">Transcripción</CardTitle>
+          <CardTitle className="text-base font-semibold">
+            Transcripción
+          </CardTitle>
           <SettingsButton />
         </CardHeader>
-        <CardContent className="p-0 flex-grow overflow-hidden">{renderContent()}</CardContent>
+        <CardContent className="p-0 flex-grow overflow-hidden">
+          {renderContent()}
+        </CardContent>
       </Card>
     );
   }
 
   return (
-    <div ref={parentRef} className="w-full h-full absolute top-0 left-0 pointer-events-none">
+    <div
+      ref={parentRef}
+      className="w-full h-full absolute top-0 left-0 pointer-events-none"
+    >
       <Rnd
         size={size}
         position={pos}
@@ -188,14 +207,19 @@ export function TranscriptionPanel() {
         enableResizing={!isDocked}
         disableDragging={isDocked}
       >
-        <Card className="h-full w-full flex flex-col shadow-2xl" onDoubleClick={() => isDocked && handleSetPosition('free')}>
+        <Card
+          className="h-full w-full flex flex-col shadow-2xl"
+          onDoubleClick={() => isDocked && handleSetPosition('free')}
+        >
           <CardHeader className="flex flex-row items-center justify-between p-3 border-b drag-handle cursor-move">
             <div className="flex items-center gap-2">
               <GripVertical className="text-muted-foreground" />
-              <CardTitle className="text-base font-semibold">Transcripción</CardTitle>
+              <CardTitle className="text-base font-semibold">
+                Transcripción
+              </CardTitle>
             </div>
             <div className="flex items-center gap-1">
-               <SettingsButton />
+              <SettingsButton />
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button

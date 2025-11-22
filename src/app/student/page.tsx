@@ -29,19 +29,25 @@ import React, { useRef, useEffect, useState } from 'react';
 import { TextWithDefinitions } from '@/components/TextWithDefinitions';
 import { LineHighlighter } from '@/components/LineHighlighter';
 
-
 export default function StudentPage() {
   const { transcription } = useTranscription();
   const { style } = useStyle();
   const { toast } = useToast();
   const scrollViewportRef = useRef<HTMLDivElement>(null);
   const textContainerRef = useRef<HTMLDivElement>(null);
-  const [mousePosition, setMousePosition] = useState<{ y: number, isVisible: boolean } | null>(null);
+  const [mousePosition, setMousePosition] = useState<{
+    y: number;
+    isVisible: boolean;
+  } | null>(null);
+  const [contentHeight, setContentHeight] = useState(0);
 
   useEffect(() => {
     if (scrollViewportRef.current) {
       scrollViewportRef.current.scrollTop =
         scrollViewportRef.current.scrollHeight;
+    }
+    if (textContainerRef.current) {
+      setContentHeight(textContainerRef.current.scrollHeight);
     }
   }, [transcription]);
 
@@ -74,12 +80,17 @@ export default function StudentPage() {
     if (textContainerRef.current) {
       const rect = textContainerRef.current.getBoundingClientRect();
       const y = e.clientY - rect.top;
-      setMousePosition({ y, isVisible: true });
+      // Solo mostramos el resaltador si el cursor está sobre el contenido de texto real
+      if (y < contentHeight) {
+        setMousePosition({ y, isVisible: true });
+      } else {
+        handleMouseLeave();
+      }
     }
   };
 
   const handleMouseLeave = () => {
-    setMousePosition(prev => prev ? { ...prev, isVisible: false } : null);
+    setMousePosition((prev) => (prev ? { ...prev, isVisible: false } : null));
   };
 
   return (
@@ -142,19 +153,21 @@ export default function StudentPage() {
           </div>
         </CardHeader>
         <CardContent className="p-0 flex-grow overflow-hidden">
-          <ScrollArea className="h-full w-full" viewportRef={scrollViewportRef}>
+          <ScrollArea
+            className="h-full w-full"
+            viewportRef={scrollViewportRef}
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+          >
             <div
               ref={textContainerRef}
-              className="p-4 prose bg-transparent min-h-full relative"
-              onMouseMove={handleMouseMove}
-              onMouseLeave={handleMouseLeave}
+              className="p-4 prose bg-transparent relative"
               style={{
                 fontSize: `${style.fontSize}px`,
                 lineHeight: style.lineHeight,
                 letterSpacing: `${style.letterSpacing}px`,
                 fontFamily: style.fontFamily,
                 color: 'inherit',
-                minHeight: '100%',
               }}
             >
               {mousePosition && (
