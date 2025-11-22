@@ -5,19 +5,13 @@ import React, {
   useState,
   useCallback,
   ReactNode,
-  useEffect,
-  useRef,
 } from 'react';
 import {
   startWebSpeechApi,
   stopWebSpeechApi,
 } from '@/lib/transcription/web-speech-api';
-import {
-  startGoogleApi,
-  stopGoogleApi,
-} from '@/lib/transcription/google-api';
 
-export type TranscriptionModel = 'web-speech-api' | 'google';
+export type TranscriptionModel = 'web-speech-api';
 
 export interface TranscriptionContextType {
   transcription: string;
@@ -46,53 +40,30 @@ export const TranscriptionProvider: React.FC<TranscriptionProviderProps> = ({
   const [transcriptionModel, setTranscriptionModel] =
     useState<TranscriptionModel>('web-speech-api');
 
-  // Usamos una ref para tener siempre el valor más reciente de la transcripción en los callbacks
-  const transcriptionRef = useRef(transcription);
-  useEffect(() => {
-    transcriptionRef.current = transcription;
-  }, [transcription]);
-
-  const handleTranscriptionUpdate = useCallback((newText: string, isFinal: boolean) => {
-    if (isFinal) {
-      // Cuando es final, reemplazamos la transcripción actual
-      setTranscription(newText);
-    } else {
-      // Cuando es provisional, la añadimos al final.
-      // Esto funciona mejor para los modelos de servidor que envían trozos completos.
-      // Buscamos si el texto base ya existe para evitar duplicados.
-      const baseText = transcriptionRef.current.endsWith('...') 
-        ? transcriptionRef.current.slice(0, -3) 
-        : transcriptionRef.current;
-      setTranscription(baseText + newText);
-    }
+  const handleTranscriptionUpdate = useCallback((newText: string) => {
+    setTranscription(newText);
   }, []);
 
   const startRecording = useCallback(async () => {
     setIsRecording(true);
-    setTranscription('Iniciando grabación... ');
+    setTranscription('');
 
     try {
-      if (transcriptionModel === 'web-speech-api') {
-        await startWebSpeechApi(handleTranscriptionUpdate);
-      } else {
-        await startGoogleApi(handleTranscriptionUpdate);
-      }
+      // Por ahora, solo usamos Web Speech API
+      await startWebSpeechApi(handleTranscriptionUpdate);
     } catch (error) {
       console.error('Error al iniciar la grabación:', error);
       const errorMessage = (error instanceof Error) ? error.message : 'Error desconocido al iniciar grabación.';
       setTranscription(`Error: ${errorMessage}`);
       setIsRecording(false);
     }
-  }, [transcriptionModel, handleTranscriptionUpdate]);
+  }, [handleTranscriptionUpdate]);
 
   const stopRecording = useCallback(() => {
-    if (transcriptionModel === 'web-speech-api') {
-      stopWebSpeechApi();
-    } else {
-      stopGoogleApi();
-    }
+    // Por ahora, solo usamos Web Speech API
+    stopWebSpeechApi();
     setIsRecording(false);
-  }, [transcriptionModel]);
+  }, []);
 
   const value = {
     isRecording,

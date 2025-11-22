@@ -8,13 +8,13 @@
 
 let recognition: SpeechRecognition | null = null;
 let finalTranscription = '';
-let onUpdate: (text: string, isFinal: boolean) => void;
+let onUpdate: (text: string) => void;
 
 /**
  * Inicia la captura y el reconocimiento de audio.
  */
 export async function startWebSpeechApi(
-    onTranscriptionUpdate: (text: string, isFinal: boolean) => void
+    onTranscriptionUpdate: (text: string) => void
 ): Promise<void> {
   onUpdate = onTranscriptionUpdate;
 
@@ -34,11 +34,11 @@ export async function startWebSpeechApi(
   finalTranscription = ''; // Reiniciar al comenzar
 
   recognition.onstart = () => {
-    onUpdate('🎙️ Grabación iniciada...', false);
+    onUpdate('🎙️ Grabación iniciada...');
   };
 
   recognition.onend = () => {
-    onUpdate(finalTranscription || 'Grabación detenida.', true);
+    onUpdate(finalTranscription || 'Grabación detenida.');
     recognition = null;
   };
 
@@ -47,27 +47,23 @@ export async function startWebSpeechApi(
       return;
     }
     console.error('Error en el reconocimiento de voz:', event.error);
-    onUpdate(`Error: ${event.error}`, true);
+    onUpdate(`Error: ${event.error}`);
   };
 
   recognition.onresult = (event) => {
     let interimTranscription = '';
-    let currentFinal = '';
-
+    
     for (let i = event.resultIndex; i < event.results.length; ++i) {
       if (event.results[i].isFinal) {
-        currentFinal += event.results[i][0].transcript.trim() + '\n';
+        // Concatenamos el resultado final con un salto de línea para legibilidad
+        finalTranscription += event.results[i][0].transcript.trim() + '\n\n';
       } else {
         interimTranscription += event.results[i][0].transcript;
       }
     }
     
-    if (currentFinal) {
-        finalTranscription += currentFinal;
-        onUpdate(finalTranscription, true);
-    } else if (interimTranscription) {
-        onUpdate(finalTranscription + interimTranscription, false);
-    }
+    // Actualizamos la UI con la transcripción final más la provisional actual
+    onUpdate(finalTranscription + interimTranscription);
   };
 
   try {

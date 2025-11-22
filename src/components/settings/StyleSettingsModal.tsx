@@ -16,26 +16,29 @@ import { TranscriptionModel } from '@/context/TranscriptionContext';
 
 export function StyleSettingsModal() {
   const { style, setStyle, theme, setTheme } = useStyle();
-  const { isRecording, transcriptionModel, setTranscriptionModel } = useTranscription();
+  const { isRecording } = useTranscription();
 
   return (
     <div className="grid gap-6 py-4">
        <div className="grid gap-2">
         <Label htmlFor="transcription-model">Modelo de Transcripción</Label>
         <Select
-          value={transcriptionModel}
-          onValueChange={(value) => setTranscriptionModel(value as TranscriptionModel)}
+          defaultValue="web-speech-api"
           disabled={isRecording}
         >
           <SelectTrigger id="transcription-model">
             <SelectValue placeholder="Seleccionar modelo" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="web-speech-api">Navegador (Rápido)</SelectItem>
-            <SelectItem value="google">Google (Alta Calidad)</SelectItem>
+            <SelectItem value="web-speech-api">Navegador (Gratis, Rápido)</SelectItem>
           </SelectContent>
         </Select>
-        {isRecording && <p className="text-xs text-muted-foreground">No se puede cambiar el modelo mientras se graba.</p>}
+        <p className="text-xs text-muted-foreground">
+            {isRecording 
+                ? "No se puede cambiar el modelo mientras se graba."
+                : "Actualmente solo está disponible el modelo del navegador."
+            }
+        </p>
       </div>
       <div className="grid gap-2">
         <Label htmlFor="font-size">Tamaño de Fuente: {style.fontSize}px</Label>

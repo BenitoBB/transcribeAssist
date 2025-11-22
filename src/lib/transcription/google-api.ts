@@ -1,78 +1,106 @@
-/**
- * ===================================================================================
- * Lógica de Transcripción con API de Google (Lado del Cliente)
- * ===================================================================================
- * Este archivo se encarga de capturar el audio del micrófono, enviarlo a nuestro
- * flujo de Genkit en el servidor para su transcripción, y manejar la respuesta.
- */
+'use client';
 
-import { transcribeAudio } from '@/ai/flows/transcribe-audio-flow';
+import { useStyle } from '@/context/StyleContext';
+import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { useTranscription } from '@/hooks/use-transcription';
+import { TranscriptionModel } from '@/context/TranscriptionContext';
 
-let mediaRecorder: MediaRecorder | null = null;
-let audioChunks: Blob[] = [];
-let onUpdate: (text: string, isFinal: boolean) => void;
+export function StyleSettingsModal() {
+  const { style, setStyle, theme, setTheme } = useStyle();
+  const { isRecording } = useTranscription();
 
-/**
- * Inicia la grabación del micrófono.
- * @param onTranscriptionUpdate - Callback para notificar de nuevo texto.
- */
-export async function startGoogleApi(
-  onTranscriptionUpdate: (text: string, isFinal: boolean) => void
-): Promise<void> {
-  onUpdate = onTranscriptionUpdate;
-
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
-
-    mediaRecorder.onstart = () => {
-      audioChunks = [];
-    };
-
-    mediaRecorder.ondataavailable = (event) => {
-      audioChunks.push(event.data);
-    };
-
-    // Cuando se detiene la grabación, procesamos el audio.
-    mediaRecorder.onstop = async () => {
-      onUpdate('Procesando audio...', false);
-      const audioBlob = new Blob(audioChunks, { type: 'audio/webm;codecs=opus' });
-      const reader = new FileReader();
-
-      reader.onload = async () => {
-        const base64Audio = reader.result as string;
-        try {
-          const result = await transcribeAudio({ audioDataUri: base64Audio });
-          onUpdate(result.transcription, true);
-        } catch (error) {
-          console.error('Error al transcribir con Google:', error);
-          onUpdate('Error en la transcripción del servidor.', true);
-        }
-      };
-      
-      reader.onerror = () => {
-          console.error('Error al leer el blob de audio');
-          onUpdate('Error al procesar el audio localmente.', true);
-      }
-
-      reader.readAsDataURL(audioBlob);
-    };
-
-    mediaRecorder.start();
-  } catch (err) {
-    console.error('Error al acceder al micrófono:', err);
-    throw new Error('No se pudo acceder al micrófono. Por favor, comprueba los permisos en tu navegador.');
-  }
-}
-
-/**
- * Detiene la grabación. El evento 'onstop' se encargará del resto.
- */
-export function stopGoogleApi(): void {
-  if (mediaRecorder && mediaRecorder.state === 'recording') {
-    mediaRecorder.stop();
-    
-    // Apagar las pistas del micrófono para que el icono de grabación del navegador desaparezca
-    mediaRecorder.stream.getTracks().forEach(track => track.stop());
-  }
+  return (
+    <div className="grid gap-6 py-4">
+       <div className="grid gap-2">
+        <Label htmlFor="transcription-model">Modelo de Transcripción</Label>
+        <Select
+          defaultValue="web-speech-api"
+          disabled={isRecording}
+        >
+          <SelectTrigger id="transcription-model">
+            <SelectValue placeholder="Seleccionar modelo" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="web-speech-api">Navegador (Gratis, Rápido)</SelectItem>
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">
+            {isRecording 
+                ? "No se puede cambiar el modelo mientras se graba."
+                : "Actualmente solo está disponible el modelo del navegador."
+            }
+        </p>
+      </div>
+      <div className="grid gap-2">
+        <Label htmlFor="font-size">Tamaño de Fuente: {style.fontSize}px</Label>
+        <Slider
+          id="font-size"
+          min={12}
+          max={32}
+          step={1}
+          value={[style.fontSize]}
+          onValueChange={(value) => setStyle({ ...style, fontSize: value[0] })}
+        />
+      </div>
+      <div className="grid gap-2">
+        <Label htmlFor="line-height">Altura de Línea: {style.lineHeight}</Label>
+        <Slider
+          id="line-height"
+          min={1.2}
+          max={2.5}
+          step={0.1}
+          value={[style.lineHeight]}
+          onValueChange={(value) => setStyle({ ...style, lineHeight: value[0] })}
+        />
+      </div>
+      <div className="grid gap-2">
+        <Label htmlFor="letter-spacing">Espaciado de Letras: {style.letterSpacing}px</Label>
+        <Slider
+          id="letter-spacing"
+          min={0}
+          max={5}
+          step={0.5}
+          value={[style.letterSpacing]}
+          onValueChange={(value) => setStyle({ ...style, letterSpacing: value[0] })}
+        />
+      </div>
+      <div className="grid gap-2">
+        <Label htmlFor="font-family">Tipografía</Label>
+        <Select
+          value={style.fontFamily}
+          onValueChange={(value) => setStyle({ ...style, fontFamily: value })}
+        >
+          <SelectTrigger id="font-family">
+            <SelectValue placeholder="Seleccionar fuente" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Inter, sans-serif">Inter (Defecto)</SelectItem>
+            <SelectItem value="Arial, sans-serif">Arial</SelectItem>
+            <SelectItem value="Verdana, sans-serif">Verdana</SelectItem>
+            <SelectItem value="'Open Dyslexic', sans-serif">Open Dyslexic</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+       <div className="grid gap-2">
+        <Label>Tema de Color</Label>
+        <div className="grid grid-cols-2 gap-2">
+          <Button variant={theme === 'light' ? 'default' : 'outline'} onClick={() => setTheme('light')}>Claro</Button>
+          <Button variant={theme === 'dark' ? 'default' : 'outline'} onClick={() => setTheme('dark')}>Oscuro</Button>
+          <Button variant={theme === 'protanopia' ? 'default' : 'outline'} onClick={() => setTheme('protanopia')}>Protanopia</Button>
+          <Button variant={theme === 'deuteranopia' ? 'default' : 'outline'} onClick={() => setTheme('deuteranopia')}>Deuteranopia</Button>
+          <Button variant={theme === 'tritanopia' ? 'default' : 'outline'} onClick={() => setTheme('tritanopia')}>Tritanopia</Button>
+          <Button variant={theme === 'accessible' ? 'default' : 'outline'} onClick={() => setTheme('accessible')}>Alto Contraste</Button>
+        </div>
+      </div>
+    </div>
+  );
 }
