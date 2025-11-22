@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { GripVertical, X, Sparkles } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
-import { generateExtractiveSummary } from './extractive-summary';
 
 interface SummaryPanelProps {
   textToSummarize: string;
@@ -37,22 +36,15 @@ export function SummaryPanel({
     setError(null);
     setSummary('');
     startTransition(() => {
-      if (!textToSummarize || textToSummarize.trim().length < 100) {
+      if (!textToSummarize || textToSummarize.trim().length < 50) {
         setError(
-          'No hay suficiente texto para generar un resumen. Se necesitan al menos 100 caracteres.'
+          'No hay suficiente texto para generar un resumen. Se necesitan al menos 50 caracteres.'
         );
         return;
       }
       try {
-        // Simula un pequeño retraso para la percepción de procesamiento
-        setTimeout(() => {
-          const result = generateExtractiveSummary(textToSummarize);
-          if (result) {
-            setSummary(result);
-          } else {
-            setError('No se pudo generar el resumen.');
-          }
-        }, 500);
+        // Lógica de resumen eliminada temporalmente
+        setSummary('La funcionalidad de resumen está en desarrollo y se implementará utilizando una arquitectura P2P para mantener el costo cero.');
       } catch (e) {
         console.error(e);
         setError('Ocurrió un error al generar el resumen.');
