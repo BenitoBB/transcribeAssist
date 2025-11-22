@@ -30,6 +30,14 @@ type Position = 'top' | 'bottom' | 'left' | 'right' | 'free';
 export function TranscriptionPanel() {
   const { transcription } = useTranscription();
   const { style } = useStyle();
+  const scrollViewportRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollViewportRef.current) {
+      scrollViewportRef.current.scrollTop = scrollViewportRef.current.scrollHeight;
+    }
+  }, [transcription]);
+
 
   const [position, setPosition] = useState<Position>('free');
   const [size, setSize] = useState({ width: 500, height: 300 });
@@ -99,9 +107,9 @@ export function TranscriptionPanel() {
   const isDocked = position !== 'free';
 
   const renderContent = () => (
-    <ScrollArea className="h-full">
+    <ScrollArea className="h-full" viewportRef={scrollViewportRef}>
       <div
-        className="p-4 prose bg-transparent"
+        className="p-4 prose bg-transparent min-h-full"
         style={{
           fontSize: `${style.fontSize}px`,
           lineHeight: style.lineHeight,

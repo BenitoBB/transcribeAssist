@@ -25,14 +25,21 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { TextWithDefinitions } from '@/components/TextWithDefinitions';
-
 
 export default function StudentPage() {
   const { transcription } = useTranscription();
   const { style } = useStyle();
   const { toast } = useToast();
+  const scrollViewportRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollViewportRef.current) {
+      scrollViewportRef.current.scrollTop = scrollViewportRef.current.scrollHeight;
+    }
+  }, [transcription]);
+
 
   const handleCopy = () => {
     navigator.clipboard.writeText(transcription);
@@ -118,9 +125,9 @@ export default function StudentPage() {
           </div>
         </CardHeader>
         <CardContent className="p-0 flex-grow overflow-hidden">
-          <ScrollArea className="h-full w-full">
+          <ScrollArea className="h-full w-full" viewportRef={scrollViewportRef}>
             <div
-              className="p-4 prose bg-transparent"
+              className="p-4 prose bg-transparent min-h-full"
               style={{
                 fontSize: `${style.fontSize}px`,
                 lineHeight: style.lineHeight,
