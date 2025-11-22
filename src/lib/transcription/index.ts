@@ -88,11 +88,13 @@ export async function startTranscription(): Promise<void> {
     let interimTranscription = '';
     for (let i = event.resultIndex; i < event.results.length; ++i) {
       if (event.results[i].isFinal) {
-        finalTranscription += event.results[i][0].transcript + ' ';
+        // En lugar de un espacio, añadimos un salto de línea al final de cada frase/pausa.
+        finalTranscription += event.results[i][0].transcript.trim() + '\n';
       } else {
         interimTranscription += event.results[i][0].transcript;
       }
     }
+    // Notificamos con la transcripción final (con saltos de línea) y la provisional.
     notifyListeners(finalTranscription + interimTranscription);
   };
 

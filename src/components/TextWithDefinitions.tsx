@@ -1,9 +1,7 @@
 'use client';
 
-import React, { useState, useTransition } from 'react';
+import React, { useState, useTransition, Fragment } from 'react';
 import { DefinitionPopup } from './DefinitionPopup';
-
-// La Server Action ahora vive en su propio archivo dedicado.
 import { defineWord } from './define-word';
 
 interface TextWithDefinitionsProps {
@@ -17,8 +15,7 @@ export function TextWithDefinitions({ text }: TextWithDefinitionsProps) {
 
   const handleDoubleClick = (e: React.MouseEvent<HTMLSpanElement>) => {
     const target = e.target as HTMLSpanElement;
-    // Limpia la palabra de puntuación común al final.
-    const word = target.innerText.trim().replace(/[\p{P}\p{S}]/gu, '');
+    const word = target.innerText.trim().replace(/[.,¡!¿?]/g, '');
 
     if (word) {
       setSelectedWord(word);
@@ -35,27 +32,35 @@ export function TextWithDefinitions({ text }: TextWithDefinitionsProps) {
     setDefinition(null);
   };
 
-  // Divide el texto en palabras y espacios, manteniendo los espacios
-  const elements = text.split(/(\s+)/).map((segment, index) => {
-    // Si no es un espacio en blanco, es una palabra
-    if (segment.trim() !== '') {
-      return (
-        <span
-          key={index}
-          onDoubleClick={handleDoubleClick}
-          className="cursor-pointer hover:bg-yellow-200/50 dark:hover:bg-yellow-700/50 rounded"
-        >
-          {segment}
-        </span>
-      );
-    }
-    // Devuelve el espacio o salto de línea
-    return <React.Fragment key={index}>{segment}</React.Fragment>;
+  // Divide el texto en párrafos por los saltos de línea
+  const paragraphs = text.split('\n').map((paragraph, pIndex) => {
+    // Dentro de cada párrafo, divide en palabras y espacios
+    const elements = paragraph.split(/(\s+)/).map((segment, sIndex) => {
+      if (segment.trim() !== '') {
+        return (
+          <span
+            key={sIndex}
+            onDoubleClick={handleDoubleClick}
+            className="cursor-pointer hover:bg-yellow-200/50 dark:hover:bg-yellow-700/50 rounded"
+          >
+            {segment}
+          </span>
+        );
+      }
+      return <Fragment key={sIndex}>{segment}</Fragment>;
+    });
+    // Envuelve cada párrafo en un <p> y añade un <br> para los saltos de línea explícitos
+    return (
+      <Fragment key={pIndex}>
+        {elements}
+        <br />
+      </Fragment>
+    );
   });
 
   return (
     <>
-      <p>{elements}</p>
+      <div>{paragraphs}</div>
       {selectedWord && (
         <DefinitionPopup
           word={selectedWord}
