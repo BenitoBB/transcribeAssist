@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { GripVertical, X, Sparkles } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
-import { summarizeText } from './summarize-text-flow';
+import { generateExtractiveSummary } from './extractive-summary';
 
 interface SummaryPanelProps {
   textToSummarize: string;
@@ -36,18 +36,23 @@ export function SummaryPanel({
   const handleGenerateSummary = () => {
     setError(null);
     setSummary('');
-    startTransition(async () => {
-      if (!textToSummarize || textToSummarize.trim().length < 50) {
-        setError('No hay suficiente texto para generar un resumen.');
+    startTransition(() => {
+      if (!textToSummarize || textToSummarize.trim().length < 100) {
+        setError(
+          'No hay suficiente texto para generar un resumen. Se necesitan al menos 100 caracteres.'
+        );
         return;
       }
       try {
-        const result = await summarizeText({ text: textToSummarize });
-        if (result.summary) {
-          setSummary(result.summary);
-        } else {
-          setError('No se pudo generar el resumen.');
-        }
+        // Simula un pequeño retraso para la percepción de procesamiento
+        setTimeout(() => {
+          const result = generateExtractiveSummary(textToSummarize);
+          if (result) {
+            setSummary(result);
+          } else {
+            setError('No se pudo generar el resumen.');
+          }
+        }, 500);
       } catch (e) {
         console.error(e);
         setError('Ocurrió un error al generar el resumen.');
@@ -68,11 +73,7 @@ export function SummaryPanel({
         ) : error ? (
           <p className="text-destructive">{error}</p>
         ) : summary ? (
-          <div
-            dangerouslySetInnerHTML={{
-              __html: summary.replace(/\n/g, '<br />'),
-            }}
-          />
+          <p>{summary}</p>
         ) : (
           <div className="text-center text-muted-foreground p-8">
             <p>
@@ -90,12 +91,18 @@ export function SummaryPanel({
       <CardHeader className="flex flex-row items-center justify-between p-3 border-b drag-handle cursor-move">
         <div className="flex items-center gap-2">
           <GripVertical className="text-muted-foreground" />
-          <CardTitle className="text-base font-semibold">Resumen de la Clase</CardTitle>
+          <CardTitle className="text-base font-semibold">
+            Resumen de la Clase
+          </CardTitle>
         </div>
         <div className="flex items-center gap-1">
-          <Button size="sm" onClick={handleGenerateSummary} disabled={isPending}>
+          <Button
+            size="sm"
+            onClick={handleGenerateSummary}
+            disabled={isPending}
+          >
             <Sparkles className="mr-2 h-4 w-4" />
-            Generar Resumen
+            {isPending ? 'Generando...' : 'Generar Resumen'}
           </Button>
           <Button
             variant="ghost"
