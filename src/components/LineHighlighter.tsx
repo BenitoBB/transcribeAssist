@@ -9,7 +9,7 @@ interface LineHighlighterProps {
 }
 
 export function LineHighlighter({ lineHeight, mouseY, isVisible }: LineHighlighterProps) {
-  if (!isVisible) {
+  if (!isVisible || !lineHeight) {
     return null;
   }
 
@@ -25,7 +25,7 @@ export function LineHighlighter({ lineHeight, mouseY, isVisible }: LineHighlight
         height: `${lineHeight}px`,
         transform: `translateY(${topPosition}px)`,
         opacity: isVisible ? 1 : 0,
-        zIndex: -1, // Ensure it's behind the text
+        // zIndex: -1 was hiding it behind the parent background
       }}
       aria-hidden="true"
     />

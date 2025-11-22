@@ -144,7 +144,9 @@ export function TranscriptionPanel() {
             isVisible={mousePosition.isVisible}
           />
         )}
-        <TextWithDefinitions text={transcription} />
+        <div className="relative z-10">
+            <TextWithDefinitions text={transcription} />
+        </div>
       </div>
     </ScrollArea>
   );
