@@ -21,7 +21,7 @@ export function TextWithDefinitions({ text }: TextWithDefinitionsProps) {
     return (
       <Fragment key={pIndex}>
         {elements}
-        <br />
+        {pIndex < text.split('\n').length -1 && <br />}
       </Fragment>
     );
   });

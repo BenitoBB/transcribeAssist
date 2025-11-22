@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useTransition } from 'react';
+import { useState, useEffect, useTransition } from 'react';
 import { Rnd } from 'react-rnd';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -50,7 +50,7 @@ export function SummaryPanel({
         }
       } catch (e) {
         console.error(e);
-        setError('Ocurrió un error al contactar el servicio de IA.');
+        setError('Ocurrió un error al generar el resumen.');
       }
     });
   };
