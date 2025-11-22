@@ -15,13 +15,12 @@ export function generateExtractiveSummary(
 ): string {
   if (!text || text.trim().length === 0) return '';
 
-  // 1. Tokenización mejorada: Dividir el texto en frases.
-  // Primero, normaliza los espacios y saltos de línea.
-  const normalizedText = text.replace(/[\n\r]+/g, ' ').replace(/\s+/g, ' ').trim();
-  // Usa una expresión regular más robusta para dividir por puntos, pero también maneja pausas largas.
-  const sentences = normalizedText.match(/[^.!?]+[.!?]*|[^.!?]+$/g) || [];
+  // 1. Tokenización por bloques de habla (usando saltos de línea dobles como delimitador).
+  // Estos saltos de línea se generan en web-speech-api.ts cuando el usuario hace una pausa.
+  const sentences = text.split(/\n\n+/).filter(sentence => sentence.trim().length > 0);
+  
   if (sentences.length <= 2) {
-    return text; // Si hay muy pocas frases, devuelve el texto original.
+    return text; // Si hay muy pocas frases/bloques, devuelve el texto original.
   }
 
   // 2. Preprocesamiento: Limpiar el texto y obtener las palabras "importantes".
@@ -33,10 +32,11 @@ export function generateExtractiveSummary(
     'se', 'pero', 'mas', 'si', 'sí', 'no', 'su', 'sus', 'mi', 'mis', 'tu', 'tus',
     'yo', 'tú', 'él', 'ella', 'nosotros', 'vosotros', 'ellos', 'ellas', 'esto', 'eso',
     'aquel', 'aquella', 'aquellos', 'aquellas', 'como', 'dónde', 'cuando', 'porque',
-    'entonces', 'también', 'muy', 'mucho', 'poco'
+    'entonces', 'también', 'muy', 'mucho', 'poco', 'pues', 'pero', 'entonces'
   ]);
 
   const wordFrequencies: { [key: string]: number } = {};
+  const normalizedText = text.replace(/[\n\r]+/g, ' ').replace(/\s+/g, ' ').trim();
   const allWords = normalizedText.toLowerCase().replace(/[^a-zA-Záéíóúüñ\s]/g, '').split(/\s+/);
   
   allWords.forEach(word => {
@@ -58,7 +58,7 @@ export function generateExtractiveSummary(
     });
 
     // Ponderar por longitud de la frase (evita frases muy cortas e irrelevantes)
-    if (wordsInSentence.length < 4 || wordsInSentence.length > 30) {
+    if (wordsInSentence.length < 5 || wordsInSentence.length > 40) {
         score *= 0.5;
     }
 
@@ -83,7 +83,7 @@ export function generateExtractiveSummary(
   // 5. Ensamblaje del Resumen: Ordenar las frases seleccionadas por su aparición original.
   topSentences.sort((a, b) => a.index - b.index);
 
-  const summary = topSentences.map(item => item.sentence).join('. ').trim();
+  const summary = topSentences.map(item => item.sentence).join('\n\n');
 
-  return summary.length > 0 ? summary + '.' : "No se pudo generar un resumen.";
+  return summary.length > 0 ? summary : "No se pudo generar un resumen.";
 }
