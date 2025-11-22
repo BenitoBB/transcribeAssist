@@ -14,7 +14,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ArrowLeft, MoreVertical, Copy, FileDown, Book } from 'lucide-react';
+import { ArrowLeft, MoreVertical, Copy, FileDown } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useTranscription } from '@/hooks/use-transcription';
 import { useStyle } from '@/context/StyleContext';
@@ -27,15 +27,16 @@ import {
 } from '@/components/ui/tooltip';
 import React, { useRef, useEffect, useState } from 'react';
 import { TextWithDefinitions } from '@/components/TextWithDefinitions';
-import { DictionaryPanel } from '@/components/dictionary/DictionaryPanel';
+import { LineHighlighter } from '@/components/LineHighlighter';
+
 
 export default function StudentPage() {
   const { transcription } = useTranscription();
   const { style } = useStyle();
   const { toast } = useToast();
   const scrollViewportRef = useRef<HTMLDivElement>(null);
-  const [isDictionaryOpen, setIsDictionaryOpen] = useState(false);
-
+  const textContainerRef = useRef<HTMLDivElement>(null);
+  const [mousePosition, setMousePosition] = useState<{ y: number, isVisible: boolean } | null>(null);
 
   useEffect(() => {
     if (scrollViewportRef.current) {
@@ -69,11 +70,20 @@ export default function StudentPage() {
     });
   };
 
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (textContainerRef.current) {
+      const rect = textContainerRef.current.getBoundingClientRect();
+      const y = e.clientY - rect.top;
+      setMousePosition({ y, isVisible: true });
+    }
+  };
+
+  const handleMouseLeave = () => {
+    setMousePosition(prev => prev ? { ...prev, isVisible: false } : null);
+  };
+
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center p-4">
-      {isDictionaryOpen && (
-        <DictionaryPanel onClose={() => setIsDictionaryOpen(false)} />
-      )}
       <div className="absolute top-4 left-4 sm:top-8 sm:left-8 flex items-center gap-4">
         <Link href="/">
           <Tooltip>
@@ -103,22 +113,6 @@ export default function StudentPage() {
             Transcripción
           </CardTitle>
           <div className="flex items-center gap-2">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => setIsDictionaryOpen(true)}
-                >
-                  <Book className="h-4 w-4" />
-                  <span className="sr-only">Abrir diccionario</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Abrir Diccionario</p>
-              </TooltipContent>
-            </Tooltip>
             <SettingsButton />
             <DropdownMenu>
               <Tooltip>
@@ -150,7 +144,10 @@ export default function StudentPage() {
         <CardContent className="p-0 flex-grow overflow-hidden">
           <ScrollArea className="h-full w-full" viewportRef={scrollViewportRef}>
             <div
-              className="p-4 prose bg-transparent min-h-full"
+              ref={textContainerRef}
+              className="p-4 prose bg-transparent min-h-full relative"
+              onMouseMove={handleMouseMove}
+              onMouseLeave={handleMouseLeave}
               style={{
                 fontSize: `${style.fontSize}px`,
                 lineHeight: style.lineHeight,
@@ -160,6 +157,13 @@ export default function StudentPage() {
                 minHeight: '100%',
               }}
             >
+              {mousePosition && (
+                <LineHighlighter
+                  lineHeight={style.lineHeight * style.fontSize}
+                  mouseY={mousePosition.y}
+                  isVisible={mousePosition.isVisible}
+                />
+              )}
               <TextWithDefinitions text={transcription} />
             </div>
           </ScrollArea>

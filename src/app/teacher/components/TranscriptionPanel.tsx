@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
@@ -24,6 +23,8 @@ import { useTranscription } from '@/hooks/use-transcription';
 import { useStyle } from '@/context/StyleContext';
 import { SettingsButton } from '@/components/settings/SettingsButton';
 import { TextWithDefinitions } from '@/components/TextWithDefinitions';
+import { LineHighlighter } from '@/components/LineHighlighter';
+
 
 type Position = 'top' | 'bottom' | 'left' | 'right' | 'free';
 
@@ -31,6 +32,8 @@ export function TranscriptionPanel() {
   const { transcription } = useTranscription();
   const { style } = useStyle();
   const scrollViewportRef = useRef<HTMLDivElement>(null);
+  const textContainerRef = useRef<HTMLDivElement>(null);
+  const [mousePosition, setMousePosition] = useState<{ y: number, isVisible: boolean } | null>(null);
 
   useEffect(() => {
     if (scrollViewportRef.current) {
@@ -106,10 +109,26 @@ export function TranscriptionPanel() {
   
   const isDocked = position !== 'free';
 
+    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (textContainerRef.current) {
+      const rect = textContainerRef.current.getBoundingClientRect();
+      const y = e.clientY - rect.top;
+      setMousePosition({ y, isVisible: true });
+    }
+  };
+
+  const handleMouseLeave = () => {
+    setMousePosition(prev => prev ? { ...prev, isVisible: false } : null);
+  };
+
+
   const renderContent = () => (
     <ScrollArea className="h-full" viewportRef={scrollViewportRef}>
       <div
-        className="p-4 prose bg-transparent min-h-full"
+        ref={textContainerRef}
+        className="p-4 prose bg-transparent min-h-full relative"
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
         style={{
           fontSize: `${style.fontSize}px`,
           lineHeight: style.lineHeight,
@@ -118,6 +137,13 @@ export function TranscriptionPanel() {
           color: 'inherit',
         }}
       >
+        {mousePosition && (
+          <LineHighlighter
+            lineHeight={style.lineHeight * style.fontSize}
+            mouseY={mousePosition.y}
+            isVisible={mousePosition.isVisible}
+          />
+        )}
         <TextWithDefinitions text={transcription} />
       </div>
     </ScrollArea>
