@@ -201,6 +201,10 @@ export function TranscriptionPanel() {
           setPos(position);
           setPosition('free');
         }}
+        minWidth={300}
+        minHeight={150}
+        maxWidth={'80vw'}
+        maxHeight={'80vh'}
         bounds="parent"
         dragHandleClassName="drag-handle"
         className="pointer-events-auto"

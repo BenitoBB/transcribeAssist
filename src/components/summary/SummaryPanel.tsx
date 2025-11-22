@@ -140,6 +140,10 @@ export function SummaryPanel({
         });
         setPos(position);
       }}
+      minWidth={350}
+      minHeight={200}
+      maxWidth={'70vw'}
+      maxHeight={'70vh'}
       bounds="parent"
       dragHandleClassName="drag-handle"
       className="z-40 pointer-events-auto"
