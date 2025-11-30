@@ -1,34 +1,59 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { ArrowLeft, Pencil, Mic, MicOff } from 'lucide-react';
+import { ArrowLeft, Pencil, Mic, MicOff, Sparkles, LoaderCircle } from 'lucide-react';
 import { TranscriptionPanel } from './components/TranscriptionPanel';
 import { DrawingCanvas } from './components/DrawingCanvas';
 import { DrawingToolbar } from './components/DrawingToolbar';
 import { useTranscription } from '@/hooks/use-transcription';
+import { summarizeText } from '@/ai/flows/summarize-text-flow';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 export default function TeacherPage() {
   const [isDrawingMode, setIsDrawingMode] = useState(false);
-  const [brushColor, setBrushColor] = useState('#FF0000'); // Color por defecto: rojo
+  const [brushColor, setBrushColor] = useState('#FF0000');
   const [clearCanvas, setClearCanvas] = useState(false);
-  const { isRecording, startRecording, stopRecording } = useTranscription();
+  const { isRecording, startRecording, stopRecording, transcription } = useTranscription();
+  
+  const [summary, setSummary] = useState('');
+  const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   const handleClearCanvas = () => {
     setClearCanvas(true);
-    // Reseteamos el estado para poder volver a limpiar en el futuro
     setTimeout(() => setClearCanvas(false), 50);
+  };
+
+  const handleGenerateSummary = () => {
+    startTransition(async () => {
+      if (!transcription || transcription.startsWith('La transcripción')) {
+        setSummary('No hay suficiente texto para generar un resumen.');
+        setIsSummaryDialogOpen(true);
+        return;
+      }
+      const result = await summarizeText(transcription);
+      setSummary(result);
+      setIsSummaryDialogOpen(true);
+    });
   };
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-background">
-      {/* Funcionalidad de Dibujo - Renderizado primero para estar detrás */}
       {isDrawingMode && (
         <>
           <DrawingCanvas brushColor={brushColor} clear={clearCanvas} />
@@ -41,7 +66,6 @@ export default function TeacherPage() {
         </>
       )}
 
-      {/* Controles superiores */}
       <div className="absolute top-4 left-4 sm:top-8 sm:left-8 z-30 flex gap-2">
         <Link href="/">
           <Tooltip>
@@ -106,13 +130,50 @@ export default function TeacherPage() {
             </TooltipContent>
           </Tooltip>
         )}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleGenerateSummary}
+              disabled={isPending}
+            >
+              {isPending ? (
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+              ) : (
+                <Sparkles className="h-4 w-4" />
+              )}
+              <span className="sr-only">Resumir transcripción</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Generar Resumen de la Clase</p>
+          </TooltipContent>
+        </Tooltip>
       </div>
 
-      {/* Contenido principal */}
       <div className="relative p-4 h-full w-full z-10 pointer-events-none">
         <TranscriptionPanel />
       </div>
 
+      <Dialog open={isSummaryDialogOpen} onOpenChange={setIsSummaryDialogOpen}>
+        <DialogContent className="sm:max-w-md md:max-w-lg lg:max-w-2xl h-[70vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Resumen de la Transcripción</DialogTitle>
+            <DialogDescription>
+              Este es un resumen de la clase generado por IA.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-grow min-h-0">
+            <ScrollArea className="h-full w-full rounded-md border p-4">
+              <p className="text-sm">{summary}</p>
+            </ScrollArea>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setIsSummaryDialogOpen(false)}>Cerrar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
