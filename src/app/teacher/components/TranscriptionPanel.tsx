@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
@@ -26,8 +25,10 @@ import { SettingsButton } from '@/components/settings/SettingsButton';
 import { TextWithDefinitions } from '@/components/TextWithDefinitions';
 
 type Position = 'top' | 'bottom' | 'left' | 'right' | 'free';
+export type Command = Position | null;
 
-export function TranscriptionPanel() {
+
+export function TranscriptionPanel({ command }: { command: Command }) {
   const { transcription } = useTranscription();
   const { style } = useStyle();
 
@@ -62,6 +63,13 @@ export function TranscriptionPanel() {
       }
     }
   }, [isMobile]);
+
+  useEffect(() => {
+    if (command) {
+      handleSetPosition(command);
+    }
+  }, [command]);
+
 
   const handleSetPosition = (newPosition: Position) => {
     setPosition(newPosition);

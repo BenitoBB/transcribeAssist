@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,13 +16,15 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { ArrowLeft, Pencil, Mic, MicOff, Sparkles, LoaderCircle } from 'lucide-react';
-import { TranscriptionPanel } from './components/TranscriptionPanel';
+import { ArrowLeft, Pencil, Mic, MicOff, Sparkles, LoaderCircle, Ear, EarOff } from 'lucide-react';
+import { TranscriptionPanel, Command } from './components/TranscriptionPanel';
 import { DrawingCanvas } from './components/DrawingCanvas';
 import { DrawingToolbar } from './components/DrawingToolbar';
 import { useTranscription } from '@/hooks/use-transcription';
 import { summarizeText } from '@/ai/flows/summarize-text-flow';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useVoiceCommands } from '@/hooks/use-voice-commands';
+
 
 export default function TeacherPage() {
   const [isDrawingMode, setIsDrawingMode] = useState(false);
@@ -33,6 +35,48 @@ export default function TeacherPage() {
   const [summary, setSummary] = useState('');
   const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+
+  const [panelCommand, setPanelCommand] = useState<Command | null>(null);
+  
+  const handleCommand = (command: string) => {
+    console.log('Comando reconocido:', command);
+    switch (command) {
+      case 'iniciar grabación':
+        if (!isRecording) startRecording();
+        break;
+      case 'detener grabación':
+        if (isRecording) stopRecording();
+        break;
+      case 'activar pizarra':
+        setIsDrawingMode(true);
+        break;
+      case 'cerrar pizarra':
+        setIsDrawingMode(false);
+        break;
+      case 'pizarra arriba':
+        setPanelCommand('top');
+        break;
+      case 'pizarra abajo':
+        setPanelCommand('bottom');
+        break;
+      case 'pizarra izquierda':
+        setPanelCommand('left');
+        break;
+      case 'pizarra derecha':
+        setPanelCommand('right');
+        break;
+      case 'pizarra centro':
+        setPanelCommand('free');
+        break;
+    }
+    // El comando del panel se consume y se resetea
+    if (command.startsWith('pizarra')) {
+      setTimeout(() => setPanelCommand(null), 100);
+    }
+  };
+  
+  const { isListening, toggleListening } = useVoiceCommands(handleCommand);
+
 
   const handleClearCanvas = () => {
     setClearCanvas(true);
@@ -150,10 +194,25 @@ export default function TeacherPage() {
             <p>Generar Resumen de la Clase</p>
           </TooltipContent>
         </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant={isListening ? 'default' : 'outline'}
+              size="icon"
+              onClick={toggleListening}
+            >
+              {isListening ? <Ear className="h-4 w-4" /> : <EarOff className="h-4 w-4" />}
+              <span className="sr-only">Activar/Desactivar comandos de voz</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Comandos de Voz ({isListening ? 'Activados' : 'Desactivados'})</p>
+          </TooltipContent>
+        </Tooltip>
       </div>
 
       <div className="relative p-4 h-full w-full z-10 pointer-events-none">
-        <TranscriptionPanel />
+        <TranscriptionPanel command={panelCommand}/>
       </div>
 
       <Dialog open={isSummaryDialogOpen} onOpenChange={setIsSummaryDialogOpen}>
