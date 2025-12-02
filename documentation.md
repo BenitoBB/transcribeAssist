@@ -112,3 +112,77 @@ Para el correcto funcionamiento del sistema, se requiere el siguiente conjunto d
 - **Servicios Externos**:
     - **Free Dictionary API (`dictionaryapi.dev`)**: API pública utilizada para obtener las definiciones de las palabras.
     - **Google AI Platform**: Proporciona el modelo de lenguaje para la generación de resúmenes.
+
+---
+
+# Manual de Usuario: TranscribeAssist
+
+## 1. Introducción
+¡Bienvenido a TranscribeAssist! Esta herramienta está diseñada para hacer las clases más accesibles, permitiendo la transcripción de voz en tiempo real, el dibujo interactivo y la consulta de información de manera fácil y rápida. Esta guía te ayudará a sacar el máximo provecho de todas las funciones.
+
+## 2. Primeros Pasos: Selecciona tu Rol
+Al iniciar la aplicación, la primera pantalla te pedirá que elijas tu rol. Esta selección determinará las herramientas a las que tendrás acceso.
+- **Entrar como Maestro:** Te da el control de la transcripción, la pizarra y las herramientas de resumen.
+- **Entrar como Alumno:** Te permite visualizar la clase, consultar definiciones y descargar el contenido.
+
+## 3. Guía para el Maestro
+La vista del maestro es el centro de control. Desde aquí puedes gestionar la clase de manera interactiva.
+
+### 3.1. Barra de Herramientas Principal
+Ubicada en la esquina superior izquierda, te da acceso a todas las funciones clave:
+- **Volver (`<--`):** Regresa a la pantalla de selección de rol.
+- **Pizarra (`Lápiz`):** Activa o desactiva el modo de dibujo en pantalla.
+- **Transcripción (`Micrófono`):** Inicia o detiene la transcripción de tu voz.
+- **Resumen (`Estrellas`):** Genera un resumen inteligente de todo lo transcrito.
+- **Comandos de Voz (`Oreja`):** Activa o desactiva la escucha de comandos por voz.
+
+### 3.2. Transcripción en Tiempo Real
+- **Para Iniciar:** Haz clic en el icono del **Micrófono**. El icono cambiará a rojo (`Micrófono Desactivado`) para indicar que está grabando. Necesitarás dar permiso al navegador para usar tu micrófono la primera vez.
+- **Para Detener:** Haz clic de nuevo en el icono del **Micrófono Desactivado**.
+- **Panel de Transcripción:** Todo lo que digas aparecerá en un panel flotante. Puedes moverlo arrastrándolo desde la barra de título o redimensionarlo desde sus bordes. También puedes anclarlo a los lados, arriba o abajo usando los iconos de flechas.
+
+### 3.3. Pizarra Interactiva
+- **Para Activar:** Haz clic en el icono del **Lápiz**. La pantalla se convertirá en un lienzo donde podrás dibujar.
+- **Barra de Herramientas de la Pizarra:** Al activar la pizarra, aparecerá una nueva barra de herramientas en la esquina superior derecha:
+    - **Paleta de colores:** Te permite elegir colores predefinidos o uno personalizado.
+    - **Borrador:** Limpia todo el lienzo.
+    - **Cerrar (`X`):** Desactiva el modo pizarra y oculta los dibujos.
+
+### 3.4. Resumen con IA
+- Al final de la clase, o en cualquier momento, puedes generar un resumen.
+- **Para Generar:** Haz clic en el icono de **Estrellas**. La aplicación procesará el texto de la transcripción y mostrará un resumen en un cuadro de diálogo. El icono mostrará un indicador de carga mientras trabaja.
+
+### 3.5. Comandos de Voz (VUI)
+- Para un control "manos libres", puedes usar tu voz.
+- **Para Activar/Desactivar:** Haz clic en el icono de la **Oreja**. Cuando está activado, la aplicación escuchará los siguientes comandos:
+    - `"iniciar grabación"`
+    - `"detener grabación"`
+    - `"activar pizarra"`
+    - `"cerrar pizarra"`
+    - `"pizarra arriba"` / `"pizarra abajo"` / `"pizarra izquierda"` / `"pizarra derecha"` / `"pizarra centro"`
+
+## 4. Guía para el Alumno
+La vista del alumno está diseñada para el estudio y la consulta.
+
+### 4.1. Visualización de la Transcripción
+- La transcripción generada por el maestro aparecerá en tiempo real en tu pantalla.
+- El texto se muestra en un panel principal claro y legible.
+
+### 4.2. Obtener Definiciones
+- Si no entiendes una palabra, simplemente **haz doble clic** sobre ella.
+- Aparecerá un pequeño panel flotante con la definición de la palabra obtenida de un diccionario.
+- Puedes mover este panel de definición para que no te estorbe y cerrarlo con la `X` cuando termines.
+
+### 4.3. Opciones de la Transcripción
+- En la esquina superior derecha del panel de transcripción, encontrarás un menú (`...`). Desde aquí puedes:
+    - **Copiar al portapapeles:** Copia todo el texto de la transcripción.
+    - **Guardar como .txt:** Descarga un archivo de texto con la transcripción completa.
+
+## 5. Ajustes de Visualización (Para Ambos Roles)
+Tanto maestros como alumnos pueden personalizar la apariencia de la aplicación para una mejor legibilidad y accesibilidad.
+- **Para Abrir los Ajustes:** Haz clic en el icono del **Engranaje** (`Settings`).
+- **Opciones Disponibles:**
+    - **Tamaño de Fuente:** Aumenta o disminuye el tamaño del texto.
+    - **Altura de Línea y Espaciado:** Ajusta el espaciado para una lectura más cómoda.
+    - **Tipografía:** Cambia la fuente, incluyendo la fuente **Open Dyslexic**, diseñada para personas con dislexia.
+    - **Temas de Color:** Elige entre varios temas, como Claro, Oscuro, Alto Contraste, y modos específicos para daltonismo (Protanopia, Deuteranopia, Tritanopia).
