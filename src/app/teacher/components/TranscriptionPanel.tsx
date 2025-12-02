@@ -22,7 +22,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useTranscription } from '@/hooks/use-transcription';
 import { useStyle } from '@/context/StyleContext';
 import { SettingsButton } from '@/components/settings/SettingsButton';
-import { TextWithDefinitions } from '@/components/TextWithDefinitions';
 
 type Position = 'top' | 'bottom' | 'left' | 'right' | 'free';
 export type Command = Position | null;
@@ -119,7 +118,7 @@ export function TranscriptionPanel({ command }: { command: Command }) {
           color: 'inherit',
         }}
       >
-        <TextWithDefinitions text={transcription} />
+        {transcription}
       </div>
     </ScrollArea>
   );
@@ -160,6 +159,10 @@ export function TranscriptionPanel({ command }: { command: Command }) {
         className="pointer-events-auto"
         enableResizing={!isDocked}
         disableDragging={isDocked}
+        minWidth={300}
+        minHeight={200}
+        maxWidth="90%"
+        maxHeight="90%"
       >
         <Card className="h-full w-full flex flex-col shadow-2xl" onDoubleClick={() => isDocked && handleSetPosition('free')}>
           <CardHeader className="flex flex-row items-center justify-between p-3 border-b drag-handle cursor-move">
