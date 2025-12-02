@@ -29,7 +29,7 @@ export const useVoiceCommands = (onCommand: (command: string) => void) => {
   }, []);
 
   const startListening = useCallback(() => {
-    if (isListening) return; // <-- AÑADIDO: Prevenir inicio si ya está escuchando
+    if (isListening) return;
 
     manualStop.current = false;
     // Comprobar la compatibilidad del navegador
@@ -101,7 +101,7 @@ export const useVoiceCommands = (onCommand: (command: string) => void) => {
         stopListening();
       });
 
-  }, [toast, stopListening, isListening]); // <-- AÑADIDO: isListening como dependencia
+  }, [toast, stopListening, isListening]);
   
   const toggleListening = useCallback(() => {
       if (isListening) {
