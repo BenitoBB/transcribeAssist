@@ -5,6 +5,8 @@ import { useToast } from './use-toast';
 
 // Referencia global al reconocimiento para evitar múltiples instancias
 let recognition: SpeechRecognition | null = null;
+// Ref para controlar si el usuario detuvo la escucha manualmente
+const manualStop = { current: false };
 
 /**
  * Hook para manejar el reconocimiento de comandos de voz.
@@ -19,12 +21,14 @@ export const useVoiceCommands = (onCommand: (command: string) => void) => {
   onCommandRef.current = onCommand;
 
   const stopListening = useCallback(() => {
+    manualStop.current = true;
     if (recognition) {
       recognition.stop();
     }
   }, []);
 
   const startListening = useCallback(() => {
+    manualStop.current = false;
     // Comprobar la compatibilidad del navegador
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -38,7 +42,6 @@ export const useVoiceCommands = (onCommand: (command: string) => void) => {
       return;
     }
     
-    // Si ya existe una instancia, la detenemos antes de crear una nueva
     if (recognition) {
         recognition.stop();
         recognition = null;
@@ -55,11 +58,11 @@ export const useVoiceCommands = (onCommand: (command: string) => void) => {
 
     recognition.onend = () => {
       setIsListening(false);
-      // Si el reconocimiento se detuvo y debería seguir escuchando (no fue un stop manual),
+      // Si el reconocimiento se detuvo y NO fue un stop manual,
       // lo reiniciamos para que siga atento a comandos.
-      if (recognition) {
+      if (!manualStop.current) {
           try {
-              recognition.start();
+              recognition?.start();
           } catch(e) {
             // A veces, si se cambia de pestaña, puede dar error. Lo ignoramos.
           }
@@ -67,7 +70,6 @@ export const useVoiceCommands = (onCommand: (command: string) => void) => {
     };
 
     recognition.onerror = (event) => {
-      // Errores como 'no-speech', 'audio-capture', o 'aborted' son normales. Los ignoramos.
       if (['no-speech', 'audio-capture', 'aborted'].includes(event.error)) {
         return;
       }
@@ -93,7 +95,6 @@ export const useVoiceCommands = (onCommand: (command: string) => void) => {
           title: 'Error de micrófono',
           description: 'No se pudo acceder al micrófono para los comandos de voz.',
         });
-        // Si hay error, nos aseguramos de que no siga intentando.
         stopListening();
       });
 
@@ -111,6 +112,7 @@ export const useVoiceCommands = (onCommand: (command: string) => void) => {
   useEffect(() => {
     return () => {
         if(recognition) {
+            manualStop.current = true;
             recognition.stop();
             recognition = null;
         }
