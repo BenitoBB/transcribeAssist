@@ -79,7 +79,7 @@ export default function StudentPage() {
       <div className="text-center mb-6 sm:mb-8">
         <h1 className="text-2xl sm:text-3xl font-bold">Vista del Alumno</h1>
         <p className="mt-2 text-sm sm:text-base">
-          Haz doble clic en una palabra para ver su definición.
+          Aquí puedes ver la transcripción de la clase en tiempo real.
         </p>
       </div>
 
