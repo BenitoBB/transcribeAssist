@@ -24,7 +24,7 @@ import { useStyle } from '@/context/StyleContext';
 import { SettingsButton } from '@/components/settings/SettingsButton';
 
 type Position = 'top' | 'bottom' | 'left' | 'right' | 'free';
-export type Command = Position | null;
+export type Command = Position | 'free' | null;
 
 
 export function TranscriptionPanel({ command }: { command: Command }) {
@@ -70,8 +70,8 @@ export function TranscriptionPanel({ command }: { command: Command }) {
   }, [command]);
 
 
-  const handleSetPosition = (newPosition: Position) => {
-    setPosition(newPosition);
+  const handleSetPosition = (newPosition: Position | 'free') => {
+    setPosition(newPosition === 'free' ? 'free' : newPosition);
     if (!parentRef.current) return;
     const { offsetWidth: parentW, offsetHeight: parentH } = parentRef.current;
 
@@ -125,7 +125,7 @@ export function TranscriptionPanel({ command }: { command: Command }) {
 
   if (isMobile) {
     return (
-      <Card className="fixed bottom-0 left-0 right-0 h-[40vh] w-full flex flex-col shadow-2xl rounded-b-none border-t">
+      <Card className="fixed bottom-0 left-0 right-0 h-[40vh] w-full flex flex-col shadow-2xl rounded-b-none border-t z-20">
         <CardHeader className="flex flex-row items-center justify-between p-3 border-b">
           <CardTitle className="text-base font-semibold">Transcripción</CardTitle>
           <SettingsButton />
@@ -156,7 +156,7 @@ export function TranscriptionPanel({ command }: { command: Command }) {
         }}
         bounds="parent"
         dragHandleClassName="drag-handle"
-        className="pointer-events-auto"
+        className="pointer-events-auto z-20"
         enableResizing={!isDocked}
         disableDragging={isDocked}
         minWidth={300}
