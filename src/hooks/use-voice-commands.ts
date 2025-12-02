@@ -5,8 +5,6 @@ import { useToast } from './use-toast';
 
 // Referencia global al reconocimiento para evitar múltiples instancias
 let recognition: SpeechRecognition | null = null;
-// Ref para controlar si el usuario detuvo la escucha manualmente
-const manualStop = { current: false };
 
 /**
  * Hook para manejar el reconocimiento de comandos de voz.
@@ -20,14 +18,19 @@ export const useVoiceCommands = (onCommand: (command: string) => void) => {
   const onCommandRef = useRef(onCommand);
   onCommandRef.current = onCommand;
 
+  const manualStop = useRef(false);
+
   const stopListening = useCallback(() => {
     manualStop.current = true;
     if (recognition) {
       recognition.stop();
+      setIsListening(false);
     }
   }, []);
 
   const startListening = useCallback(() => {
+    if (isListening) return; // <-- AÑADIDO: Prevenir inicio si ya está escuchando
+
     manualStop.current = false;
     // Comprobar la compatibilidad del navegador
     const SpeechRecognition =
@@ -42,51 +45,51 @@ export const useVoiceCommands = (onCommand: (command: string) => void) => {
       return;
     }
     
-    if (recognition) {
-        recognition.stop();
-        recognition = null;
-    }
+    // Evita crear una nueva instancia si ya existe
+    if (!recognition) {
+        recognition = new SpeechRecognition();
+        recognition.lang = 'es-ES';
+        recognition.interimResults = false;
+        recognition.continuous = false;
 
-    recognition = new SpeechRecognition();
-    recognition.lang = 'es-ES';
-    recognition.interimResults = false; // No necesitamos resultados parciales para comandos
-    recognition.continuous = false; // Escucha un solo comando y se detiene
+        recognition.onstart = () => {
+          setIsListening(true);
+        };
 
-    recognition.onstart = () => {
-      setIsListening(true);
-    };
-
-    recognition.onend = () => {
-      setIsListening(false);
-      // Si el reconocimiento se detuvo y NO fue un stop manual,
-      // lo reiniciamos para que siga atento a comandos.
-      if (!manualStop.current) {
-          try {
-              recognition?.start();
-          } catch(e) {
-            // A veces, si se cambia de pestaña, puede dar error. Lo ignoramos.
+        recognition.onend = () => {
+          setIsListening(false);
+          // Si no fue un stop manual, intenta reiniciar la escucha.
+          if (!manualStop.current) {
+            try {
+                recognition?.start();
+            } catch(e) {
+              // Ignorar error si ya se detuvo o cambió de pestaña
+            }
           }
-      }
-    };
+        };
 
-    recognition.onerror = (event) => {
-      if (['no-speech', 'audio-capture', 'aborted'].includes(event.error)) {
-        return;
-      }
-      console.error('Error en el reconocimiento de voz para comandos:', event.error);
-    };
+        recognition.onerror = (event) => {
+          if (['no-speech', 'audio-capture', 'aborted'].includes(event.error)) {
+            return;
+          }
+          console.error('Error en el reconocimiento de voz para comandos:', event.error);
+        };
 
-    recognition.onresult = (event) => {
-      const lastResult = event.results[event.results.length - 1];
-      if (lastResult.isFinal) {
-        const command = lastResult[0].transcript.trim().toLowerCase();
-        onCommandRef.current(command);
-      }
-    };
+        recognition.onresult = (event) => {
+          const lastResult = event.results[event.results.length - 1];
+          if (lastResult.isFinal) {
+            const command = lastResult[0].transcript.trim().toLowerCase();
+            onCommandRef.current(command);
+          }
+        };
+    }
 
     navigator.mediaDevices.getUserMedia({ audio: true })
       .then(() => {
-        recognition?.start();
+        // Solo iniciar si no está ya escuchando
+        if (!isListening) {
+          recognition?.start();
+        }
       })
       .catch(err => {
         console.error('No se pudo acceder al micrófono para los comandos de voz:', err);
@@ -98,7 +101,7 @@ export const useVoiceCommands = (onCommand: (command: string) => void) => {
         stopListening();
       });
 
-  }, [toast, stopListening]);
+  }, [toast, stopListening, isListening]); // <-- AÑADIDO: isListening como dependencia
   
   const toggleListening = useCallback(() => {
       if (isListening) {
@@ -113,6 +116,10 @@ export const useVoiceCommands = (onCommand: (command: string) => void) => {
     return () => {
         if(recognition) {
             manualStop.current = true;
+            recognition.onstart = null;
+            recognition.onend = null;
+            recognition.onerror = null;
+            recognition.onresult = null;
             recognition.stop();
             recognition = null;
         }
