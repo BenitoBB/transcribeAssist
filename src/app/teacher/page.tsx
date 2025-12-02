@@ -16,7 +16,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { ArrowLeft, Pencil, Mic, MicOff, Sparkles, LoaderCircle, Ear, EarOff } from 'lucide-react';
+import { ArrowLeft, Pencil, Mic, MicOff, Sparkles, LoaderCircle, Ear, EarOff, Copy } from 'lucide-react';
 import { TranscriptionPanel, Command } from './components/TranscriptionPanel';
 import { DrawingCanvas } from './components/DrawingCanvas';
 import { DrawingToolbar } from './components/DrawingToolbar';
@@ -24,6 +24,7 @@ import { useTranscription } from '@/hooks/use-transcription';
 import { summarizeText } from '@/ai/flows/summarize-text-flow';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useVoiceCommands } from '@/hooks/use-voice-commands';
+import { useToast } from '@/hooks/use-toast';
 
 
 export default function TeacherPage() {
@@ -35,6 +36,7 @@ export default function TeacherPage() {
   const [summary, setSummary] = useState('');
   const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const { toast } = useToast();
 
   const [panelCommand, setPanelCommand] = useState<Command | null>(null);
   
@@ -94,6 +96,16 @@ export default function TeacherPage() {
       setSummary(result);
       setIsSummaryDialogOpen(true);
     });
+  };
+
+  const handleCopySummary = () => {
+    if (summary) {
+      navigator.clipboard.writeText(summary);
+      toast({
+        title: 'Copiado',
+        description: 'El resumen ha sido copiado al portapapeles.',
+      });
+    }
   };
 
   return (
@@ -228,7 +240,11 @@ export default function TeacherPage() {
               <p className="text-sm">{summary}</p>
             </ScrollArea>
           </div>
-          <DialogFooter>
+          <DialogFooter className="sm:justify-between">
+            <Button variant="outline" onClick={handleCopySummary} disabled={!summary || summary.startsWith('No hay')}>
+              <Copy className="mr-2 h-4 w-4" />
+              Copiar
+            </Button>
             <Button onClick={() => setIsSummaryDialogOpen(false)}>Cerrar</Button>
           </DialogFooter>
         </DialogContent>
