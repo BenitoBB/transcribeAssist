@@ -67,8 +67,8 @@ export const useVoiceCommands = (onCommand: (command: string) => void) => {
     };
 
     recognition.onerror = (event) => {
-      // Errores como 'no-speech' son normales si no se habla. Los ignoramos.
-      if (event.error === 'no-speech' || event.error === 'audio-capture') {
+      // Errores como 'no-speech', 'audio-capture', o 'aborted' son normales. Los ignoramos.
+      if (['no-speech', 'audio-capture', 'aborted'].includes(event.error)) {
         return;
       }
       console.error('Error en el reconocimiento de voz para comandos:', event.error);
