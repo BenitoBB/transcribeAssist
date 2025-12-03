@@ -52,25 +52,23 @@ export default function TeacherPage() {
     // Definimos la función de manejo de comandos directamente
     const handleCommand = (command: Command) => {
         setPanelCommand(command);
-        // Resetear el comando después de un breve instante para permitir futuras llamadas
-        setTimeout(() => setPanelCommand(null), 100);
     };
 
     // Registramos los comandos una sola vez al montar el componente
     const commands = {
-      iniciargrabación: () => {
+      'iniciargrabación': () => {
         if (!isRecording) startRecording();
       },
-      detenergrabación: () => {
+      'detenergrabación': () => {
         if (isRecording) stopRecording();
       },
-      activarpizarra: () => setIsDrawingMode(true),
-      cerrarpizarra: () => setIsDrawingMode(false),
-      pizarraarriba: () => handleCommand('top'),
-      pizarraabajo: () => handleCommand('bottom'),
-      pizarraderecha: () => handleCommand('right'),
-      pizarraizquierda: () => handleCommand('left'),
-      pizarracentro: () => handleCommand('free'),
+      'activarpizarra': () => setIsDrawingMode(true),
+      'cerrarpizarra': () => setIsDrawingMode(false),
+      'pizarraarriba': () => handleCommand('top'),
+      'pizarraabajo': () => handleCommand('bottom'),
+      'pizarraderecha': () => handleCommand('right'),
+      'pizarraizquierda': () => handleCommand('left'),
+      'pizarracentro': () => handleCommand('free'),
     };
     
     registerCommands(commands);

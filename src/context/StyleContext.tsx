@@ -40,18 +40,6 @@ interface StyleProviderProps {
 export const StyleProvider: React.FC<StyleProviderProps> = ({ children }) => {
   const [style, setStyle] = useState<CustomStyle>(defaultStyle);
   const [theme, setTheme] = useState<Theme>('light');
-  
-  useEffect(() => {
-    // Cargar la fuente Open Dyslexic dinámicamente si es necesario
-    let fontLink = document.querySelector('link[href*="fonts.googleapis.com"]');
-    if (!fontLink) {
-        fontLink = document.createElement('link');
-        (fontLink as HTMLLinkElement).href = "https://fonts.googleapis.com/css2?family=Open+Sans&family=Roboto&family=Inter&family=Open+Dyslexic&display=swap";
-        (fontLink as HTMLLinkElement).rel = "stylesheet";
-        document.head.appendChild(fontLink);
-    }
-  }, []);
-
 
   const value = { style, setStyle, theme, setTheme };
 

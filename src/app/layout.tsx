@@ -16,7 +16,9 @@ function ThemedLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={theme}>
       <head>
-        {/* Metadata can be managed here if needed, but we keep it static for now */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Open+Sans&family=Roboto&family=Open+Dyslexic&display=swap" rel="stylesheet" />
       </head>
       <body className={inter.className}>
         {children}
