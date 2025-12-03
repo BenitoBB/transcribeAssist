@@ -14,7 +14,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ArrowLeft, MoreVertical, Copy, FileDown } from 'lucide-react';
+import { ArrowLeft, MoreVertical, Copy, FileDown, LoaderCircle } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useTranscription } from '@/hooks/use-transcription';
 import { useStyle } from '@/context/StyleContext';
@@ -25,20 +25,28 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { defineWord } from '@/components/define-word';
-import { useTranscriptionClient } from '@/hooks/use-transcription-client';
+import { onTranscriptionUpdate } from '@/lib/transcription';
 
 const DefinitionPopupWithNoSSR = dynamic(
   () => import('@/components/DefinitionPopup').then((mod) => mod.DefinitionPopup),
-  { ssr: false }
+  { ssr: false, loading: () => <div className="z-50 flex items-center justify-center"><LoaderCircle className="h-6 w-6 animate-spin"/></div> }
 );
 
+function StudentTranscriptionClient() {
+  const { setTranscription } = useTranscription();
+  useEffect(() => {
+    const unsubscribe = onTranscriptionUpdate((newText: string) => {
+      setTranscription(newText);
+    });
+    return () => unsubscribe();
+  }, [setTranscription]);
+  return null; // Este componente no renderiza nada
+}
+
 export default function StudentPage() {
-  // Inicializa el listener de transcripción (solo en cliente)
-  useTranscriptionClient(); 
-  
   const { transcription } = useTranscription();
   const { style } = useStyle();
   const { toast } = useToast();
@@ -87,6 +95,9 @@ export default function StudentPage() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-4">
+      {/* El componente para escuchar la transcripción no renderiza nada */}
+      <StudentTranscriptionClient />
+      
        {definitionState && (
         <DefinitionPopupWithNoSSR
           word={definitionState.word}

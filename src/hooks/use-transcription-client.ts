@@ -8,6 +8,11 @@ import { useTranscription } from './use-transcription';
  * Este hook se encarga de conectar la lógica de transcripción (que solo
  * se ejecuta en el cliente) con el contexto de React. Se debe usar
  * en cualquier página que necesite mostrar o controlar la transcripción.
+ * 
+ * NO SE DEBE USAR MÁS. LA LÓGICA SE HA MOVIDO A LOS COMPONENTES
+ * DINÁMICOS CORRESPONDIENTES PARA EVITAR ERRORES DE HIDRATACIÓN.
+ * 
+ * @deprecated
  */
 export const useTranscriptionClient = () => {
   const { setTranscription, setIsRecording } = useTranscription();

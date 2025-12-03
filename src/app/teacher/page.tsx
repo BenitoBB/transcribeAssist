@@ -30,10 +30,10 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { useTranscription } from '@/hooks/use-transcription';
 
-// Carga dinámica de TODOS los componentes que dependen de la API de navegador
+// Carga dinámica del componente que contiene TODA la lógica del cliente
 const TeacherUIWithNoSSR = dynamic(() => import('./components/TeacherUI'), {
   ssr: false,
-  loading: () => <p>Cargando interfaz del profesor...</p>,
+  loading: () => <div className="flex items-center justify-center h-screen w-screen"><LoaderCircle className="h-8 w-8 animate-spin" /></div>,
 });
 
 export default function TeacherPage() {
@@ -87,65 +87,65 @@ export default function TeacherPage() {
         />
       )}
 
-      <div className="absolute top-4 left-4 sm:top-8 sm:left-8 z-30 flex gap-2">
-        <Link href="/">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="outline" size="icon">
-                <ArrowLeft className="h-4 w-4" />
-                <span className="sr-only">Volver</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Volver a la página principal</p>
-            </TooltipContent>
-          </Tooltip>
-        </Link>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setIsDrawingMode(!isDrawingMode)}
-              aria-pressed={isDrawingMode}
-            >
-              <Pencil className="h-4 w-4" />
-              <span className="sr-only">Activar modo dibujo</span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Activar/Desactivar Pizarra</p>
-          </TooltipContent>
-        </Tooltip>
-
-        {/* El resto de botones de la barra de herramientas se mueven a TeacherUI */}
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handleGenerateSummary}
-              disabled={isPending}
-            >
-              {isPending ? (
-                <LoaderCircle className="h-4 w-4 animate-spin" />
-              ) : (
-                <Sparkles className="h-4 w-4" />
-              )}
-              <span className="sr-only">Resumir transcripción</span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Generar Resumen de la Clase</p>
-          </TooltipContent>
-        </Tooltip>
-      </div>
-
+      {/* La barra de herramientas principal se pasa como prop a TeacherUI */}
       <TeacherUIWithNoSSR 
         isDrawingMode={isDrawingMode} 
         brushColor={brushColor} 
-        clearCanvas={clearCanvas} 
+        clearCanvas={clearCanvas}
+        Toolbar={
+            <div className="absolute top-4 left-4 sm:top-8 sm:left-8 z-30 flex gap-2">
+                <Link href="/">
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                        <Button variant="outline" size="icon">
+                            <ArrowLeft className="h-4 w-4" />
+                            <span className="sr-only">Volver</span>
+                        </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                        <p>Volver a la página principal</p>
+                        </TooltipContent>
+                    </Tooltip>
+                </Link>
+                <Tooltip>
+                <TooltipTrigger asChild>
+                    <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setIsDrawingMode(!isDrawingMode)}
+                    aria-pressed={isDrawingMode}
+                    >
+                    <Pencil className="h-4 w-4" />
+                    <span className="sr-only">Activar modo dibujo</span>
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                    <p>Activar/Desactivar Pizarra</p>
+                </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                <TooltipTrigger asChild>
+                    <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={handleGenerateSummary}
+                    disabled={isPending}
+                    >
+                    {isPending ? (
+                        <LoaderCircle className="h-4 w-4 animate-spin" />
+                    ) : (
+                        <Sparkles className="h-4 w-4" />
+                    )}
+                    <span className="sr-only">Resumir transcripción</span>
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                    <p>Generar Resumen de la Clase</p>
+                </TooltipContent>
+                </Tooltip>
+            </div>
+        }
       />
 
       <Dialog open={isSummaryDialogOpen} onOpenChange={setIsSummaryDialogOpen}>
