@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useEffect } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -25,7 +26,6 @@ import {
   LoaderCircle,
   Copy,
 } from 'lucide-react';
-import { TranscriptionPanel, Command } from './components/TranscriptionPanel';
 import { DrawingCanvas } from './components/DrawingCanvas';
 import { DrawingToolbar } from './components/DrawingToolbar';
 import { useTranscription } from '@/hooks/use-transcription';
@@ -33,6 +33,13 @@ import { summarizeText } from '@/ai/flows/summarize-text-flow';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { registerCommands } from '@/lib/transcription';
+import type { Command } from './components/TranscriptionPanel';
+
+const TranscriptionPanelWithNoSSR = dynamic(
+  () => import('./components/TranscriptionPanel').then((mod) => mod.TranscriptionPanel),
+  { ssr: false }
+);
+
 
 export default function TeacherPage() {
   const [isDrawingMode, setIsDrawingMode] = useState(false);
@@ -52,6 +59,8 @@ export default function TeacherPage() {
     // Definimos la función de manejo de comandos directamente
     const handleCommand = (command: Command) => {
         setPanelCommand(command);
+        // Resetea el comando después de un breve instante para permitir que se vuelva a ejecutar
+        setTimeout(() => setPanelCommand(null), 100);
     };
 
     // Registramos los comandos una sola vez al montar el componente
@@ -200,7 +209,7 @@ export default function TeacherPage() {
       </div>
 
       <div className="relative p-4 h-full w-full pointer-events-none">
-        <TranscriptionPanel command={panelCommand} />
+        <TranscriptionPanelWithNoSSR command={panelCommand} />
       </div>
 
       <Dialog open={isSummaryDialogOpen} onOpenChange={setIsSummaryDialogOpen}>

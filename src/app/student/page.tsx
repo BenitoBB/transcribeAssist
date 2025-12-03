@@ -25,14 +25,26 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import React from 'react';
-import { TextWithDefinitions } from '@/components/TextWithDefinitions';
+import React, { useState } from 'react';
+import dynamic from 'next/dynamic';
+import { defineWord } from '@/components/define-word';
 
+// Carga dinámica del popup de definición para evitar problemas de SSR con react-rnd
+const DefinitionPopupWithNoSSR = dynamic(
+  () => import('@/components/DefinitionPopup').then((mod) => mod.DefinitionPopup),
+  { ssr: false }
+);
 
 export default function StudentPage() {
   const { transcription } = useTranscription();
   const { style } = useStyle();
   const { toast } = useToast();
+
+  const [definitionState, setDefinitionState] = useState<{
+    word: string;
+    definition: string | null;
+    isLoading: boolean;
+  } | null>(null);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(transcription);
@@ -53,13 +65,51 @@ export default function StudentPage() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     toast({
-        title: 'Guardado',
-        description: 'La transcripción se está descargando como transcripcion.txt.',
-      });
+      title: 'Guardado',
+      description:
+        'La transcripción se está descargando como transcripcion.txt.',
+    });
   };
+
+  const handleWordDoubleClick = async (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (target.nodeName === 'SPAN') {
+      const word = target.innerText.trim();
+      if (word) {
+        setDefinitionState({ word, definition: null, isLoading: true });
+        const definition = await defineWord(word);
+        setDefinitionState({ word, definition, isLoading: false });
+      }
+    }
+  };
+
+  const renderTextWithSpans = (text: string) => {
+    return text.split('\n').map((paragraph, pIndex) => (
+      <p key={pIndex} className="mb-4 last:mb-0" onDoubleClick={handleWordDoubleClick}>
+        {paragraph.split(/(\s+)/).map((word, wIndex) => {
+          if (word.trim() === '') return word; // Mantener espacios
+          // Envuelve cada palabra en un <span> para capturar el evento
+          return (
+            <span key={wIndex} className="cursor-pointer">
+              {word}
+            </span>
+          );
+        })}
+      </p>
+    ));
+  };
+
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-4">
+       {definitionState && (
+        <DefinitionPopupWithNoSSR
+          word={definitionState.word}
+          definition={definitionState.definition}
+          isLoading={definitionState.isLoading}
+          onClose={() => setDefinitionState(null)}
+        />
+      )}
       <div className="absolute top-4 left-4 sm:top-8 sm:left-8 flex items-center gap-4">
         <Link href="/">
           <Tooltip>
@@ -130,7 +180,7 @@ export default function StudentPage() {
                 color: 'inherit',
               }}
             >
-              <TextWithDefinitions text={transcription} />
+              {renderTextWithSpans(transcription)}
             </div>
           </ScrollArea>
         </CardContent>
