@@ -61,7 +61,7 @@ function processFinalTranscript(transcript: string) {
   if (registeredCommands[cleanedTranscript]) {
     registeredCommands[cleanedTranscript]();
   } else {
-    // Añade la transcripción con la primera letra en mayúscula para un mejor formato.
+    // Añade la transcripción con la primera letra en mayúscula y un salto de línea.
     const formattedTranscript = transcript.charAt(0).toUpperCase() + transcript.slice(1);
     finalTranscription += formattedTranscript + '\n';
   }
@@ -70,71 +70,84 @@ function processFinalTranscript(transcript: string) {
 /**
  * Inicia la captura y el reconocimiento de audio.
  */
-export async function startTranscription(): Promise<void> {
-  if (recognition) {
-    console.warn('La grabación ya está en curso.');
-    return;
-  }
-
-  const SpeechRecognition =
-    (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-
-  if (!SpeechRecognition) {
-    const errorMsg = 'Tu navegador no soporta la API de Reconocimiento de Voz. Prueba con Google Chrome.';
-    notifyTextListeners(errorMsg);
-    console.error(errorMsg);
-    return;
-  }
-
-  recognition = new SpeechRecognition();
-  recognition.lang = 'es-ES';
-  recognition.interimResults = true;
-  recognition.continuous = true;
-
-  recognition.onstart = () => {
-    finalTranscription = '';
-    notifyTextListeners('🎙️ Grabación iniciada...');
-    notifyStateListeners('recording');
-  };
-
-  recognition.onend = () => {
-    notifyTextListeners(finalTranscription || 'Grabación detenida.');
-    notifyStateListeners('stopped');
-    recognition = null;
-  };
-
-  recognition.onerror = (event) => {
-    if (['no-speech', 'aborted'].includes(event.error)) {
+export function startTranscription(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (recognition) {
+      console.warn('La grabación ya está en curso.');
+      resolve();
       return;
     }
-    console.error('Error en el reconocimiento de voz:', event.error);
-    notifyTextListeners(`Error: ${event.error}`);
-  };
 
-  recognition.onresult = (event) => {
-    let interimTranscription = '';
-    for (let i = event.resultIndex; i < event.results.length; ++i) {
-      if (event.results[i].isFinal) {
-        const transcript = event.results[i][0].transcript.trim();
-        processFinalTranscript(transcript);
-      } else {
-        interimTranscription += event.results[i][0].transcript;
-      }
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      const errorMsg = 'Tu navegador no soporta la API de Reconocimiento de Voz. Prueba con Google Chrome.';
+      notifyTextListeners(errorMsg);
+      console.error(errorMsg);
+      reject(new Error(errorMsg));
+      return;
     }
-    notifyTextListeners(finalTranscription + interimTranscription);
-  };
 
-  try {
-    await navigator.mediaDevices.getUserMedia({ audio: true });
-    recognition.start();
-  } catch (err) {
-     const errorMsg = 'No se pudo acceder al micrófono. Por favor, comprueba los permisos en tu navegador.';
-     notifyTextListeners(errorMsg);
-     console.error(errorMsg, err);
-     if (recognition) {
-         recognition.stop();
-     }
-  }
+    recognition = new SpeechRecognition();
+    recognition.lang = 'es-ES';
+    recognition.interimResults = true;
+    recognition.continuous = true;
+
+    recognition.onstart = () => {
+      finalTranscription = '';
+      notifyTextListeners('🎙️ Grabación iniciada...');
+      notifyStateListeners('recording');
+      resolve();
+    };
+
+    recognition.onend = () => {
+      notifyTextListeners(finalTranscription || 'Grabación detenida.');
+      notifyStateListeners('stopped');
+      recognition = null;
+    };
+
+    recognition.onerror = (event) => {
+      if (['no-speech', 'aborted'].includes(event.error)) {
+        return;
+      }
+      console.error('Error en el reconocimiento de voz:', event.error);
+      const errorMsg = `Error: ${event.error}`;
+      notifyTextListeners(errorMsg);
+      reject(new Error(errorMsg));
+    };
+
+    recognition.onresult = (event) => {
+      let interimTranscription = '';
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          const transcript = event.results[i][0].transcript.trim();
+          processFinalTranscript(transcript);
+        } else {
+          interimTranscription += event.results[i][0].transcript;
+        }
+      }
+      notifyTextListeners(finalTranscription + interimTranscription);
+    };
+
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then(() => {
+        try {
+          recognition?.start();
+        } catch (e) {
+          // A veces puede lanzar error si ya empezó, lo ignoramos.
+        }
+      })
+      .catch((err) => {
+        const errorMsg = 'No se pudo acceder al micrófono. Por favor, comprueba los permisos en tu navegador.';
+        notifyTextListeners(errorMsg);
+        console.error(errorMsg, err);
+        if (recognition) {
+            recognition.stop();
+        }
+        reject(err);
+      });
+  });
 }
 
 

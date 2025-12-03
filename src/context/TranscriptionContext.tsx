@@ -5,22 +5,15 @@ import React, {
   useState,
   useCallback,
   ReactNode,
-  useEffect,
 } from 'react';
-import {
-  startTranscription,
-  stopTranscription,
-  onTranscriptionUpdate,
-  onStateChange,
-  TranscriptionState,
-} from '@/lib/transcription';
 import { Keyword } from '@/ai/flows/extract-keywords-flow';
 
+// Este estado es ahora puramente para la UI, la lógica real se carga dinámicamente.
 export interface TranscriptionContextType {
   transcription: string;
+  setTranscription: React.Dispatch<React.SetStateAction<string>>;
   isRecording: boolean;
-  startRecording: () => void;
-  stopRecording: () => void;
+  setIsRecording: React.Dispatch<React.SetStateAction<boolean>>;
   keywords: Keyword[];
   setKeywords: React.Dispatch<React.SetStateAction<Keyword[]>>;
 }
@@ -42,50 +35,14 @@ export const TranscriptionProvider: React.FC<TranscriptionProviderProps> = ({
   );
   const [keywords, setKeywords] = useState<Keyword[]>([]);
 
-  useEffect(() => {
-    // Sincronizar el estado de la grabación (isRecording)
-    const handleStateChange = (newState: TranscriptionState) => {
-      setIsRecording(newState === 'recording');
-    };
-
-    // Sincronizar el texto de la transcripción
-    const handleTranscriptionUpdate = (newText: string) => {
-      setTranscription(newText);
-    };
-
-    const unsubscribeState = onStateChange(handleStateChange);
-    const unsubscribeText = onTranscriptionUpdate(handleTranscriptionUpdate);
-
-    return () => {
-      unsubscribeState();
-      unsubscribeText();
-    };
-  }, []);
-
-  const startRecording = useCallback(async () => {
-    try {
-      await startTranscription();
-      // El estado se actualizará a través del evento onStateChange
-      setTranscription('Iniciando grabación... ');
-      setKeywords([]);
-    } catch (error) {
-      console.error('Error al iniciar la grabación:', error);
-      setTranscription(
-        'Error: No se pudo acceder al micrófono. Por favor, comprueba los permisos en tu navegador.'
-      );
-    }
-  }, []);
-
-  const stopRecording = useCallback(() => {
-    stopTranscription();
-    // El estado se actualizará a través del evento onStateChange
-  }, []);
+  // Las funciones start/stop se eliminan de aquí, ya que ahora son
+  // manejadas por el hook que se carga en el cliente.
 
   const value = {
     isRecording,
+    setIsRecording,
     transcription,
-    startRecording,
-    stopRecording,
+    setTranscription,
     keywords,
     setKeywords,
   };

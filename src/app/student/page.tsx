@@ -28,14 +28,17 @@ import {
 import React, { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { defineWord } from '@/components/define-word';
+import { useTranscriptionClient } from '@/hooks/use-transcription-client';
 
-// Carga dinámica del popup de definición para evitar problemas de SSR con react-rnd
 const DefinitionPopupWithNoSSR = dynamic(
   () => import('@/components/DefinitionPopup').then((mod) => mod.DefinitionPopup),
   { ssr: false }
 );
 
 export default function StudentPage() {
+  // Inicializa el listener de transcripción (solo en cliente)
+  useTranscriptionClient(); 
+  
   const { transcription } = useTranscription();
   const { style } = useStyle();
   const { toast } = useToast();
@@ -72,33 +75,15 @@ export default function StudentPage() {
   };
 
   const handleWordDoubleClick = async (e: React.MouseEvent<HTMLDivElement>) => {
-    const target = e.target as HTMLElement;
-    if (target.nodeName === 'SPAN') {
-      const word = target.innerText.trim();
-      if (word) {
-        setDefinitionState({ word, definition: null, isLoading: true });
-        const definition = await defineWord(word);
-        setDefinitionState({ word, definition, isLoading: false });
-      }
+    const selection = window.getSelection();
+    const word = selection?.toString().trim();
+    
+    if (word) {
+      setDefinitionState({ word, definition: null, isLoading: true });
+      const definition = await defineWord(word);
+      setDefinitionState({ word, definition, isLoading: false });
     }
   };
-
-  const renderTextWithSpans = (text: string) => {
-    return text.split('\n').map((paragraph, pIndex) => (
-      <p key={pIndex} className="mb-4 last:mb-0" onDoubleClick={handleWordDoubleClick}>
-        {paragraph.split(/(\s+)/).map((word, wIndex) => {
-          if (word.trim() === '') return word; // Mantener espacios
-          // Envuelve cada palabra en un <span> para capturar el evento
-          return (
-            <span key={wIndex} className="cursor-pointer">
-              {word}
-            </span>
-          );
-        })}
-      </p>
-    ));
-  };
-
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-4">
@@ -179,8 +164,9 @@ export default function StudentPage() {
                 height: '100%',
                 color: 'inherit',
               }}
+              onDoubleClick={handleWordDoubleClick}
             >
-              {renderTextWithSpans(transcription)}
+              {transcription}
             </div>
           </ScrollArea>
         </CardContent>

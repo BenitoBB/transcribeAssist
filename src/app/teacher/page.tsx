@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition, useEffect } from 'react';
+import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
@@ -20,69 +20,32 @@ import {
 import {
   ArrowLeft,
   Pencil,
-  Mic,
-  MicOff,
   Sparkles,
   LoaderCircle,
   Copy,
 } from 'lucide-react';
-import { DrawingCanvas } from './components/DrawingCanvas';
 import { DrawingToolbar } from './components/DrawingToolbar';
-import { useTranscription } from '@/hooks/use-transcription';
 import { summarizeText } from '@/ai/flows/summarize-text-flow';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { registerCommands } from '@/lib/transcription';
-import type { Command } from './components/TranscriptionPanel';
+import { useTranscription } from '@/hooks/use-transcription';
 
-const TranscriptionPanelWithNoSSR = dynamic(
-  () => import('./components/TranscriptionPanel').then((mod) => mod.TranscriptionPanel),
-  { ssr: false }
-);
-
+// Carga dinámica de TODOS los componentes que dependen de la API de navegador
+const TeacherUIWithNoSSR = dynamic(() => import('./components/TeacherUI'), {
+  ssr: false,
+  loading: () => <p>Cargando interfaz del profesor...</p>,
+});
 
 export default function TeacherPage() {
   const [isDrawingMode, setIsDrawingMode] = useState(false);
   const [brushColor, setBrushColor] = useState('#FF0000');
   const [clearCanvas, setClearCanvas] = useState(false);
-  const { isRecording, startRecording, stopRecording, transcription } =
-    useTranscription();
+  const { transcription } = useTranscription();
 
   const [summary, setSummary] = useState('');
   const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
-
-  const [panelCommand, setPanelCommand] = useState<Command | null>(null);
-
-  useEffect(() => {
-    // Definimos la función de manejo de comandos directamente
-    const handleCommand = (command: Command) => {
-        setPanelCommand(command);
-        // Resetea el comando después de un breve instante para permitir que se vuelva a ejecutar
-        setTimeout(() => setPanelCommand(null), 100);
-    };
-
-    // Registramos los comandos una sola vez al montar el componente
-    const commands = {
-      'iniciargrabación': () => {
-        if (!isRecording) startRecording();
-      },
-      'detenergrabación': () => {
-        if (isRecording) stopRecording();
-      },
-      'activarpizarra': () => setIsDrawingMode(true),
-      'cerrarpizarra': () => setIsDrawingMode(false),
-      'pizarraarriba': () => handleCommand('top'),
-      'pizarraabajo': () => handleCommand('bottom'),
-      'pizarraderecha': () => handleCommand('right'),
-      'pizarraizquierda': () => handleCommand('left'),
-      'pizarracentro': () => handleCommand('free'),
-    };
-    
-    registerCommands(commands);
-  }, [isRecording, startRecording, stopRecording]);
-
 
   const handleClearCanvas = () => {
     setClearCanvas(true);
@@ -114,16 +77,14 @@ export default function TeacherPage() {
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-background">
+      
       {isDrawingMode && (
-        <>
-          <DrawingCanvas brushColor={brushColor} clear={clearCanvas} />
-          <DrawingToolbar
-            onColorChange={setBrushColor}
-            onClear={handleClearCanvas}
-            onClose={() => setIsDrawingMode(false)}
-            currentColor={brushColor}
-          />
-        </>
+        <DrawingToolbar
+          onColorChange={setBrushColor}
+          onClear={handleClearCanvas}
+          onClose={() => setIsDrawingMode(false)}
+          currentColor={brushColor}
+        />
       )}
 
       <div className="absolute top-4 left-4 sm:top-8 sm:left-8 z-30 flex gap-2">
@@ -157,35 +118,8 @@ export default function TeacherPage() {
           </TooltipContent>
         </Tooltip>
 
-        {!isRecording ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="outline" size="icon" onClick={startRecording}>
-                <Mic className="h-4 w-4" />
-                <span className="sr-only">Iniciar transcripción</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Iniciar Transcripción</p>
-            </TooltipContent>
-          </Tooltip>
-        ) : (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="destructive"
-                size="icon"
-                onClick={stopRecording}
-              >
-                <MicOff className="h-4 w-4" />
-                <span className="sr-only">Detener transcripción</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Detener Transcripción</p>
-            </TooltipContent>
-          </Tooltip>
-        )}
+        {/* El resto de botones de la barra de herramientas se mueven a TeacherUI */}
+
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
@@ -208,9 +142,11 @@ export default function TeacherPage() {
         </Tooltip>
       </div>
 
-      <div className="relative p-4 h-full w-full pointer-events-none">
-        <TranscriptionPanelWithNoSSR command={panelCommand} />
-      </div>
+      <TeacherUIWithNoSSR 
+        isDrawingMode={isDrawingMode} 
+        brushColor={brushColor} 
+        clearCanvas={clearCanvas} 
+      />
 
       <Dialog open={isSummaryDialogOpen} onOpenChange={setIsSummaryDialogOpen}>
         <DialogContent className="sm:max-w-md md:max-w-lg lg:max-w-2xl h-[70vh] flex flex-col">
