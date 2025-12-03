@@ -6,6 +6,7 @@
  */
 
 import { ai } from '@/ai/genkit';
+import { googleAI } from '@genkit-ai/google-genai';
 import { z } from 'zod';
 
 const SummarizeInputSchema = z.string();
@@ -14,6 +15,7 @@ const SummarizeOutputSchema = z.string();
 // Define el prompt de Genkit
 const summarizePrompt = ai.definePrompt({
   name: 'summarizePrompt',
+  model: googleAI('gemini-1.5-flash-latest'),
   input: { schema: SummarizeInputSchema },
   output: { schema: SummarizeOutputSchema },
   prompt: `Resume el siguiente texto de una clase de la manera más clara y concisa posible. 
