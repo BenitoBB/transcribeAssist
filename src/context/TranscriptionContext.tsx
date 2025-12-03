@@ -6,7 +6,6 @@ import React, {
   useCallback,
   ReactNode,
 } from 'react';
-import { Keyword } from '@/ai/flows/extract-keywords-flow';
 
 // Este estado es ahora puramente para la UI, la lógica real se carga dinámicamente.
 export interface TranscriptionContextType {
@@ -14,8 +13,6 @@ export interface TranscriptionContextType {
   setTranscription: React.Dispatch<React.SetStateAction<string>>;
   isRecording: boolean;
   setIsRecording: React.Dispatch<React.SetStateAction<boolean>>;
-  keywords: Keyword[];
-  setKeywords: React.Dispatch<React.SetStateAction<Keyword[]>>;
 }
 
 export const TranscriptionContext = createContext<
@@ -33,15 +30,12 @@ export const TranscriptionProvider: React.FC<TranscriptionProviderProps> = ({
   const [transcription, setTranscription] = useState(
     'La transcripción de la clase aparecerá aquí cuando inicies la grabación...'
   );
-  const [keywords, setKeywords] = useState<Keyword[]>([]);
 
   const value = {
     isRecording,
     setIsRecording,
     transcription,
     setTranscription,
-    keywords,
-    setKeywords,
   };
 
   return (

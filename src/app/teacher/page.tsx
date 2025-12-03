@@ -20,13 +20,10 @@ import {
 import {
   ArrowLeft,
   Pencil,
-  KeyRound,
-  LoaderCircle,
   Mic,
   MicOff,
 } from 'lucide-react';
 import { DrawingToolbar } from './components/DrawingToolbar';
-import { extractKeywords, Keyword } from '@/ai/flows/extract-keywords-flow';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useTranscription } from '@/hooks/use-transcription';
 import { DrawingCanvas } from './components/DrawingCanvas';
@@ -46,10 +43,6 @@ export default function TeacherPage() {
 
   const { transcription, setTranscription, isRecording, setIsRecording } = useTranscription();
   
-  const [keywords, setKeywords] = useState<Keyword[]>([]);
-  const [isKeywordsDialogOpen, setIsKeywordsDialogOpen] = useState(false);
-  const [isPending, startTransition] = useTransition();
-
   const [panelCommand, setPanelCommand] = useState<Command>(null);
 
 
@@ -109,19 +102,6 @@ export default function TeacherPage() {
     setTimeout(() => setClearCanvas(false), 50);
   };
 
-  const handleExtractKeywords = () => {
-    startTransition(async () => {
-      if (!transcription || transcription.trim().length < 100) {
-        setKeywords([]);
-        setIsKeywordsDialogOpen(true);
-        return;
-      }
-      const result = await extractKeywords(transcription);
-      setKeywords(result);
-      setIsKeywordsDialogOpen(true);
-    });
-  };
-
   const handleToggleRecording = () => {
     if (isRecording) {
       stopTranscription();
@@ -172,20 +152,6 @@ export default function TeacherPage() {
           </TooltipTrigger>
           <TooltipContent><p>{isRecording ? 'Detener' : 'Iniciar'} Transcripción</p></TooltipContent>
         </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handleExtractKeywords}
-              disabled={isPending}
-            >
-              {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
-              <span className="sr-only">Extraer conceptos clave</span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent><p>Extraer Conceptos Clave de la Clase</p></TooltipContent>
-        </Tooltip>
       </div>
 
       {isDrawingMode && (
@@ -205,46 +171,6 @@ export default function TeacherPage() {
         <TranscriptionPanel command={panelCommand} />
       </div>
 
-
-      {/* Diálogo de Conceptos Clave */}
-      <Dialog open={isKeywordsDialogOpen} onOpenChange={setIsKeywordsDialogOpen}>
-        <DialogContent className="sm:max-w-md md:max-w-lg lg:max-w-2xl h-[70vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle>Conceptos Clave de la Clase</DialogTitle>
-            <DialogDescription>
-              Estos son los temas principales identificados por la IA en la transcripción.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex-grow min-h-0">
-            <ScrollArea className="h-full w-full rounded-md border p-4">
-              {isPending ? (
-                 <div className="flex items-center justify-center h-full">
-                    <LoaderCircle className="h-8 w-8 animate-spin text-primary" />
-                 </div>
-              ) : keywords.length > 0 ? (
-                <ul className="space-y-4">
-                  {keywords.map((kw) => (
-                    <li key={kw.keyword} className="flex gap-4 items-start">
-                        <span className="text-2xl mt-1">{kw.emoji}</span>
-                        <div>
-                            <h3 className="font-semibold text-base text-primary">{kw.keyword}</h3>
-                            <p className="text-sm text-muted-foreground">{kw.explanation}</p>
-                        </div>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm text-muted-foreground text-center mt-8">
-                  No hay suficiente texto para extraer conceptos clave. La transcripción debe tener al menos 100 caracteres.
-                </p>
-              )}
-            </ScrollArea>
-          </div>
-          <DialogFooter className="sm:justify-end mt-4">
-            <Button onClick={() => setIsKeywordsDialogOpen(false)}>Cerrar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
