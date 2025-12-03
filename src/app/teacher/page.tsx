@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition, useEffect } from 'react';
+import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import {
@@ -76,9 +76,10 @@ export default function TeacherPage() {
     }
   };
 
-  const { isListening, toggleListening } = useVoiceCommands(handleCommand, isRecording, {
+  const { isListening, toggleListening } = useVoiceCommands(handleCommand, {
+    isTranscriptionRecording: isRecording,
     onListenStart: stopRecording,
-    onListenStop: startRecording
+    onListenStop: startRecording,
   });
 
   const handleClearCanvas = () => {
