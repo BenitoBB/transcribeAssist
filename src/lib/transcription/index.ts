@@ -88,7 +88,11 @@ export async function startTranscription(): Promise<void> {
     let interimTranscription = '';
     for (let i = event.resultIndex; i < event.results.length; ++i) {
       if (event.results[i].isFinal) {
-        finalTranscription += event.results[i][0].transcript + ' ';
+        // Cuando un resultado es final, el usuario hizo una pausa. Añadimos un salto de línea.
+        const transcript = event.results[i][0].transcript.trim();
+        if (transcript) {
+          finalTranscription += transcript + '\n';
+        }
       } else {
         interimTranscription += event.results[i][0].transcript;
       }
