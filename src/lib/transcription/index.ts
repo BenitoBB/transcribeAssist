@@ -10,7 +10,7 @@ export type TranscriptionState = 'idle' | 'recording' | 'stopped';
 
 let recognition: SpeechRecognition | null = null;
 let finalTranscription = '';
-let registeredCommands: { [key: string]: () => void } = {};
+let commandCallback: ((command: string) => void) | null = null;
 
 // --- Sistema de Eventos para la UI ---
 type TranscriptionCallback = (text: string) => void;
@@ -44,28 +44,13 @@ function notifyStateListeners(state: TranscriptionState) {
 }
 
 /**
- * Registra los comandos de voz que el sistema debe reconocer.
- * @param commands - Un objeto donde la clave es el comando (sin espacios, en minúsculas) y el valor es la función a ejecutar.
+ * Registra una única función de callback para procesar comandos de voz.
+ * @param callback La función que se ejecutará cuando se detecte un posible comando.
  */
-export function registerCommands(commands: { [key: string]: () => void }) {
-  registeredCommands = commands;
+export function registerCommands(callback: (command: string) => void) {
+  commandCallback = callback;
 }
 
-/**
- * Procesa una frase finalizada, comprobando si es un comando o texto normal.
- * @param transcript - La frase a procesar.
- */
-function processFinalTranscript(transcript: string) {
-  const cleanedTranscript = transcript.toLowerCase().replace(/\s+/g, '').replace(/[.,¡!¿?]/g, '');
-
-  if (registeredCommands[cleanedTranscript]) {
-    registeredCommands[cleanedTranscript]();
-  } else {
-    // Añade la transcripción con la primera letra en mayúscula y un salto de línea.
-    const formattedTranscript = transcript.charAt(0).toUpperCase() + transcript.slice(1);
-    finalTranscription += formattedTranscript + '\n';
-  }
-}
 
 /**
  * Inicia la captura y el reconocimiento de audio.
@@ -120,11 +105,16 @@ export function startTranscription(): Promise<void> {
     recognition.onresult = (event) => {
       let interimTranscription = '';
       for (let i = event.resultIndex; i < event.results.length; ++i) {
+        const transcript = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
-          const transcript = event.results[i][0].transcript.trim();
-          processFinalTranscript(transcript);
+          // Si es una frase final, intenta ejecutarla como comando
+          if (commandCallback) {
+            commandCallback(transcript.trim());
+          }
+          // Si no es un comando, se añadirá a la transcripción en el callback
+          finalTranscription += transcript.charAt(0).toUpperCase() + transcript.slice(1) + '\n';
         } else {
-          interimTranscription += event.results[i][0].transcript;
+          interimTranscription += transcript;
         }
       }
       notifyTextListeners(finalTranscription + interimTranscription);

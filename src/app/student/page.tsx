@@ -26,14 +26,10 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import React, { useState, useEffect } from 'react';
-import dynamic from 'next/dynamic';
 import { defineWord } from '@/components/define-word';
 import { onTranscriptionUpdate } from '@/lib/transcription';
+import { DefinitionPopup } from '@/components/DefinitionPopup';
 
-const DefinitionPopupWithNoSSR = dynamic(
-  () => import('@/components/DefinitionPopup').then((mod) => mod.DefinitionPopup),
-  { ssr: false, loading: () => <div className="z-50 flex items-center justify-center"><LoaderCircle className="h-6 w-6 animate-spin"/></div> }
-);
 
 function StudentTranscriptionClient() {
   const { setTranscription } = useTranscription();
@@ -94,12 +90,12 @@ export default function StudentPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center p-4">
+    <div className="flex min-h-screen flex-col items-center justify-center p-4 relative overflow-hidden">
       {/* El componente para escuchar la transcripción no renderiza nada */}
       <StudentTranscriptionClient />
       
        {definitionState && (
-        <DefinitionPopupWithNoSSR
+        <DefinitionPopup
           word={definitionState.word}
           definition={definitionState.definition}
           isLoading={definitionState.isLoading}

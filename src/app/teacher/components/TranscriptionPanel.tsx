@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import React from 'react';
-import { Rnd } from 'react-rnd';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -26,54 +25,52 @@ import { SettingsButton } from '@/components/settings/SettingsButton';
 type Position = 'top' | 'bottom' | 'left' | 'right' | 'free';
 export type Command = Position | 'free' | null;
 
-
 export function TranscriptionPanel({ command }: { command: Command }) {
   const { transcription } = useTranscription();
   const { style } = useStyle();
 
-  const [position, setPosition] = useState<Position>('free');
+  const [currentPosition, setCurrentPosition] = useState<Position>('free');
   const [size, setSize] = useState({ width: 500, height: 300 });
   const [pos, setPos] = useState({ x: 100, y: 100 });
   const [isMobile, setIsMobile] = useState(false);
-  const parentRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  
+  const panelRef = useRef<HTMLDivElement>(null);
+  const dragStartRef = useRef({ x: 0, y: 0 }); // Posición del ratón relativa al panel
 
+  // Detectar si es móvil
   useEffect(() => {
-    const checkIsMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
+    const checkIsMobile = () => setIsMobile(window.innerWidth < 768);
     checkIsMobile();
     window.addEventListener('resize', checkIsMobile);
     return () => window.removeEventListener('resize', checkIsMobile);
   }, []);
 
+  // Centrar o anclar en móvil
   useEffect(() => {
-    if (parentRef.current) {
-      const parentW = parentRef.current.offsetWidth;
-      const parentH = parentRef.current.offsetHeight;
-      if (isMobile) {
-        handleSetPosition('bottom');
-      } else {
-        setPos({
-          x: (parentW - 500) / 2,
-          y: (parentH - 300) / 2,
-        });
-        setSize({ width: 500, height: 300 });
-        setPosition('free');
-      }
+    if (isMobile) {
+      handleSetPosition('bottom');
+    } else {
+      setPos({
+        x: window.innerWidth / 2 - 250,
+        y: window.innerHeight / 2 - 150,
+      });
+      setSize({ width: 500, height: 300 });
+      setCurrentPosition('free');
     }
   }, [isMobile]);
 
+  // Ejecutar comando de voz
   useEffect(() => {
-    if (command) {
-      handleSetPosition(command);
-    }
+    if (command) handleSetPosition(command);
   }, [command]);
 
-
   const handleSetPosition = (newPosition: Position | 'free') => {
-    setPosition(newPosition === 'free' ? 'free' : newPosition);
-    if (!parentRef.current) return;
-    const { offsetWidth: parentW, offsetHeight: parentH } = parentRef.current;
+    setCurrentPosition(newPosition);
+    if (!panelRef.current?.parentElement) return;
+
+    const parentW = panelRef.current.parentElement.offsetWidth;
+    const parentH = panelRef.current.parentElement.offsetHeight;
 
     switch (newPosition) {
       case 'top':
@@ -93,36 +90,66 @@ export function TranscriptionPanel({ command }: { command: Command }) {
         setPos({ x: parentW * 0.7, y: 0 });
         break;
       case 'free':
-        if (isMobile) {
-          handleSetPosition('bottom');
-          return;
-        }
+        if (isMobile) return handleSetPosition('bottom');
         setSize({ width: 500, height: 300 });
-        setPos({ x: (parentW - 500) / 2, y: (parentH - 300) / 2 });
+        setPos({ x: parentW / 2 - 250, y: parentH / 2 - 150 });
         break;
     }
   };
+
+  const handleMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (currentPosition !== 'free') return;
+    setIsDragging(true);
+    dragStartRef.current = {
+      x: e.clientX - pos.x,
+      y: e.clientY - pos.y,
+    };
+    e.preventDefault();
+  }, [pos, currentPosition]);
+
+  const handleMouseUp = useCallback(() => setIsDragging(false), []);
   
-  const isDocked = position !== 'free';
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!isDragging || !panelRef.current?.parentElement) return;
+    
+    const parentBounds = panelRef.current.parentElement.getBoundingClientRect();
+    let newX = e.clientX - dragStartRef.current.x;
+    let newY = e.clientY - dragStartRef.current.y;
+
+    // Limitar al viewport
+    newX = Math.max(0, Math.min(newX, parentBounds.width - size.width));
+    newY = Math.max(0, Math.min(newY, parentBounds.height - size.height));
+    
+    setPos({ x: newX, y: newY });
+  }, [isDragging, size.width, size.height]);
+
+
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, handleMouseMove, handleMouseUp]);
+
+
+  const isDocked = currentPosition !== 'free';
 
   const renderContent = () => (
     <ScrollArea className="h-full">
       <div
         className="p-4 prose bg-transparent"
-        style={{
-          fontSize: `${style.fontSize}px`,
-          lineHeight: style.lineHeight,
-          letterSpacing: `${style.letterSpacing}px`,
-          fontFamily: style.fontFamily,
-          height: '100%',
-          color: 'inherit',
-        }}
+        style={{ ...style, height: '100%', color: 'inherit' }}
       >
         {transcription}
       </div>
     </ScrollArea>
   );
 
+  // Vista para Móvil
   if (isMobile) {
     return (
       <Card className="fixed bottom-0 left-0 right-0 h-[40vh] w-full flex flex-col shadow-2xl rounded-b-none border-t z-20">
@@ -135,130 +162,72 @@ export function TranscriptionPanel({ command }: { command: Command }) {
     );
   }
 
+  // Vista para Escritorio
   return (
-    <div ref={parentRef} className="w-full h-full absolute top-0 left-0 pointer-events-none">
-      <Rnd
-        size={size}
-        position={pos}
-        onDragStop={(e, d) => {
-          if (isDocked) return;
-          setPos({ x: d.x, y: d.y });
-          setPosition('free');
-        }}
-        onResizeStop={(e, direction, ref, delta, position) => {
-          if (isDocked) return;
-          setSize({
-            width: parseInt(ref.style.width),
-            height: parseInt(ref.style.height),
-          });
-          setPos(position);
-          setPosition('free');
-        }}
-        bounds="parent"
-        dragHandleClassName="drag-handle"
-        className="pointer-events-auto z-20"
-        enableResizing={!isDocked}
-        disableDragging={isDocked}
-        minWidth={300}
-        minHeight={200}
-        maxWidth="90%"
-        maxHeight="90%"
-      >
-        <Card className="h-full w-full flex flex-col shadow-2xl" onDoubleClick={() => isDocked && handleSetPosition('free')}>
-          <CardHeader className="flex flex-row items-center justify-between p-3 border-b drag-handle cursor-move">
+    <div
+      ref={panelRef}
+      className={`absolute pointer-events-auto z-20 ${isDragging ? 'select-none' : ''}`}
+      style={{
+        left: pos.x,
+        top: pos.y,
+        width: size.width,
+        height: size.height,
+        transition: isDragging ? 'none' : 'all 0.2s ease-out',
+      }}
+    >
+      <Card className="h-full w-full flex flex-col shadow-2xl" onDoubleClick={() => isDocked && handleSetPosition('free')}>
+        <CardHeader
+          className={`flex flex-row items-center justify-between p-3 border-b ${isDocked ? '' : 'cursor-move drag-handle'}`}
+          onMouseDown={handleMouseDown}
+        >
             <div className="flex items-center gap-2">
               <GripVertical className="text-muted-foreground" />
               <CardTitle className="text-base font-semibold">Transcripción</CardTitle>
             </div>
             <div className="flex items-center gap-1">
-               <SettingsButton />
+              <SettingsButton />
+              {/* Botones de anclaje... */}
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={() => handleSetPosition('top')}
-                    aria-label="Anclar arriba"
-                  >
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleSetPosition('top')}>
                     <ArrowBigUp className="h-4 w-4" />
                   </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Anclar arriba</p>
-                </TooltipContent>
+                </TooltipTrigger><TooltipContent><p>Anclar arriba</p></TooltipContent>
               </Tooltip>
-              <Tooltip>
+               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={() => handleSetPosition('bottom')}
-                    aria-label="Anclar abajo"
-                  >
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleSetPosition('bottom')}>
                     <ArrowBigDown className="h-4 w-4" />
                   </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Anclar abajo</p>
-                </TooltipContent>
+                </TooltipTrigger><TooltipContent><p>Anclar abajo</p></TooltipContent>
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={() => handleSetPosition('left')}
-                    aria-label="Anclar izquierda"
-                  >
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleSetPosition('left')}>
                     <ArrowBigLeft className="h-4 w-4" />
                   </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Anclar a la izquierda</p>
-                </TooltipContent>
+                </TooltipTrigger><TooltipContent><p>Anclar izquierda</p></TooltipContent>
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={() => handleSetPosition('right')}
-                    aria-label="Anclar derecha"
-                  >
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleSetPosition('right')}>
                     <ArrowBigRight className="h-4 w-4" />
                   </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Anclar a la derecha</p>
-                </TooltipContent>
+                </TooltipTrigger><TooltipContent><p>Anclar derecha</p></TooltipContent>
               </Tooltip>
-              <Tooltip>
+               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={() => handleSetPosition('free')}
-                    aria-label="Posición inicial"
-                  >
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleSetPosition('free')}>
                     <Maximize className="h-4 w-4" />
                   </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Modo flotante</p>
-                </TooltipContent>
+                </TooltipTrigger><TooltipContent><p>Modo flotante</p></TooltipContent>
               </Tooltip>
             </div>
           </CardHeader>
           <CardContent className="p-0 flex-grow">
             {renderContent()}
           </CardContent>
-        </Card>
-      </Rnd>
+      </Card>
     </div>
   );
 }
