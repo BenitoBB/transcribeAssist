@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition, useEffect, useCallback } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,7 +16,15 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { ArrowLeft, Pencil, Mic, MicOff, Sparkles, LoaderCircle, Copy } from 'lucide-react';
+import {
+  ArrowLeft,
+  Pencil,
+  Mic,
+  MicOff,
+  Sparkles,
+  LoaderCircle,
+  Copy,
+} from 'lucide-react';
 import { TranscriptionPanel, Command } from './components/TranscriptionPanel';
 import { DrawingCanvas } from './components/DrawingCanvas';
 import { DrawingToolbar } from './components/DrawingToolbar';
@@ -30,8 +38,9 @@ export default function TeacherPage() {
   const [isDrawingMode, setIsDrawingMode] = useState(false);
   const [brushColor, setBrushColor] = useState('#FF0000');
   const [clearCanvas, setClearCanvas] = useState(false);
-  const { isRecording, startRecording, stopRecording, transcription } = useTranscription();
-  
+  const { isRecording, startRecording, stopRecording, transcription } =
+    useTranscription();
+
   const [summary, setSummary] = useState('');
   const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -39,14 +48,15 @@ export default function TeacherPage() {
 
   const [panelCommand, setPanelCommand] = useState<Command | null>(null);
 
-  const handleCommand = useCallback((command: Command) => {
-    setPanelCommand(command);
-    // Resetear el comando después de un breve instante para permitir futuras llamadas
-    setTimeout(() => setPanelCommand(null), 100);
-  }, []);
-
-  // Registrar los comandos de voz solo una vez
   useEffect(() => {
+    // Definimos la función de manejo de comandos directamente
+    const handleCommand = (command: Command) => {
+        setPanelCommand(command);
+        // Resetear el comando después de un breve instante para permitir futuras llamadas
+        setTimeout(() => setPanelCommand(null), 100);
+    };
+
+    // Registramos los comandos una sola vez al montar el componente
     const commands = {
       iniciargrabación: () => {
         if (!isRecording) startRecording();
@@ -58,13 +68,13 @@ export default function TeacherPage() {
       cerrarpizarra: () => setIsDrawingMode(false),
       pizarraarriba: () => handleCommand('top'),
       pizarraabajo: () => handleCommand('bottom'),
-      pizarraizquierda: () => handleCommand('left'),
       pizarraderecha: () => handleCommand('right'),
+      pizarraizquierda: () => handleCommand('left'),
       pizarracentro: () => handleCommand('free'),
     };
     
     registerCommands(commands);
-  }, [isRecording, startRecording, stopRecording, handleCommand]);
+  }, [isRecording, startRecording, stopRecording]);
 
 
   const handleClearCanvas = () => {
@@ -139,15 +149,11 @@ export default function TeacherPage() {
             <p>Activar/Desactivar Pizarra</p>
           </TooltipContent>
         </Tooltip>
-        
+
         {!isRecording ? (
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={startRecording}
-              >
+              <Button variant="outline" size="icon" onClick={startRecording}>
                 <Mic className="h-4 w-4" />
                 <span className="sr-only">Iniciar transcripción</span>
               </Button>
@@ -196,7 +202,7 @@ export default function TeacherPage() {
       </div>
 
       <div className="relative p-4 h-full w-full pointer-events-none">
-        <TranscriptionPanel command={panelCommand}/>
+        <TranscriptionPanel command={panelCommand} />
       </div>
 
       <Dialog open={isSummaryDialogOpen} onOpenChange={setIsSummaryDialogOpen}>
@@ -213,7 +219,11 @@ export default function TeacherPage() {
             </ScrollArea>
           </div>
           <DialogFooter className="sm:justify-between mt-4">
-            <Button variant="outline" onClick={handleCopySummary} disabled={!summary || summary.startsWith('No hay')}>
+            <Button
+              variant="outline"
+              onClick={handleCopySummary}
+              disabled={!summary || summary.startsWith('No hay')}
+            >
               <Copy className="mr-2 h-4 w-4" />
               Copiar
             </Button>
