@@ -22,13 +22,15 @@ import {
   Pencil,
   Sparkles,
   LoaderCircle,
-  Copy,
+  KeyRound,
 } from 'lucide-react';
 import { DrawingToolbar } from './components/DrawingToolbar';
-import { summarizeText } from '@/ai/flows/summarize-text-flow';
+import { extractKeywords, Keyword } from '@/ai/flows/extract-keywords-flow';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { useTranscription } from '@/hooks/use-transcription';
+import { Badge } from '@/components/ui/badge';
+
 
 // Carga dinámica del componente que contiene TODA la lógica del cliente
 const TeacherUIWithNoSSR = dynamic(() => import('./components/TeacherUI'), {
@@ -42,37 +44,26 @@ export default function TeacherPage() {
   const [clearCanvas, setClearCanvas] = useState(false);
   const { transcription } = useTranscription();
 
-  const [summary, setSummary] = useState('');
-  const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false);
+  const [keywords, setKeywords] = useState<Keyword[]>([]);
+  const [isKeywordsDialogOpen, setIsKeywordsDialogOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const { toast } = useToast();
 
   const handleClearCanvas = () => {
     setClearCanvas(true);
     setTimeout(() => setClearCanvas(false), 50);
   };
 
-  const handleGenerateSummary = () => {
+  const handleExtractKeywords = () => {
     startTransition(async () => {
-      if (!transcription || transcription.startsWith('La transcripción')) {
-        setSummary('No hay suficiente texto para generar un resumen.');
-        setIsSummaryDialogOpen(true);
+      if (!transcription || transcription.trim().length < 100) {
+        setKeywords([]);
+        setIsKeywordsDialogOpen(true);
         return;
       }
-      const result = await summarizeText(transcription);
-      setSummary(result);
-      setIsSummaryDialogOpen(true);
+      const result = await extractKeywords(transcription);
+      setKeywords(result);
+      setIsKeywordsDialogOpen(true);
     });
-  };
-
-  const handleCopySummary = () => {
-    if (summary) {
-      navigator.clipboard.writeText(summary);
-      toast({
-        title: 'Copiado',
-        description: 'El resumen ha sido copiado al portapapeles.',
-      });
-    }
   };
 
   return (
@@ -129,48 +120,60 @@ export default function TeacherPage() {
                     <Button
                     variant="outline"
                     size="icon"
-                    onClick={handleGenerateSummary}
+                    onClick={handleExtractKeywords}
                     disabled={isPending}
                     >
                     {isPending ? (
                         <LoaderCircle className="h-4 w-4 animate-spin" />
                     ) : (
-                        <Sparkles className="h-4 w-4" />
+                        <KeyRound className="h-4 w-4" />
                     )}
-                    <span className="sr-only">Resumir transcripción</span>
+                    <span className="sr-only">Extraer conceptos clave</span>
                     </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                    <p>Generar Resumen de la Clase</p>
+                    <p>Extraer Conceptos Clave de la Clase</p>
                 </TooltipContent>
                 </Tooltip>
             </div>
         }
       />
 
-      <Dialog open={isSummaryDialogOpen} onOpenChange={setIsSummaryDialogOpen}>
+      <Dialog open={isKeywordsDialogOpen} onOpenChange={setIsKeywordsDialogOpen}>
         <DialogContent className="sm:max-w-md md:max-w-lg lg:max-w-2xl h-[70vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle>Resumen de la Transcripción</DialogTitle>
+            <DialogTitle>Conceptos Clave de la Clase</DialogTitle>
             <DialogDescription>
-              Este es un resumen de la clase generado por IA.
+              Estos son los temas principales identificados por la IA en la transcripción.
             </DialogDescription>
           </DialogHeader>
           <div className="flex-grow min-h-0">
             <ScrollArea className="h-full w-full rounded-md border p-4">
-              <p className="text-sm">{summary}</p>
+              {isPending ? (
+                 <div className="flex items-center justify-center h-full">
+                    <LoaderCircle className="h-8 w-8 animate-spin text-primary" />
+                 </div>
+              ) : keywords.length > 0 ? (
+                <ul className="space-y-4">
+                  {keywords.map((kw) => (
+                    <li key={kw.keyword} className="flex gap-4 items-start">
+                        <span className="text-2xl mt-1">{kw.emoji}</span>
+                        <div>
+                            <h3 className="font-semibold text-base text-primary">{kw.keyword}</h3>
+                            <p className="text-sm text-muted-foreground">{kw.explanation}</p>
+                        </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center mt-8">
+                  No hay suficiente texto para extraer conceptos clave. La transcripción debe tener al menos 100 caracteres.
+                </p>
+              )}
             </ScrollArea>
           </div>
-          <DialogFooter className="sm:justify-between mt-4">
-            <Button
-              variant="outline"
-              onClick={handleCopySummary}
-              disabled={!summary || summary.startsWith('No hay')}
-            >
-              <Copy className="mr-2 h-4 w-4" />
-              Copiar
-            </Button>
-            <Button onClick={() => setIsSummaryDialogOpen(false)}>Cerrar</Button>
+          <DialogFooter className="sm:justify-end mt-4">
+            <Button onClick={() => setIsKeywordsDialogOpen(false)}>Cerrar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

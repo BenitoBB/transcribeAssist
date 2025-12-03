@@ -35,9 +35,6 @@ export const TranscriptionProvider: React.FC<TranscriptionProviderProps> = ({
   );
   const [keywords, setKeywords] = useState<Keyword[]>([]);
 
-  // Las funciones start/stop se eliminan de aquí, ya que ahora son
-  // manejadas por el hook que se carga en el cliente.
-
   const value = {
     isRecording,
     setIsRecording,
