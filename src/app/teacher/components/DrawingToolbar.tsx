@@ -20,7 +20,7 @@ export function DrawingToolbar({
   currentColor,
 }: DrawingToolbarProps) {
   return (
-    <div className="absolute top-4 right-4 sm:top-8 sm:right-8 z-20 flex items-center gap-2 bg-card p-2 rounded-lg shadow-lg border">
+    <div className="absolute top-4 right-4 sm:top-8 sm:right-8 z-40 flex items-center gap-2 bg-card p-2 rounded-lg shadow-lg border">
       <Tooltip>
         <TooltipTrigger asChild>
           <div className="relative">

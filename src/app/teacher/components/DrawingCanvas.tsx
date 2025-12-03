@@ -99,7 +99,7 @@ export function DrawingCanvas({ brushColor, clear }: DrawingCanvasProps) {
       onMouseUp={finishDrawing}
       onMouseMove={draw}
       onMouseLeave={finishDrawing} // Termina de dibujar si el cursor sale del canvas
-      className="absolute top-0 left-0 z-0" // Cambiado z-10 a z-0 para que esté detrás
+      className="absolute top-0 left-0 z-10" // Detrás de la transcripción y barras, encima del fondo
     />
   );
 }

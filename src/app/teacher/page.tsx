@@ -223,7 +223,7 @@ export default function TeacherPage() {
         </Tooltip>
       </div>
 
-      <div className="relative p-4 h-full w-full z-10 pointer-events-none">
+      <div className="relative p-4 h-full w-full pointer-events-none">
         <TranscriptionPanel command={panelCommand}/>
       </div>
 
