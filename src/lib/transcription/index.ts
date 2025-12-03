@@ -12,25 +12,6 @@ let recognition: SpeechRecognition | null = null;
 let isRecordingInternal = false;
 let finalTranscription = '';
 
-// --- Sistema de Comandos ---
-type CommandCallback = () => void;
-let registeredCommands: Record<string, CommandCallback> = {};
-
-/**
- * Registra un conjunto de comandos de voz.
- * @param commands - Un objeto donde la clave es la frase del comando y el valor es la función a ejecutar.
- */
-export function registerCommands(commands: Record<string, CommandCallback>) {
-  registeredCommands = commands;
-}
-
-/**
- * Limpia todos los comandos registrados.
- */
-export function unregisterAllCommands() {
-  registeredCommands = {};
-}
-
 // --- Sistema de Eventos para la UI ---
 type TranscriptionCallback = (text: string) => void;
 const textListeners: TranscriptionCallback[] = [];
@@ -67,14 +48,7 @@ function notifyStateListeners(state: TranscriptionState) {
  * @param transcript - La frase a procesar.
  */
 function processFinalTranscript(transcript: string) {
-  const command = transcript.toLowerCase().trim();
-
-  if (registeredCommands[command]) {
-    console.log(`Comando reconocido: "${command}"`);
-    registeredCommands[command]();
-  } else {
-    finalTranscription += transcript + '\n';
-  }
+  finalTranscription += transcript + '\n';
 }
 
 /**
@@ -155,7 +129,7 @@ export async function startTranscription(): Promise<void> {
  */
 export function stopTranscription(): void {
   if (!recognition || !isRecordingInternal) {
-    console.warn('No hay ninguna grabación activa para detener.');
+    // console.warn('No hay ninguna grabación activa para detener.');
     return;
   }
   recognition.stop();

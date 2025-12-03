@@ -16,7 +16,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { ArrowLeft, Pencil, Mic, MicOff, Sparkles, LoaderCircle, Ear, Copy } from 'lucide-react';
+import { ArrowLeft, Pencil, Mic, MicOff, Sparkles, LoaderCircle, Ear, EarOff, Copy } from 'lucide-react';
 import { TranscriptionPanel, Command } from './components/TranscriptionPanel';
 import { DrawingCanvas } from './components/DrawingCanvas';
 import { DrawingToolbar } from './components/DrawingToolbar';
@@ -24,7 +24,7 @@ import { useTranscription } from '@/hooks/use-transcription';
 import { summarizeText } from '@/ai/flows/summarize-text-flow';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { registerCommands, unregisterAllCommands } from '@/lib/transcription';
+import { useVoiceCommands } from '@/hooks/use-voice-commands';
 
 
 export default function TeacherPage() {
@@ -76,27 +76,10 @@ export default function TeacherPage() {
     }
   };
 
-  useEffect(() => {
-    const commands = {
-      'iniciar grabación': () => handleCommand('iniciar grabación'),
-      'detener grabación': () => handleCommand('detener grabación'),
-      'activar pizarra': () => handleCommand('activar pizarra'),
-      'cerrar pizarra': () => handleCommand('cerrar pizarra'),
-      'pizarra arriba': () => handleCommand('pizarra arriba'),
-      'pizarra abajo': () => handleCommand('pizarra abajo'),
-      'pizarra izquierda': () => handleCommand('pizarra izquierda'),
-      'pizarra derecha': () => handleCommand('pizarra derecha'),
-      'pizarra centro': () => handleCommand('pizarra centro'),
-    };
-
-    registerCommands(commands);
-
-    // Limpia los comandos al desmontar el componente
-    return () => {
-      unregisterAllCommands();
-    };
-  }, [isRecording]); // Se vuelve a registrar si el estado de grabación cambia para tener el closure correcto.
-  
+  const { isListening, toggleListening } = useVoiceCommands(handleCommand, isRecording, {
+    onListenStart: stopRecording,
+    onListenStop: startRecording
+  });
 
   const handleClearCanvas = () => {
     setClearCanvas(true);
@@ -178,6 +161,7 @@ export default function TeacherPage() {
                 variant="outline"
                 size="icon"
                 onClick={startRecording}
+                disabled={isListening}
               >
                 <Mic className="h-4 w-4" />
                 <span className="sr-only">Iniciar transcripción</span>
@@ -194,6 +178,7 @@ export default function TeacherPage() {
                 variant="destructive"
                 size="icon"
                 onClick={stopRecording}
+                disabled={isListening}
               >
                 <MicOff className="h-4 w-4" />
                 <span className="sr-only">Detener transcripción</span>
@@ -227,16 +212,16 @@ export default function TeacherPage() {
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
-              variant='outline'
+              variant={isListening ? "destructive" : "outline"}
               size="icon"
-              disabled
+              onClick={toggleListening}
             >
-              <Ear className="h-4 w-4" />
-              <span className="sr-only">Comandos de voz integrados en la grabación</span>
+              {isListening ? <EarOff className="h-4 w-4" /> : <Ear className="h-4 w-4" />}
+              <span className="sr-only">{isListening ? 'Desactivar comandos de voz' : 'Activar comandos de voz'}</span>
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Los comandos de voz se escuchan durante la grabación</p>
+            <p>{isListening ? 'Desactivar Comandos de Voz' : 'Activar Comandos de Voz'}</p>
           </TooltipContent>
         </Tooltip>
       </div>
