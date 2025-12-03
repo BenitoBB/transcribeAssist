@@ -12,7 +12,7 @@ import { z } from 'zod';
 
 const KeywordsInputSchema = z.string();
 
-export const KeywordSchema = z.object({
+const KeywordSchema = z.object({
   keyword: z.string().describe('La palabra o concepto clave principal.'),
   explanation: z.string().describe('Una breve explicación (1-2 frases) del concepto basada en el texto proporcionado.'),
   emoji: z.string().describe('Un emoji de un solo carácter que represente visualmente el concepto.'),
