@@ -12,17 +12,32 @@ let recognition: SpeechRecognition | null = null;
 let isRecordingInternal = false;
 let finalTranscription = '';
 
-// Sistema de eventos para el TEXTO
+// --- Sistema de Comandos ---
+type CommandCallback = () => void;
+let registeredCommands: Record<string, CommandCallback> = {};
+
+/**
+ * Registra un conjunto de comandos de voz.
+ * @param commands - Un objeto donde la clave es la frase del comando y el valor es la función a ejecutar.
+ */
+export function registerCommands(commands: Record<string, CommandCallback>) {
+  registeredCommands = commands;
+}
+
+/**
+ * Limpia todos los comandos registrados.
+ */
+export function unregisterAllCommands() {
+  registeredCommands = {};
+}
+
+// --- Sistema de Eventos para la UI ---
 type TranscriptionCallback = (text: string) => void;
 const textListeners: TranscriptionCallback[] = [];
 
-// Sistema de eventos para el ESTADO de la grabación
 type StateChangeCallback = (state: TranscriptionState) => void;
 const stateListeners: StateChangeCallback[] = [];
 
-/**
- * Suscripción a las actualizaciones de la transcripción de texto.
- */
 export function onTranscriptionUpdate(callback: TranscriptionCallback) {
   textListeners.push(callback);
   return () => {
@@ -31,9 +46,6 @@ export function onTranscriptionUpdate(callback: TranscriptionCallback) {
   };
 }
 
-/**
- * Suscripción a los cambios de estado (idle, recording, stopped).
- */
 export function onStateChange(callback: StateChangeCallback) {
   stateListeners.push(callback);
   return () => {
@@ -48,6 +60,21 @@ function notifyTextListeners(text: string) {
 
 function notifyStateListeners(state: TranscriptionState) {
   stateListeners.forEach(listener => listener(state));
+}
+
+/**
+ * Procesa una frase finalizada, comprobando si es un comando o texto normal.
+ * @param transcript - La frase a procesar.
+ */
+function processFinalTranscript(transcript: string) {
+  const command = transcript.toLowerCase().trim();
+
+  if (registeredCommands[command]) {
+    console.log(`Comando reconocido: "${command}"`);
+    registeredCommands[command]();
+  } else {
+    finalTranscription += transcript + '\n';
+  }
 }
 
 /**
@@ -100,10 +127,8 @@ export async function startTranscription(): Promise<void> {
     let interimTranscription = '';
     for (let i = event.resultIndex; i < event.results.length; ++i) {
       if (event.results[i].isFinal) {
-        const transcript = event.results[i][0].transcript.trim();
-        if (transcript) {
-          finalTranscription += transcript + '\n';
-        }
+        const transcript = event.results[i][0].transcript;
+        processFinalTranscript(transcript);
       } else {
         interimTranscription += event.results[i][0].transcript;
       }

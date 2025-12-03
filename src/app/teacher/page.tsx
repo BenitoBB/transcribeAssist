@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,15 +16,15 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { ArrowLeft, Pencil, Mic, MicOff, Sparkles, LoaderCircle, Ear, EarOff, Copy } from 'lucide-react';
+import { ArrowLeft, Pencil, Mic, MicOff, Sparkles, LoaderCircle, Ear, Copy } from 'lucide-react';
 import { TranscriptionPanel, Command } from './components/TranscriptionPanel';
 import { DrawingCanvas } from './components/DrawingCanvas';
 import { DrawingToolbar } from './components/DrawingToolbar';
 import { useTranscription } from '@/hooks/use-transcription';
 import { summarizeText } from '@/ai/flows/summarize-text-flow';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useVoiceCommands } from '@/hooks/use-voice-commands';
 import { useToast } from '@/hooks/use-toast';
+import { registerCommands, unregisterAllCommands } from '@/lib/transcription';
 
 
 export default function TeacherPage() {
@@ -41,7 +41,6 @@ export default function TeacherPage() {
   const [panelCommand, setPanelCommand] = useState<Command | null>(null);
   
   const handleCommand = (command: string) => {
-    console.log('Comando reconocido:', command);
     switch (command) {
       case 'iniciar grabación':
         if (!isRecording) startRecording();
@@ -76,9 +75,28 @@ export default function TeacherPage() {
       setTimeout(() => setPanelCommand(null), 100);
     }
   };
-  
-  const { isListening, toggleListening } = useVoiceCommands(handleCommand);
 
+  useEffect(() => {
+    const commands = {
+      'iniciar grabación': () => handleCommand('iniciar grabación'),
+      'detener grabación': () => handleCommand('detener grabación'),
+      'activar pizarra': () => handleCommand('activar pizarra'),
+      'cerrar pizarra': () => handleCommand('cerrar pizarra'),
+      'pizarra arriba': () => handleCommand('pizarra arriba'),
+      'pizarra abajo': () => handleCommand('pizarra abajo'),
+      'pizarra izquierda': () => handleCommand('pizarra izquierda'),
+      'pizarra derecha': () => handleCommand('pizarra derecha'),
+      'pizarra centro': () => handleCommand('pizarra centro'),
+    };
+
+    registerCommands(commands);
+
+    // Limpia los comandos al desmontar el componente
+    return () => {
+      unregisterAllCommands();
+    };
+  }, [isRecording]); // Se vuelve a registrar si el estado de grabación cambia para tener el closure correcto.
+  
 
   const handleClearCanvas = () => {
     setClearCanvas(true);
@@ -209,16 +227,16 @@ export default function TeacherPage() {
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
-              variant={isListening ? 'default' : 'outline'}
+              variant='outline'
               size="icon"
-              onClick={toggleListening}
+              disabled
             >
-              {isListening ? <Ear className="h-4 w-4" /> : <EarOff className="h-4 w-4" />}
-              <span className="sr-only">Activar/Desactivar comandos de voz</span>
+              <Ear className="h-4 w-4" />
+              <span className="sr-only">Comandos de voz integrados en la grabación</span>
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Comandos de Voz ({isListening ? 'Activados' : 'Desactivados'})</p>
+            <p>Los comandos de voz se escuchan durante la grabación</p>
           </TooltipContent>
         </Tooltip>
       </div>
