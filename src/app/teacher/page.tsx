@@ -1,17 +1,9 @@
 'use client';
 
-import { useState, useTransition, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog';
 import {
   Tooltip,
   TooltipContent,
@@ -22,12 +14,12 @@ import {
   Pencil,
   Mic,
   MicOff,
+  Sparkles,
+  LoaderCircle
 } from 'lucide-react';
 import { DrawingToolbar } from './components/DrawingToolbar';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { useTranscription } from '@/hooks/use-transcription';
-import { DrawingCanvas } from './components/DrawingCanvas';
-import { Command, TranscriptionPanel } from './components/TranscriptionPanel';
+import { Command } from './components/TranscriptionPanel';
 import {
   startTranscription,
   stopTranscription,
@@ -35,11 +27,29 @@ import {
   onStateChange,
   onTranscriptionUpdate,
 } from '@/lib/transcription';
+import { SummaryDialog } from './components/SummaryDialog';
+import { summarizeText } from '@/ai/flows/summarize-text-flow';
+
+
+// Carga dinámica de componentes que solo funcionan en el cliente
+const DrawingCanvas = dynamic(
+  () => import('./components/DrawingCanvas').then(mod => mod.DrawingCanvas),
+  { ssr: false }
+);
+
+const TranscriptionPanel = dynamic(
+  () => import('./components/TranscriptionPanel').then(mod => mod.TranscriptionPanel),
+  { ssr: false }
+);
 
 export default function TeacherPage() {
   const [isDrawingMode, setIsDrawingMode] = useState(false);
   const [brushColor, setBrushColor] = useState('#FF0000');
   const [clearCanvas, setClearCanvas] = useState(false);
+  
+  const [showSummaryDialog, setShowSummaryDialog] = useState(false);
+  const [summary, setSummary] = useState('');
+  const [isSummarizing, setIsSummarizing] = useState(false);
 
   const { transcription, setTranscription, isRecording, setIsRecording } = useTranscription();
   
@@ -110,6 +120,22 @@ export default function TeacherPage() {
     }
   };
 
+  const handleGenerateSummary = async () => {
+    if (!transcription || isSummarizing) return;
+    setIsSummarizing(true);
+    setSummary('');
+    setShowSummaryDialog(true);
+    try {
+      const result = await summarizeText(transcription);
+      setSummary(result);
+    } catch (error) {
+      console.error('Error generating summary:', error);
+      setSummary('No se pudo generar el resumen. Inténtalo de nuevo.');
+    } finally {
+      setIsSummarizing(false);
+    }
+  };
+
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-background">
       {/* Barra de Herramientas Principal */}
@@ -152,7 +178,33 @@ export default function TeacherPage() {
           </TooltipTrigger>
           <TooltipContent><p>{isRecording ? 'Detener' : 'Iniciar'} Transcripción</p></TooltipContent>
         </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleGenerateSummary}
+              disabled={isSummarizing}
+            >
+              {isSummarizing ? (
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+              ) : (
+                <Sparkles className="h-4 w-4" />
+              )}
+              <span className="sr-only">Generar resumen con IA</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent><p>Generar Resumen con IA</p></TooltipContent>
+        </Tooltip>
       </div>
+      
+      <SummaryDialog
+        summary={summary}
+        isLoading={isSummarizing}
+        open={showSummaryDialog}
+        onOpenChange={setShowSummaryDialog}
+      />
+
 
       {isDrawingMode && (
         <>
@@ -170,7 +222,6 @@ export default function TeacherPage() {
       <div className="relative w-full h-full pointer-events-none">
         <TranscriptionPanel command={panelCommand} />
       </div>
-
     </div>
   );
 }

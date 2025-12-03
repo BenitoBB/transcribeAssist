@@ -3,11 +3,9 @@
 import React, {
   createContext,
   useState,
-  useCallback,
   ReactNode,
 } from 'react';
 
-// Este estado es ahora puramente para la UI, la lógica real se carga dinámicamente.
 export interface TranscriptionContextType {
   transcription: string;
   setTranscription: React.Dispatch<React.SetStateAction<string>>;
