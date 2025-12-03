@@ -11,6 +11,8 @@ import {
   startTranscription,
   stopTranscription,
   onTranscriptionUpdate,
+  onStateChange,
+  TranscriptionState,
 } from '@/lib/transcription';
 import { Keyword } from '@/ai/flows/extract-keywords-flow';
 
@@ -41,21 +43,29 @@ export const TranscriptionProvider: React.FC<TranscriptionProviderProps> = ({
   const [keywords, setKeywords] = useState<Keyword[]>([]);
 
   useEffect(() => {
+    // Sincronizar el estado de la grabación (isRecording)
+    const handleStateChange = (newState: TranscriptionState) => {
+      setIsRecording(newState === 'recording');
+    };
+
+    // Sincronizar el texto de la transcripción
     const handleTranscriptionUpdate = (newText: string) => {
       setTranscription(newText);
     };
 
-    const unsubscribe = onTranscriptionUpdate(handleTranscriptionUpdate);
+    const unsubscribeState = onStateChange(handleStateChange);
+    const unsubscribeText = onTranscriptionUpdate(handleTranscriptionUpdate);
 
     return () => {
-      unsubscribe();
+      unsubscribeState();
+      unsubscribeText();
     };
   }, []);
 
   const startRecording = useCallback(async () => {
     try {
       await startTranscription();
-      setIsRecording(true);
+      // El estado se actualizará a través del evento onStateChange
       setTranscription('Iniciando grabación... ');
       setKeywords([]);
     } catch (error) {
@@ -68,8 +78,7 @@ export const TranscriptionProvider: React.FC<TranscriptionProviderProps> = ({
 
   const stopRecording = useCallback(() => {
     stopTranscription();
-    setIsRecording(false);
-    // El texto final se actualizará a través del evento onTranscriptionUpdate
+    // El estado se actualizará a través del evento onStateChange
   }, []);
 
   const value = {

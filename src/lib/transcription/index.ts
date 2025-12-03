@@ -6,89 +6,100 @@
  * Contiene la lógica para usar la API de reconocimiento de voz nativa del navegador.
  */
 
+export type TranscriptionState = 'idle' | 'recording' | 'stopped';
+
 let recognition: SpeechRecognition | null = null;
-let isRecording = false;
+let isRecordingInternal = false;
 let finalTranscription = '';
 
-// Un simple sistema de eventos para notificar a los componentes de React sobre las actualizaciones.
+// Sistema de eventos para el TEXTO
 type TranscriptionCallback = (text: string) => void;
-const listeners: TranscriptionCallback[] = [];
+const textListeners: TranscriptionCallback[] = [];
+
+// Sistema de eventos para el ESTADO de la grabación
+type StateChangeCallback = (state: TranscriptionState) => void;
+const stateListeners: StateChangeCallback[] = [];
 
 /**
- * Permite a los componentes de React suscribirse a las actualizaciones de la transcripción.
- * @param callback La función a llamar cuando haya una nueva transcripción.
- * @returns Una función para cancelar la suscripción.
+ * Suscripción a las actualizaciones de la transcripción de texto.
  */
 export function onTranscriptionUpdate(callback: TranscriptionCallback) {
-  listeners.push(callback);
+  textListeners.push(callback);
   return () => {
-    const index = listeners.indexOf(callback);
-    if (index > -1) {
-      listeners.splice(index, 1);
-    }
+    const index = textListeners.indexOf(callback);
+    if (index > -1) textListeners.splice(index, 1);
   };
 }
 
 /**
- * Notifica a todos los oyentes suscritos sobre el nuevo texto de transcripción.
- * @param text El texto actualizado de la transcripción.
+ * Suscripción a los cambios de estado (idle, recording, stopped).
  */
-function notifyListeners(text: string) {
-  listeners.forEach(listener => listener(text));
+export function onStateChange(callback: StateChangeCallback) {
+  stateListeners.push(callback);
+  return () => {
+    const index = stateListeners.indexOf(callback);
+    if (index > -1) stateListeners.splice(index, 1);
+  };
+}
+
+function notifyTextListeners(text: string) {
+  textListeners.forEach(listener => listener(text));
+}
+
+function notifyStateListeners(state: TranscriptionState) {
+  stateListeners.forEach(listener => listener(state));
 }
 
 /**
  * Inicia la captura y el reconocimiento de audio.
  */
 export async function startTranscription(): Promise<void> {
-  if (isRecording) {
+  if (isRecordingInternal) {
     console.warn('La grabación ya está en curso.');
     return;
   }
 
-  // Comprobar la compatibilidad del navegador
   const SpeechRecognition =
     (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
   if (!SpeechRecognition) {
     const errorMsg = 'Tu navegador no soporta la API de Reconocimiento de Voz. Prueba con Google Chrome.';
-    notifyListeners(errorMsg);
+    notifyTextListeners(errorMsg);
     console.error(errorMsg);
     return;
   }
 
   recognition = new SpeechRecognition();
   recognition.lang = 'es-ES';
-  recognition.interimResults = true; // Queremos resultados mientras hablamos
-  recognition.continuous = true; // Queremos que siga escuchando
+  recognition.interimResults = true;
+  recognition.continuous = true;
 
   recognition.onstart = () => {
-    isRecording = true;
-    finalTranscription = ''; // Reiniciar al comenzar
-    notifyListeners('🎙️ Grabación iniciada...');
+    isRecordingInternal = true;
+    finalTranscription = '';
+    notifyTextListeners('🎙️ Grabación iniciada...');
+    notifyStateListeners('recording');
   };
 
   recognition.onend = () => {
-    isRecording = false;
-    notifyListeners(finalTranscription || 'Grabación detenida.');
+    isRecordingInternal = false;
+    notifyTextListeners(finalTranscription || 'Grabación detenida.');
+    notifyStateListeners('stopped');
     recognition = null;
   };
 
   recognition.onerror = (event) => {
-    // Los errores 'no-speech' y 'aborted' se disparan en situaciones normales.
-    // Los ignoramos para no llenar la consola de errores innecesarios.
     if (['no-speech', 'aborted'].includes(event.error)) {
       return;
     }
     console.error('Error en el reconocimiento de voz:', event.error);
-    notifyListeners(`Error: ${event.error}`);
+    notifyTextListeners(`Error: ${event.error}`);
   };
 
   recognition.onresult = (event) => {
     let interimTranscription = '';
     for (let i = event.resultIndex; i < event.results.length; ++i) {
       if (event.results[i].isFinal) {
-        // Cuando un resultado es final, el usuario hizo una pausa. Añadimos un salto de línea.
         const transcript = event.results[i][0].transcript.trim();
         if (transcript) {
           finalTranscription += transcript + '\n';
@@ -97,16 +108,15 @@ export async function startTranscription(): Promise<void> {
         interimTranscription += event.results[i][0].transcript;
       }
     }
-    notifyListeners(finalTranscription + interimTranscription);
+    notifyTextListeners(finalTranscription + interimTranscription);
   };
 
   try {
-    // Pedir permiso de micrófono
     await navigator.mediaDevices.getUserMedia({ audio: true });
     recognition.start();
   } catch (err) {
      const errorMsg = 'No se pudo acceder al micrófono. Por favor, comprueba los permisos en tu navegador.';
-     notifyListeners(errorMsg);
+     notifyTextListeners(errorMsg);
      console.error(errorMsg, err);
      if (recognition) {
          recognition.stop();
@@ -119,7 +129,7 @@ export async function startTranscription(): Promise<void> {
  * Detiene el proceso de transcripción.
  */
 export function stopTranscription(): void {
-  if (!recognition || !isRecording) {
+  if (!recognition || !isRecordingInternal) {
     console.warn('No hay ninguna grabación activa para detener.');
     return;
   }
