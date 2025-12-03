@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import {
@@ -41,37 +41,40 @@ export default function TeacherPage() {
   const [panelCommand, setPanelCommand] = useState<Command | null>(null);
   
   const handleCommand = (command: string) => {
-    switch (command) {
-      case 'iniciar grabación':
+    // Normalizar el comando eliminando espacios para hacerlo más robusto
+    const processedCommand = command.replace(/\s+/g, '');
+
+    switch (processedCommand) {
+      case 'iniciargrabación':
         if (!isRecording) startRecording();
         break;
-      case 'detener grabación':
+      case 'detenergrabación':
         if (isRecording) stopRecording();
         break;
-      case 'activar pizarra':
+      case 'activarpizarra':
         setIsDrawingMode(true);
         break;
-      case 'cerrar pizarra':
+      case 'cerrarpizarra':
         setIsDrawingMode(false);
         break;
-      case 'pizarra arriba':
+      case 'pizarraarriba':
         setPanelCommand('top');
         break;
-      case 'pizarra abajo':
+      case 'pizarraabajo':
         setPanelCommand('bottom');
         break;
-      case 'pizarra izquierda':
+      case 'pizarraizquierda':
         setPanelCommand('left');
         break;
-      case 'pizarra derecha':
+      case 'pizarraderecha':
         setPanelCommand('right');
         break;
-      case 'pizarra centro':
+      case 'pizarracentro':
         setPanelCommand('free');
         break;
     }
     // El comando del panel se consume y se resetea
-    if (command.startsWith('pizarra')) {
+    if (processedCommand.startsWith('pizarra')) {
       setTimeout(() => setPanelCommand(null), 100);
     }
   };
@@ -244,7 +247,7 @@ export default function TeacherPage() {
               <p className="text-sm">{summary}</p>
             </ScrollArea>
           </div>
-          <DialogFooter className="sm:justify-between">
+          <DialogFooter className="sm:justify-between mt-4">
             <Button variant="outline" onClick={handleCopySummary} disabled={!summary || summary.startsWith('No hay')}>
               <Copy className="mr-2 h-4 w-4" />
               Copiar
