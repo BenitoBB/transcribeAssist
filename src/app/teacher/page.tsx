@@ -16,7 +16,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { ArrowLeft, Pencil, Mic, MicOff, Sparkles, LoaderCircle, Ear, EarOff, Copy } from 'lucide-react';
+import { ArrowLeft, Pencil, Mic, MicOff, Sparkles, LoaderCircle, Copy } from 'lucide-react';
 import { TranscriptionPanel, Command } from './components/TranscriptionPanel';
 import { DrawingCanvas } from './components/DrawingCanvas';
 import { DrawingToolbar } from './components/DrawingToolbar';
@@ -24,7 +24,7 @@ import { useTranscription } from '@/hooks/use-transcription';
 import { summarizeText } from '@/ai/flows/summarize-text-flow';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { useVoiceCommands } from '@/hooks/use-voice-commands';
+import { registerCommands } from '@/lib/transcription';
 
 
 export default function TeacherPage() {
@@ -39,51 +39,34 @@ export default function TeacherPage() {
   const { toast } = useToast();
 
   const [panelCommand, setPanelCommand] = useState<Command | null>(null);
-  
-  const handleCommand = (command: string) => {
-    // Normalizar el comando eliminando espacios para hacerlo más robusto
-    const processedCommand = command.replace(/\s+/g, '');
 
-    switch (processedCommand) {
-      case 'iniciargrabación':
+  // Registrar los comandos de voz al montar el componente
+  useEffect(() => {
+    const commands = {
+      iniciargrabación: () => {
         if (!isRecording) startRecording();
-        break;
-      case 'detenergrabación':
+      },
+      detenergrabación: () => {
         if (isRecording) stopRecording();
-        break;
-      case 'activarpizarra':
-        setIsDrawingMode(true);
-        break;
-      case 'cerrarpizarra':
-        setIsDrawingMode(false);
-        break;
-      case 'pizarraarriba':
-        setPanelCommand('top');
-        break;
-      case 'pizarraabajo':
-        setPanelCommand('bottom');
-        break;
-      case 'pizarraizquierda':
-        setPanelCommand('left');
-        break;
-      case 'pizarraderecha':
-        setPanelCommand('right');
-        break;
-      case 'pizarracentro':
-        setPanelCommand('free');
-        break;
-    }
-    // El comando del panel se consume y se resetea
-    if (processedCommand.startsWith('pizarra')) {
-      setTimeout(() => setPanelCommand(null), 100);
-    }
-  };
+      },
+      activarpizarra: () => setIsDrawingMode(true),
+      cerrarpizarra: () => setIsDrawingMode(false),
+      pizarraarriba: () => setPanelCommand('top'),
+      pizarraabajo: () => setPanelCommand('bottom'),
+      pizarraizquierda: () => setPanelCommand('left'),
+      pizarraderecha: () => setPanelCommand('right'),
+      pizarracentro: () => setPanelCommand('free'),
+    };
 
-  const { isListening, toggleListening } = useVoiceCommands(handleCommand, {
-    isTranscriptionRecording: isRecording,
-    onListenStart: stopRecording,
-    onListenStop: startRecording,
-  });
+    registerCommands(commands);
+
+    // Resetear el comando del panel para que pueda ser llamado múltiples veces
+    if (panelCommand) {
+        const timer = setTimeout(() => setPanelCommand(null), 100);
+        return () => clearTimeout(timer);
+    }
+  }, [isRecording, startRecording, stopRecording, panelCommand]);
+
 
   const handleClearCanvas = () => {
     setClearCanvas(true);
@@ -165,7 +148,6 @@ export default function TeacherPage() {
                 variant="outline"
                 size="icon"
                 onClick={startRecording}
-                disabled={isListening}
               >
                 <Mic className="h-4 w-4" />
                 <span className="sr-only">Iniciar transcripción</span>
@@ -182,7 +164,6 @@ export default function TeacherPage() {
                 variant="destructive"
                 size="icon"
                 onClick={stopRecording}
-                disabled={isListening}
               >
                 <MicOff className="h-4 w-4" />
                 <span className="sr-only">Detener transcripción</span>
@@ -211,21 +192,6 @@ export default function TeacherPage() {
           </TooltipTrigger>
           <TooltipContent>
             <p>Generar Resumen de la Clase</p>
-          </TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant={isListening ? "destructive" : "outline"}
-              size="icon"
-              onClick={toggleListening}
-            >
-              {isListening ? <EarOff className="h-4 w-4" /> : <Ear className="h-4 w-4" />}
-              <span className="sr-only">{isListening ? 'Desactivar comandos de voz' : 'Activar comandos de voz'}</span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>{isListening ? 'Desactivar Comandos de Voz' : 'Activar Comandos de Voz'}</p>
           </TooltipContent>
         </Tooltip>
       </div>

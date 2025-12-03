@@ -9,8 +9,8 @@
 export type TranscriptionState = 'idle' | 'recording' | 'stopped';
 
 let recognition: SpeechRecognition | null = null;
-let isRecordingInternal = false;
 let finalTranscription = '';
+let registeredCommands: { [key: string]: () => void } = {};
 
 // --- Sistema de Eventos para la UI ---
 type TranscriptionCallback = (text: string) => void;
@@ -44,18 +44,34 @@ function notifyStateListeners(state: TranscriptionState) {
 }
 
 /**
+ * Registra los comandos de voz que el sistema debe reconocer.
+ * @param commands - Un objeto donde la clave es el comando (sin espacios, en minúsculas) y el valor es la función a ejecutar.
+ */
+export function registerCommands(commands: { [key: string]: () => void }) {
+  registeredCommands = commands;
+}
+
+/**
  * Procesa una frase finalizada, comprobando si es un comando o texto normal.
  * @param transcript - La frase a procesar.
  */
 function processFinalTranscript(transcript: string) {
-  finalTranscription += transcript + '\n';
+  const cleanedTranscript = transcript.toLowerCase().replace(/\s+/g, '').replace(/[.,¡!¿?]/g, '');
+
+  if (registeredCommands[cleanedTranscript]) {
+    registeredCommands[cleanedTranscript]();
+  } else {
+    // Añade la transcripción con la primera letra en mayúscula para un mejor formato.
+    const formattedTranscript = transcript.charAt(0).toUpperCase() + transcript.slice(1);
+    finalTranscription += formattedTranscript + '\n';
+  }
 }
 
 /**
  * Inicia la captura y el reconocimiento de audio.
  */
 export async function startTranscription(): Promise<void> {
-  if (isRecordingInternal) {
+  if (recognition) {
     console.warn('La grabación ya está en curso.');
     return;
   }
@@ -76,14 +92,12 @@ export async function startTranscription(): Promise<void> {
   recognition.continuous = true;
 
   recognition.onstart = () => {
-    isRecordingInternal = true;
     finalTranscription = '';
     notifyTextListeners('🎙️ Grabación iniciada...');
     notifyStateListeners('recording');
   };
 
   recognition.onend = () => {
-    isRecordingInternal = false;
     notifyTextListeners(finalTranscription || 'Grabación detenida.');
     notifyStateListeners('stopped');
     recognition = null;
@@ -101,7 +115,7 @@ export async function startTranscription(): Promise<void> {
     let interimTranscription = '';
     for (let i = event.resultIndex; i < event.results.length; ++i) {
       if (event.results[i].isFinal) {
-        const transcript = event.results[i][0].transcript;
+        const transcript = event.results[i][0].transcript.trim();
         processFinalTranscript(transcript);
       } else {
         interimTranscription += event.results[i][0].transcript;
@@ -128,8 +142,7 @@ export async function startTranscription(): Promise<void> {
  * Detiene el proceso de transcripción.
  */
 export function stopTranscription(): void {
-  if (!recognition || !isRecordingInternal) {
-    // console.warn('No hay ninguna grabación activa para detener.');
+  if (!recognition) {
     return;
   }
   recognition.stop();
