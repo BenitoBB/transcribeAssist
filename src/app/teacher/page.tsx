@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition, useEffect } from 'react';
+import { useState, useTransition, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import {
@@ -26,7 +26,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { registerCommands } from '@/lib/transcription';
 
-
 export default function TeacherPage() {
   const [isDrawingMode, setIsDrawingMode] = useState(false);
   const [brushColor, setBrushColor] = useState('#FF0000');
@@ -40,7 +39,13 @@ export default function TeacherPage() {
 
   const [panelCommand, setPanelCommand] = useState<Command | null>(null);
 
-  // Registrar los comandos de voz al montar el componente
+  const handleCommand = useCallback((command: Command) => {
+    setPanelCommand(command);
+    // Resetear el comando después de un breve instante para permitir futuras llamadas
+    setTimeout(() => setPanelCommand(null), 100);
+  }, []);
+
+  // Registrar los comandos de voz solo una vez
   useEffect(() => {
     const commands = {
       iniciargrabación: () => {
@@ -51,21 +56,15 @@ export default function TeacherPage() {
       },
       activarpizarra: () => setIsDrawingMode(true),
       cerrarpizarra: () => setIsDrawingMode(false),
-      pizarraarriba: () => setPanelCommand('top'),
-      pizarraabajo: () => setPanelCommand('bottom'),
-      pizarraizquierda: () => setPanelCommand('left'),
-      pizarraderecha: () => setPanelCommand('right'),
-      pizarracentro: () => setPanelCommand('free'),
+      pizarraarriba: () => handleCommand('top'),
+      pizarraabajo: () => handleCommand('bottom'),
+      pizarraizquierda: () => handleCommand('left'),
+      pizarraderecha: () => handleCommand('right'),
+      pizarracentro: () => handleCommand('free'),
     };
-
+    
     registerCommands(commands);
-
-    // Resetear el comando del panel para que pueda ser llamado múltiples veces
-    if (panelCommand) {
-        const timer = setTimeout(() => setPanelCommand(null), 100);
-        return () => clearTimeout(timer);
-    }
-  }, [isRecording, startRecording, stopRecording, panelCommand]);
+  }, [isRecording, startRecording, stopRecording, handleCommand]);
 
 
   const handleClearCanvas = () => {
