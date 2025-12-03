@@ -75,9 +75,9 @@ export async function startTranscription(): Promise<void> {
   };
 
   recognition.onerror = (event) => {
-    // El error 'no-speech' se dispara si no se detecta habla, es un comportamiento normal.
-    // Lo ignoramos para no llenar la consola de errores innecesarios.
-    if (event.error === 'no-speech') {
+    // Los errores 'no-speech' y 'aborted' se disparan en situaciones normales.
+    // Los ignoramos para no llenar la consola de errores innecesarios.
+    if (['no-speech', 'aborted'].includes(event.error)) {
       return;
     }
     console.error('Error en el reconocimiento de voz:', event.error);
