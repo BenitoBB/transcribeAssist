@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -39,8 +39,6 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useStyle } from '@/context/StyleContext';
 import { useTranscription } from '@/hooks/use-transcription';
-import { defineWord } from '@/components/define-word';
-import { DefinitionPopup } from '@/components/DefinitionPopup';
 import { joinSession, onDataReceived, onConnectionStatusChange, ConnectionStatus } from '@/lib/p2p';
 
 export default function StudentPage() {
@@ -49,11 +47,6 @@ export default function StudentPage() {
   const { toast } = useToast();
 
   const [sessionId, setSessionId] = useState('');
-  const [definitionState, setDefinitionState] = useState<{
-    word: string;
-    definition: string | null;
-    isLoading: boolean;
-  } | null>(null);
   
   const transcriptionDisplayRef = useRef<HTMLDivElement>(null);
 
@@ -62,9 +55,7 @@ export default function StudentPage() {
 
   useEffect(() => {
     const unsubData = onDataReceived((data: any) => {
-      if (typeof data === 'string') {
-        setTranscription(prev => prev + data);
-      } else if (data.type === 'full_text') {
+      if (data.type === 'full_text') {
         setTranscription(data.text);
       }
     });
@@ -197,28 +188,8 @@ export default function StudentPage() {
     });
   };
 
-
-  const handleWordDoubleClick = async (e: React.MouseEvent<HTMLDivElement>) => {
-    const selection = window.getSelection();
-    const word = selection?.toString().trim();
-
-    if (word) {
-      setDefinitionState({ word, definition: null, isLoading: true });
-      const definition = await defineWord(word);
-      setDefinitionState({ word, definition, isLoading: false });
-    }
-  };
-
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-4 relative overflow-hidden">
-      {definitionState && (
-        <DefinitionPopup
-          word={definitionState.word}
-          definition={definitionState.definition}
-          isLoading={definitionState.isLoading}
-          onClose={() => setDefinitionState(null)}
-        />
-      )}
       <div className="absolute top-4 left-4 sm:top-8 sm:left-8 flex items-center gap-4">
         <Link href="/">
           <Tooltip>
@@ -328,7 +299,6 @@ export default function StudentPage() {
                     minHeight: '100%',
                     color: 'var(--foreground)',
                   }}
-                  onDoubleClick={handleWordDoubleClick}
                 >
                   {transcription || "Esperando transcripción del maestro..."}
                 </div>
