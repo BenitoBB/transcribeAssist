@@ -14,8 +14,7 @@ import {
   Pencil,
   Mic,
   MicOff,
-  Sparkles,
-  LoaderCircle
+  Ear,
 } from 'lucide-react';
 import { DrawingToolbar } from './components/DrawingToolbar';
 import { useTranscription } from '@/hooks/use-transcription';
@@ -27,9 +26,6 @@ import {
   onStateChange,
   onTranscriptionUpdate,
 } from '@/lib/transcription';
-import { SummaryDialog } from './components/SummaryDialog';
-import { summarizeText } from '@/ai/flows/summarize-text-flow';
-
 
 // Carga dinámica de componentes que solo funcionan en el cliente
 const DrawingCanvas = dynamic(
@@ -47,13 +43,10 @@ export default function TeacherPage() {
   const [brushColor, setBrushColor] = useState('#FF0000');
   const [clearCanvas, setClearCanvas] = useState(false);
   
-  const [showSummaryDialog, setShowSummaryDialog] = useState(false);
-  const [summary, setSummary] = useState('');
-  const [isSummarizing, setIsSummarizing] = useState(false);
-
-  const { transcription, setTranscription, isRecording, setIsRecording } = useTranscription();
+  const { setTranscription, isRecording, setIsRecording } = useTranscription();
   
   const [panelCommand, setPanelCommand] = useState<Command>(null);
+  const [isVuiListening, setIsVuiListening] = useState(false);
 
 
   // --- SINCRONIZACIÓN CON LA API DE TRANSCRIPCIÓN ---
@@ -76,6 +69,8 @@ export default function TeacherPage() {
   
   // --- MANEJO DE COMANDOS DE VOZ ---
   const executeCommand = useCallback((command: string) => {
+    if (!isVuiListening) return;
+
     // Eliminar espacios y convertir a minúsculas
     const cleanedCommand = command.toLowerCase().replace(/\s+/g, '');
     
@@ -98,7 +93,7 @@ export default function TeacherPage() {
         setTimeout(() => setPanelCommand(null), 100);
       }
     }
-  }, []);
+  }, [isVuiListening]);
 
   useEffect(() => {
     // Registrar la función que maneja los comandos
@@ -120,21 +115,6 @@ export default function TeacherPage() {
     }
   };
 
-  const handleGenerateSummary = async () => {
-    if (!transcription || isSummarizing) return;
-    setIsSummarizing(true);
-    setSummary('');
-    setShowSummaryDialog(true);
-    try {
-      const result = await summarizeText(transcription);
-      setSummary(result);
-    } catch (error) {
-      console.error('Error generating summary:', error);
-      setSummary('No se pudo generar el resumen. Inténtalo de nuevo.');
-    } finally {
-      setIsSummarizing(false);
-    }
-  };
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-background">
@@ -181,31 +161,20 @@ export default function TeacherPage() {
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
-              variant="outline"
+              variant={isVuiListening ? 'default' : 'outline'}
               size="icon"
-              onClick={handleGenerateSummary}
-              disabled={isSummarizing}
+              onClick={() => setIsVuiListening(!isVuiListening)}
             >
-              {isSummarizing ? (
-                <LoaderCircle className="h-4 w-4 animate-spin" />
-              ) : (
-                <Sparkles className="h-4 w-4" />
-              )}
-              <span className="sr-only">Generar resumen con IA</span>
+              <Ear className="h-4 w-4" />
+              <span className="sr-only">Activar comandos de voz</span>
             </Button>
           </TooltipTrigger>
-          <TooltipContent><p>Generar Resumen con IA</p></TooltipContent>
+          <TooltipContent>
+            <p>{isVuiListening ? 'Desactivar' : 'Activar'} Comandos por Voz</p>
+          </TooltipContent>
         </Tooltip>
       </div>
       
-      <SummaryDialog
-        summary={summary}
-        isLoading={isSummarizing}
-        open={showSummaryDialog}
-        onOpenChange={setShowSummaryDialog}
-      />
-
-
       {isDrawingMode && (
         <>
           <DrawingToolbar

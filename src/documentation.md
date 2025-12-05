@@ -19,15 +19,15 @@
 
 ### 2.2. Funcionalidades del Maestro
 - **RF-003:** El maestro debe poder iniciar y detener la transcripción de audio en tiempo real.
-- **RF-004:** El sistema debe mostrar la transcripción en un panel móvil, redimensionable y anclable en la pantalla.
+- **RF-004:** El sistema debe mostrar la transcripción en un panel móvil y redimensionable en la pantalla.
 - **RF-005:** El maestro debe poder activar un modo "Pizarra", que habilita un lienzo de dibujo sobre toda la pantalla.
 - **RF-006:** En el modo Pizarra, el maestro debe poder cambiar el color del pincel y limpiar el lienzo.
-- **RF-007:** El maestro debe poder generar un resumen del contenido de la transcripción mediante un modelo de IA.
-- **RF-008:** El resumen generado por la IA debe mostrarse en un cuadro de diálogo emergente.
 - **RF-009:** El maestro debe poder controlar funciones clave de la aplicación mediante comandos de voz (VUI).
 
 ### 2.3. Funcionalidades del Alumno
 - **RF-010:** El alumno debe poder ver la transcripción en tiempo real generada por el maestro.
+- **RF-011:** El alumno debe poder hacer doble clic en una palabra de la transcripción para obtener su definición.
+- **RF-012:** La definición de la palabra debe aparecer en un panel emergente y móvil.
 - **RF-013:** El alumno debe poder copiar el texto completo de la transcripción al portapapeles.
 - **RF-014:** El alumno debe poder descargar la transcripción como un archivo de texto (`.txt`).
 
@@ -65,8 +65,8 @@
 ### 5.1. Mapa del Sistema
 La aplicación se compone de las siguientes pantallas principales:
 1.  **Pantalla de Bienvenida (`/`)**: Página de inicio donde el usuario elige su rol. Es el punto de entrada a la aplicación.
-2.  **Vista del Maestro (`/teacher`)**: Interfaz principal para el rol de docente. Contiene los controles para la transcripción, la pizarra, el resumen por IA y los comandos de voz.
-3.  **Vista del Alumno (`/student`)**: Interfaz principal para el rol de estudiante. Permite visualizar la transcripción en tiempo real, copiar y descargar el texto.
+2.  **Vista del Maestro (`/teacher`)**: Interfaz principal para el rol de docente. Contiene los controles para la transcripción, la pizarra y los comandos de voz.
+3.  **Vista del Alumno (`/student`)**: Interfaz principal para el rol de estudiante. Permite visualizar la transcripción en tiempo real, obtener definiciones, copiar y descargar el texto.
 
 ### 5.2. Flujo de Usuario
 El recorrido típico del usuario se describe a continuación:
@@ -78,9 +78,9 @@ El recorrido típico del usuario se describe a continuación:
         - Activa la VUI para controlar la aplicación con la voz.
         - Utiliza la pizarra para dibujar o resaltar puntos importantes.
         - Mueve el panel de transcripción para que no estorbe en la pantalla.
-        - Al final de la clase, genera un resumen con IA para compartir.
     - **Alumno**:
         - Observa la transcripción en vivo.
+        - Si no conoce una palabra, hace doble clic sobre ella para ver su definición.
         - Al finalizar, puede copiar la transcripción completa o descargarla como un archivo de texto.
 4.  **Ajustes de Visualización**: En cualquier momento, tanto el maestro como el alumno pueden hacer clic en el icono de "Ajustes" para personalizar la apariencia del texto y el tema de color según sus necesidades de accesibilidad o preferencia.
 5.  **Regreso**: Desde ambas vistas (Maestro y Alumno), hay un botón para volver a la pantalla principal de selección de rol.
@@ -88,8 +88,9 @@ El recorrido típico del usuario se describe a continuación:
 ### 5.3. Diseño de Interacción
 El sistema combina múltiples modalidades de interacción para crear una experiencia de usuario flexible y accesible:
 - **Interacción Directa (GUI)**: La interfaz gráfica de usuario es la modalidad principal. Se basa en botones con iconos claros (`<Button>`), menús desplegables (`<DropdownMenu>`) y diálogos (`<Dialog>`) para todas las funciones principales. El uso de `tooltips` en cada control ayuda a clarificar su función.
-- **Interacción por Voz (VUI)**: Para el maestro, se implementa una VUI que funciona en paralelo a la transcripción. Un "escucha" de comandos específico (`useVoiceCommands`) se activa para reconocer frases clave (ej. "activar pizarra") y traducirlas en acciones dentro de la aplicación, permitiendo un control "manos libres".
-- **Manipulación Directa (Arrastrar y Redimensionar)**: El panel de transcripción del maestro es una ventana flotante que puede ser arrastrada y redimensionada por el usuario, dándole control total sobre la disposición de su espacio de trabajo.
+- **Interacción por Voz (VUI)**: Para el maestro, se implementa una VUI que funciona en paralelo a la transcripción. Un "escucha" de comandos específico se activa para reconocer frases clave (ej. "activar pizarra") y traducirlas en acciones dentro de la aplicación, permitiendo un control "manos libres".
+- **Interacción Basada en Puntero (Doble Clic)**: Para el alumno, se habilita una interacción específica con el texto. Al hacer doble clic en una palabra, el sistema la aísla, la envía a una API de diccionario y muestra la definición en un panel emergente y móvil, permitiendo una consulta rápida sin interrumpir la lectura.
+- **Manipulación Directa (Arrastrar y Redimensionar)**: El panel de transcripción del maestro y el panel de definición del alumno son ventanas flotantes que pueden ser arrastradas y redimensionadas por el usuario, dándole control total sobre la disposición de su espacio de trabajo.
 
 ### 5.4. Infraestructura
 Para el correcto funcionamiento del sistema, se requiere el siguiente conjunto de tecnologías y hardware:
@@ -99,26 +100,24 @@ Para el correcto funcionamiento del sistema, se requiere el siguiente conjunto d
 - **Software (Frameworks y Librerías)**:
     - **Next.js/React**: Para la construcción de la interfaz de usuario reactiva.
     - **Tailwind CSS & ShadCN UI**: Para el diseño y los componentes de la interfaz.
-    - **Genkit (Google AI)**: Para la funcionalidad de resumen de texto.
     - **Lucide React**: Para la iconografía.
-    - **react-rnd**: Para los paneles móviles y redimensionables.
 - **Hardware**:
     - **Micrófono**: Requerido para la transcripción y los comandos de voz. Puede ser el micrófono integrado de un portátil o uno externo.
     - **Dispositivo de Cómputo**: Un ordenador, tableta o smartphone con la capacidad de ejecutar un navegador moderno y procesar audio en tiempo real.
 - **Servicios Externos**:
-    - **Google AI Platform**: Proporciona el modelo de lenguaje para la generación de resúmenes.
+    - **Free Dictionary API (`dictionaryapi.dev`)**: API pública utilizada para obtener las definiciones de las palabras.
 
 ---
 
 # Manual de Usuario: TranscribeAssist
 
 ## 1. Introducción
-¡Bienvenido a TranscribeAssist! Esta herramienta está diseñada para hacer las clases más accesibles, permitiendo la transcripción de voz en tiempo real, el dibujo interactivo y la gestión de contenido de manera fácil y rápida. Esta guía te ayudará a sacar el máximo provecho de todas las funciones.
+¡Bienvenido a TranscribeAssist! Esta herramienta está diseñada para hacer las clases más accesibles, permitiendo la transcripción de voz en tiempo real, el dibujo interactivo y la consulta de información de manera fácil y rápida. Esta guía te ayudará a sacar el máximo provecho de todas las funciones.
 
 ## 2. Primeros Pasos: Selecciona tu Rol
 Al iniciar la aplicación, la primera pantalla te pedirá que elijas tu rol. Esta selección determinará las herramientas a las que tendrás acceso.
-- **Entrar como Maestro:** Te da el control de la transcripción, la pizarra y las herramientas de resumen.
-- **Entrar como Alumno:** Te permite visualizar la clase y descargar el contenido.
+- **Entrar como Maestro:** Te da el control de la transcripción, la pizarra y los comandos de voz.
+- **Entrar como Alumno:** Te permite visualizar la clase, consultar definiciones y descargar el contenido.
 
 ## 3. Guía para el Maestro
 La vista del maestro es el centro de control. Desde aquí puedes gestionar la clase de manera interactiva.
@@ -128,13 +127,12 @@ Ubicada en la esquina superior izquierda, te da acceso a todas las funciones cla
 - **Volver (`<--`):** Regresa a la pantalla de selección de rol.
 - **Pizarra (`Lápiz`):** Activa o desactiva el modo de dibujo en pantalla.
 - **Transcripción (`Micrófono`):** Inicia o detiene la transcripción de tu voz.
-- **Resumen (`Estrellas`):** Genera un resumen inteligente de todo lo transcrito.
 - **Comandos de Voz (`Oreja`):** Activa o desactiva la escucha de comandos por voz.
 
 ### 3.2. Transcripción en Tiempo Real
 - **Para Iniciar:** Haz clic en el icono del **Micrófono**. El icono cambiará a rojo (`Micrófono Desactivado`) para indicar que está grabando. Necesitarás dar permiso al navegador para usar tu micrófono la primera vez.
 - **Para Detener:** Haz clic de nuevo en el icono del **Micrófono Desactivado**.
-- **Panel de Transcripción:** Todo lo que digas aparecerá en un panel flotante. Puedes moverlo arrastrándolo desde la barra de título o redimensionarlo desde sus bordes. También puedes anclarlo a los lados, arriba o abajo usando los iconos de flechas.
+- **Panel de Transcripción:** Todo lo que digas aparecerá en un panel flotante. Puedes moverlo arrastrándolo desde la barra de título. También puedes anclarlo a los lados, arriba o abajo usando los iconos de flechas.
 
 ### 3.3. Pizarra Interactiva
 - **Para Activar:** Haz clic en el icono del **Lápiz**. La pantalla se convertirá en un lienzo donde podrás dibujar.
@@ -142,10 +140,6 @@ Ubicada en la esquina superior izquierda, te da acceso a todas las funciones cla
     - **Paleta de colores:** Te permite elegir colores predefinidos o uno personalizado.
     - **Borrador:** Limpia todo el lienzo.
     - **Cerrar (`X`):** Desactiva el modo pizarra y oculta los dibujos.
-
-### 3.4. Resumen con IA
-- Al final de la clase, o en cualquier momento, puedes generar un resumen.
-- **Para Generar:** Haz clic en el icono de **Estrellas**. La aplicación procesará el texto de la transcripción y mostrará un resumen en un cuadro de diálogo. El icono mostrará un indicador de carga mientras trabaja.
 
 ### 3.5. Comandos de Voz (VUI)
 - Para un control "manos libres", puedes usar tu voz.
@@ -163,7 +157,12 @@ La vista del alumno está diseñada para el estudio y la consulta.
 - La transcripción generada por el maestro aparecerá en tiempo real en tu pantalla.
 - El texto se muestra en un panel principal claro y legible.
 
-### 4.2. Opciones de la Transcripción
+### 4.2. Obtener Definiciones
+- Si no entiendes una palabra, simplemente **haz doble clic** sobre ella.
+- Aparecerá un pequeño panel flotante con la definición de la palabra obtenida de un diccionario.
+- Puedes mover este panel de definición para que no te estorbe y cerrarlo con la `X` cuando termines.
+
+### 4.3. Opciones de la Transcripción
 - En la esquina superior derecha del panel de transcripción, encontrarás un menú (`...`). Desde aquí puedes:
     - **Copiar al portapapeles:** Copia todo el texto de la transcripción.
     - **Guardar como .txt:** Descarga un archivo de texto con la transcripción completa.
