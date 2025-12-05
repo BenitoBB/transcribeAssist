@@ -15,7 +15,7 @@ import {
   Mic,
   MicOff,
   Copy,
-  Ear,
+  Sparkles,
 } from 'lucide-react';
 import { DrawingToolbar } from './components/DrawingToolbar';
 import { useTranscription } from '@/hooks/use-transcription';
@@ -29,6 +29,8 @@ import {
 } from '@/lib/transcription';
 import { hostSession, sendToPeers, onPeerStatusChange } from '@/lib/p2p';
 import { useToast } from '@/hooks/use-toast';
+import { SummaryDialog } from './components/SummaryDialog';
+import { summarizeText } from '@/ai/flows/summarize-text-flow';
 
 // Carga dinámica de componentes que solo funcionan en el cliente
 const DrawingCanvas = dynamic(
@@ -51,6 +53,10 @@ export default function TeacherPage() {
   const [panelCommand, setPanelCommand] = useState<Command>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [peerCount, setPeerCount] = useState(0);
+
+  const [isSummaryLoading, setIsSummaryLoading] = useState(false);
+  const [summary, setSummary] = useState('');
+  const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false);
 
   const { toast } = useToast();
 
@@ -149,6 +155,37 @@ export default function TeacherPage() {
     }
   };
 
+  const handleGenerateSummary = async () => {
+    if (!transcription || transcription.length < 50) {
+      toast({
+        variant: 'destructive',
+        title: 'Texto insuficiente',
+        description: 'Se necesita más texto en la transcripción para generar un buen resumen.',
+      });
+      return;
+    }
+
+    setIsSummaryLoading(true);
+    setIsSummaryDialogOpen(true);
+    setSummary('');
+
+    try {
+      const result = await summarizeText(transcription);
+      setSummary(result);
+    } catch (error) {
+      console.error('Error al generar el resumen:', error);
+      setSummary('Ocurrió un error al intentar generar el resumen. Por favor, inténtalo de nuevo.');
+      toast({
+        variant: 'destructive',
+        title: 'Error de IA',
+        description: 'No se pudo conectar con el servicio de resumen.',
+      });
+    } finally {
+      setIsSummaryLoading(false);
+    }
+  };
+
+
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-background">
       {/* Barra de ID de Sala */}
@@ -212,6 +249,15 @@ export default function TeacherPage() {
           </TooltipTrigger>
           <TooltipContent><p>{isRecording ? 'Detener' : 'Iniciar'} Transcripción</p></TooltipContent>
         </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="outline" size="icon" onClick={handleGenerateSummary} disabled={isSummaryLoading}>
+              <Sparkles className="h-4 w-4" />
+              <span className="sr-only">Generar resumen</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent><p>Generar Resumen (IA)</p></TooltipContent>
+        </Tooltip>
       </div>
       
       {isDrawingMode && (
@@ -227,9 +273,16 @@ export default function TeacherPage() {
       )}
 
       {/* El div contenedor para el posicionamiento del panel */}
-      <div className="relative w-full h-full pointer-events-none">
+      <div className="relative w-full h-full pointer-events-none z-10">
         <TranscriptionPanel command={panelCommand} />
       </div>
+
+      <SummaryDialog 
+        open={isSummaryDialogOpen}
+        onOpenChange={setIsSummaryDialogOpen}
+        summary={summary}
+        isLoading={isSummaryLoading}
+      />
     </div>
   );
 }
