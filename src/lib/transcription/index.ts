@@ -46,9 +46,13 @@ function notifyStateListeners(state: TranscriptionState) {
 /**
  * Registra una única función de callback para procesar comandos de voz.
  * @param callback La función que se ejecutará cuando se detecte un posible comando.
+ * @returns Una función para cancelar el registro del callback.
  */
-export function registerCommands(callback: (command: string) => void) {
+export function registerCommands(callback: (command: string) => void): () => void {
   commandCallback = callback;
+  return () => {
+    commandCallback = null;
+  };
 }
 
 
