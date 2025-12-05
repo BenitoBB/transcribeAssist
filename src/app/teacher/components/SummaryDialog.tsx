@@ -1,59 +1,65 @@
-'use client';
-
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
-import { LoaderCircle } from 'lucide-react';
-import { ScrollArea } from '@/components/ui/scroll-area';
-
-interface SummaryDialogProps {
-  summary: string;
-  isLoading: boolean;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}
-
-export function SummaryDialog({
-  summary,
-  isLoading,
-  open,
-  onOpenChange,
-}: SummaryDialogProps) {
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl">
-        <DialogHeader>
-          <DialogTitle>Resumen de la Clase</DialogTitle>
-          <DialogDescription>
-            Este es un resumen de la transcripción generado por IA.
-          </DialogDescription>
-        </DialogHeader>
-        <ScrollArea className="h-[400px] w-full rounded-md border p-4">
-          {isLoading && (
-            <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-              <LoaderCircle className="h-8 w-8 animate-spin mb-4" />
-              <p>Generando resumen, por favor espera...</p>
-            </div>
-          )}
-          {!isLoading && summary && (
-            <div
-              className="prose prose-sm dark:prose-invert max-w-none"
-              dangerouslySetInnerHTML={{
-                __html: summary.replace(/\n/g, '<br />'),
-              }}
-            />
-          )}
-          {!isLoading && !summary && (
-            <div className="flex items-center justify-center h-full text-muted-foreground">
-              <p>El resumen aparecerá aquí.</p>
-            </div>
-          )}
-        </ScrollArea>
-      </DialogContent>
-    </Dialog>
-  );
+{
+  "name": "nextn",
+  "version": "0.1.0",
+  "private": "true",
+  "scripts": {
+    "dev": "next dev --turbopack -p 9002",
+    "build": "NODE_ENV=production next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^4.1.3",
+    "@radix-ui/react-accordion": "^1.2.3",
+    "@radix-ui/react-alert-dialog": "^1.1.6",
+    "@radix-ui/react-avatar": "^1.1.3",
+    "@radix-ui/react-checkbox": "^1.1.4",
+    "@radix-ui/react-collapsible": "^1.1.11",
+    "@radix-ui/react-dialog": "^1.1.6",
+    "@radix-ui/react-dropdown-menu": "^2.1.6",
+    "@radix-ui/react-hover-card": "^1.1.1",
+    "@radix-ui/react-label": "^2.1.2",
+    "@radix-ui/react-menubar": "^1.1.6",
+    "@radix-ui/react-popover": "^1.1.6",
+    "@radix-ui/react-progress": "^1.1.2",
+    "@radix-ui/react-radio-group": "^1.2.3",
+    "@radix-ui/react-scroll-area": "^1.2.3",
+    "@radix-ui/react-select": "^2.1.6",
+    "@radix-ui/react-separator": "^1.1.2",
+    "@radix-ui/react-slider": "^1.2.3",
+    "@radix-ui/react-slot": "^1.2.3",
+    "@radix-ui/react-switch": "^1.1.3",
+    "@radix-ui/react-tabs": "^1.1.3",
+    "@radix-ui/react-toast": "^1.2.6",
+    "@radix-ui/react-tooltip": "^1.1.8",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "date-fns": "^3.6.0",
+    "embla-carousel-react": "^8.6.0",
+    "firebase": "^11.9.1",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^2.5.1",
+    "lucide-react": "^0.475.0",
+    "nanoid": "^5.0.7",
+    "next": "15.3.3",
+    "patch-package": "^8.0.0",
+    "peerjs": "^1.5.4",
+    "react": "^18.3.1",
+    "react-day-picker": "^8.10.1",
+    "react-dom": "^18.3.1",
+    "react-hook-form": "^7.54.2",
+    "recharts": "^2.15.1",
+    "tailwind-merge": "^3.0.1",
+    "tailwindcss-animate": "^1.0.7",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
+  }
 }
