@@ -16,28 +16,34 @@ import { TranscriptionModel } from '@/context/TranscriptionContext';
 
 export function StyleSettingsModal() {
   const { style, setStyle, theme, setTheme } = useStyle();
-  const { isRecording } = useTranscription();
+  const { isRecording, transcriptionModel, setTranscriptionModel } = useTranscription();
 
   return (
     <div className="grid gap-6 py-4">
-       <div className="grid gap-2">
+      <div className="grid gap-2">
         <Label htmlFor="transcription-model">Modelo de Transcripción</Label>
         <Select
-          defaultValue="web-speech-api"
+          value={transcriptionModel}
+          onValueChange={(v) => setTranscriptionModel(v as TranscriptionModel)}
           disabled={isRecording}
         >
           <SelectTrigger id="transcription-model">
             <SelectValue placeholder="Seleccionar modelo" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="web-speech-api">Navegador (Gratis, Rápido)</SelectItem>
+            <SelectItem value="web-speech-api">Navegador (Web Speech API) — Gratis, rápido</SelectItem>
+            <SelectItem value="whisper-wasm">Whisper (WASM) — Local (privado, pesado)</SelectItem>
+            <SelectItem value="whisper-server">Whisper (Servidor) — Alta calidad, necesita backend</SelectItem>
+            <SelectItem value="whisper-translate">Whisper (Traducción) — Traduce entre idiomas</SelectItem>
+            <SelectItem value="vosk-server">Vosk (Servidor) — Ligero, bueno para streaming</SelectItem>
+            <SelectItem value="silero-server">Silero/Coqui (Servidor) — Modelos rápidos</SelectItem>
           </SelectContent>
         </Select>
         <p className="text-xs text-muted-foreground">
-            {isRecording 
-                ? "No se puede cambiar el modelo mientras se graba."
-                : "Actualmente solo está disponible el modelo del navegador."
-            }
+          {isRecording 
+            ? "No se puede cambiar el modelo mientras se graba."
+            : "Selecciona el backend de transcripción (algunos requieren servidor)."
+          }
         </p>
       </div>
       <div className="grid gap-2">
@@ -90,7 +96,7 @@ export function StyleSettingsModal() {
           </SelectContent>
         </Select>
       </div>
-       <div className="grid gap-2">
+      <div className="grid gap-2">
         <Label>Tema de Color</Label>
         <div className="grid grid-cols-2 gap-2">
           <Button variant={theme === 'light' ? 'default' : 'outline'} onClick={() => setTheme('light')}>Claro</Button>

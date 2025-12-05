@@ -11,7 +11,23 @@ import {
   stopWebSpeechApi,
 } from '@/lib/transcription/web-speech-api';
 
-export type TranscriptionModel = 'web-speech-api';
+import {
+  startWhisperWasm,
+  stopWhisperWasm,
+} from '../lib/transcription/whisper-wasm';
+
+import {
+  startServerTranscription,
+  stopServerTranscription,
+} from '../lib/transcription/server-proxy';
+
+export type TranscriptionModel =
+  | 'web-speech-api'
+  | 'whisper-wasm'
+  | 'whisper-server'
+  | 'whisper-translate'
+  | 'vosk-server'
+  | 'silero-server';
 
 export interface TranscriptionContextType {
   transcription: string;
@@ -49,21 +65,37 @@ export const TranscriptionProvider: React.FC<TranscriptionProviderProps> = ({
     setTranscription('');
 
     try {
-      // Por ahora, solo usamos Web Speech API
-      await startWebSpeechApi(handleTranscriptionUpdate);
+      if (transcriptionModel === 'web-speech-api') {
+        await startWebSpeechApi(handleTranscriptionUpdate);
+      } else if (transcriptionModel === 'whisper-wasm') {
+        await startWhisperWasm(handleTranscriptionUpdate);
+      } else {
+        // modelos server-side: whisper-server, whisper-translate, vosk-server, silero-server
+        await startServerTranscription(transcriptionModel, handleTranscriptionUpdate);
+      }
     } catch (error) {
       console.error('Error al iniciar la grabación:', error);
       const errorMessage = (error instanceof Error) ? error.message : 'Error desconocido al iniciar grabación.';
       setTranscription(`Error: ${errorMessage}`);
       setIsRecording(false);
     }
-  }, [handleTranscriptionUpdate]);
+  }, [handleTranscriptionUpdate, transcriptionModel]);
 
   const stopRecording = useCallback(() => {
-    // Por ahora, solo usamos Web Speech API
-    stopWebSpeechApi();
-    setIsRecording(false);
-  }, []);
+    try {
+      if (transcriptionModel === 'web-speech-api') {
+        stopWebSpeechApi();
+      } else if (transcriptionModel === 'whisper-wasm') {
+        stopWhisperWasm();
+      } else {
+        stopServerTranscription();
+      }
+    } catch (e) {
+      console.error('Error al detener la grabación:', e);
+    } finally {
+      setIsRecording(false);
+    }
+  }, [transcriptionModel]);
 
   const value = {
     isRecording,
