@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import {
   ArrowLeft,
   Copy,
@@ -9,6 +11,7 @@ import {
   MoreVertical,
   Wifi,
   WifiOff,
+  FileText,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -24,6 +27,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { SettingsButton } from '@/components/settings/SettingsButton';
@@ -50,6 +54,8 @@ export default function StudentPage() {
     definition: string | null;
     isLoading: boolean;
   } | null>(null);
+  
+  const transcriptionDisplayRef = useRef<HTMLDivElement>(null);
 
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected');
   const hasConnected = useRef(false);
@@ -113,6 +119,84 @@ export default function StudentPage() {
         'La transcripción se está descargando como transcripcion.txt.',
     });
   };
+  
+  const handleExportToPdf = async () => {
+    const element = transcriptionDisplayRef.current;
+    if (!element) {
+        toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'No se pudo encontrar el contenido de la transcripción.',
+        });
+        return;
+    }
+    
+    toast({
+      title: 'Generando PDF...',
+      description: 'Por favor, espera un momento.',
+    });
+
+    // Usamos html2canvas para capturar el contenido estilizado
+    const canvas = await html2canvas(element, {
+        scale: 2, // Aumentar la escala para mejor resolución
+        useCORS: true,
+        backgroundColor: null, // Mantiene el fondo transparente si lo tiene
+    });
+
+    const imgData = canvas.toDataURL('image/png');
+
+    const pdf = new jsPDF({
+        orientation: 'p',
+        unit: 'mm',
+        format: 'a4',
+    });
+
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 15;
+
+    // --- Añadir Encabezado ---
+    pdf.setFontSize(18);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Transcripción de la Clase', margin, margin);
+
+    pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'normal');
+    const date = new Date().toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+    pdf.text(`Fecha: ${date}`, margin, margin + 8);
+    pdf.text(`Sala: ${sessionId}`, margin, margin + 12);
+    
+    pdf.setLineWidth(0.5);
+    pdf.line(margin, margin + 15, pageWidth - margin, margin + 15);
+    
+    // --- Añadir Contenido ---
+    const imgWidth = pageWidth - margin * 2;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    let heightLeft = imgHeight;
+    let position = margin + 20;
+
+    pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
+    heightLeft -= (pageHeight - position - margin);
+
+    while (heightLeft > 0) {
+        position = -heightLeft - margin;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
+        heightLeft -= (pageHeight - margin * 2);
+    }
+    
+    pdf.save(`transcripcion-${sessionId}.pdf`);
+
+     toast({
+      title: 'PDF Generado',
+      description: 'La descarga de tu transcripción ha comenzado.',
+    });
+  };
+
 
   const handleWordDoubleClick = async (e: React.MouseEvent<HTMLDivElement>) => {
     const selection = window.getSelection();
@@ -219,9 +303,14 @@ export default function StudentPage() {
                     <Copy className="mr-2 h-4 w-4" />
                     <span>Copiar al portapapeles</span>
                   </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem onSelect={handleSave}>
                     <FileDown className="mr-2 h-4 w-4" />
                     <span>Guardar como .txt</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={handleExportToPdf}>
+                    <FileText className="mr-2 h-4 w-4" />
+                    <span>Exportar como PDF</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -229,14 +318,15 @@ export default function StudentPage() {
             <CardContent className="p-0 flex-grow">
               <ScrollArea className="h-full w-full">
                 <div
-                  className="p-4 prose bg-transparent"
+                  ref={transcriptionDisplayRef}
+                  className="p-6 prose bg-background"
                   style={{
                     fontSize: `${style.fontSize}px`,
                     lineHeight: style.lineHeight,
                     letterSpacing: `${style.letterSpacing}px`,
                     fontFamily: style.fontFamily,
-                    height: '100%',
-                    color: 'inherit',
+                    minHeight: '100%',
+                    color: 'var(--foreground)',
                   }}
                   onDoubleClick={handleWordDoubleClick}
                 >
