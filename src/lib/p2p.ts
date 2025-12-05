@@ -9,11 +9,11 @@
  */
 
 import Peer, { DataConnection } from 'peerjs';
+import { nanoid } from 'nanoid';
 
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 
 let peer: Peer | null = null;
-let hostId: string | null = null;
 const connections: DataConnection[] = [];
 
 // --- Sistema de Eventos para la UI ---
@@ -64,18 +64,22 @@ function notifyPeerStatusListeners(count: number) {
 }
 
 
-function initializePeer(): Peer {
+function initializePeer(peerId?: string): Peer {
   if (peer) {
-    return peer;
+    // Si ya existe un peer y el ID es el mismo, lo retornamos.
+    if (peer.id === peerId || !peerId) {
+        return peer;
+    }
+    // Si el ID es diferente, destruimos el peer actual para crear uno nuevo.
+    peer.destroy();
   }
   
   // El servidor de PeerJS es gratuito y público. No requiere configuración.
-  const newPeer = new Peer();
+  const newPeer = peerId ? new Peer(peerId) : new Peer();
 
   newPeer.on('open', (id) => {
     console.log('My peer ID is: ' + id);
-    hostId = id;
-    notifyStatusListeners('connected');
+    if (!peerId) notifyStatusListeners('connected'); // Solo para alumnos
   });
 
   newPeer.on('connection', (conn) => {
@@ -91,7 +95,9 @@ function initializePeer(): Peer {
 
   newPeer.on('error', (err) => {
     console.error('PeerJS error:', err);
-    notifyStatusListeners('error');
+    if (err.type === 'peer-unavailable') {
+        notifyStatusListeners('error');
+    }
   });
 
   peer = newPeer;
@@ -99,6 +105,11 @@ function initializePeer(): Peer {
 }
 
 function setupConnection(conn: DataConnection) {
+    // Evitar conexiones duplicadas
+    if (connections.some(c => c.peer === conn.peer)) {
+      return;
+    }
+
     connections.push(conn);
     notifyPeerStatusListeners(connections.length);
 
@@ -117,18 +128,19 @@ function setupConnection(conn: DataConnection) {
     });
     
     conn.on('open', () => {
+        console.log('Connection opened with:', conn.peer);
         notifyStatusListeners('connected');
     });
 }
 
 /**
- * Inicia una sesión de maestro, generando un ID para compartir.
- * @returns El ID del peer del maestro.
+ * Inicia una sesión de maestro, generando un ID corto para compartir.
+ * @returns El ID corto de 5 caracteres.
  */
 export function hostSession(): string {
-  const p = initializePeer();
-  // El ID se obtiene del evento 'open'
-  return p.id;
+  const newId = nanoid(5);
+  initializePeer(newId);
+  return newId;
 }
 
 /**
@@ -136,7 +148,9 @@ export function hostSession(): string {
  * @param teacherId El ID del peer del maestro.
  */
 export function joinSession(teacherId: string) {
+  // Inicializamos nuestro propio peer sin ID específico
   const p = initializePeer();
+  
   notifyStatusListeners('connecting');
   
   if (connections.some(c => c.peer === teacherId)) {
@@ -144,14 +158,19 @@ export function joinSession(teacherId: string) {
       notifyStatusListeners('connected');
       return;
   }
-
-  const conn = p.connect(teacherId);
-  if (!conn) {
-    notifyStatusListeners('error');
-    return;
-  }
   
-  setupConnection(conn);
+  // Esperamos a que nuestro peer esté listo antes de conectar
+  if (!p.id) {
+    p.on('open', () => {
+        console.log('Our peer is open, connecting to', teacherId);
+        const conn = p.connect(teacherId);
+        setupConnection(conn);
+    });
+  } else {
+    console.log('Connecting to', teacherId);
+    const conn = p.connect(teacherId);
+    setupConnection(conn);
+  }
 }
 
 /**
