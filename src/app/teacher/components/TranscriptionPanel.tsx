@@ -142,7 +142,7 @@ export function TranscriptionPanel({ command }: { command: Command }) {
   const renderContent = () => (
     <ScrollArea className="h-full">
       <div
-        className="p-4 prose bg-transparent"
+        className="p-4 break-words bg-transparent"
         style={{ ...style, height: '100%', color: 'inherit' }}
       >
         {isBionic ? <BionicReadingText text={transcription} /> : transcription}

@@ -291,7 +291,7 @@ export default function StudentPage() {
               <ScrollArea className="h-full w-full">
                 <div
                   ref={transcriptionDisplayRef}
-                  className="p-6 prose bg-background"
+                  className="p-6 break-words bg-background"
                   style={{
                     fontSize: `${style.fontSize}px`,
                     lineHeight: style.lineHeight,
