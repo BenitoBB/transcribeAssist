@@ -293,10 +293,7 @@ export default function StudentPage() {
                   ref={transcriptionDisplayRef}
                   className="p-6 break-words bg-background"
                   style={{
-                    fontSize: `${style.fontSize}px`,
-                    lineHeight: style.lineHeight,
-                    letterSpacing: `${style.letterSpacing}px`,
-                    fontFamily: style.fontFamily,
+                    ...style,
                     minHeight: '100%',
                     color: 'var(--foreground)',
                   }}
