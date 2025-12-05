@@ -15,6 +15,7 @@ import {
   Mic,
   MicOff,
   Copy,
+  Ear,
 } from 'lucide-react';
 import { DrawingToolbar } from './components/DrawingToolbar';
 import { useTranscription } from '@/hooks/use-transcription';
@@ -95,20 +96,20 @@ export default function TeacherPage() {
   
   // --- MANEJO DE COMANDOS DE VOZ ---
   const executeCommand = useCallback((command: string) => {
-    const cleanedCommand = command.toLowerCase().replace(/[\s.,;:]+/g, '');
+    const cleanedCommand = command.toLowerCase().trim().replace(/[.,;:]/g, '');
     
     const commandActions: { [key: string]: () => void } = {
-      'iniciargrabación': () => startTranscription().catch(console.error),
-      'detenergrabación': stopTranscription,
-      'activarpizarra': () => setIsDrawingMode(true),
-      'cerrarpizarra': () => setIsDrawingMode(false),
-      'pizarraarriba': () => setPanelCommand('top'),
-      'pizarraabajo': () => setPanelCommand('bottom'),
-      'pizarraderecha': () => setPanelCommand('right'),
-      'pizarraizquierda': () => setPanelCommand('left'),
-      'pizarracentro': () => setPanelCommand('free'),
+      'iniciar grabación': () => startTranscription().catch(console.error),
+      'detener grabación': stopTranscription,
+      'activar pizarra': () => setIsDrawingMode(true),
+      'cerrar pizarra': () => setIsDrawingMode(false),
+      'pizarra arriba': () => setPanelCommand('top'),
+      'pizarra abajo': () => setPanelCommand('bottom'),
+      'pizarra derecha': () => setPanelCommand('right'),
+      'pizarra izquierda': () => setPanelCommand('left'),
+      'pizarra centro': () => setPanelCommand('free'),
     };
-
+    
     if (commandActions[cleanedCommand]) {
       commandActions[cleanedCommand]();
       // Resetear el comando de panel para que pueda ser re-ejecutado

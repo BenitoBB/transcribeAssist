@@ -9,7 +9,7 @@
  */
 
 import Peer, { DataConnection } from 'peerjs';
-import { nanoid } from 'nanoid';
+import { customAlphabet } from 'nanoid';
 
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 
@@ -95,7 +95,7 @@ function initializePeer(peerId?: string): Peer {
 
   newPeer.on('error', (err) => {
     console.error('PeerJS error:', err);
-    if (err.type === 'peer-unavailable') {
+    if (err.type === 'peer-unavailable' || err.type === 'invalid-id') {
         notifyStatusListeners('error');
     }
   });
@@ -138,7 +138,9 @@ function setupConnection(conn: DataConnection) {
  * @returns El ID corto de 5 caracteres.
  */
 export function hostSession(): string {
-  const newId = nanoid(5);
+  // Usar solo caracteres alfanuméricos para evitar errores de ID inválido en PeerJS.
+  const nanoid = customAlphabet('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz', 5);
+  const newId = nanoid();
   initializePeer(newId);
   return newId;
 }

@@ -50,6 +50,7 @@ function notifyStateListeners(state: TranscriptionState) {
  */
 export function registerCommands(callback: (command: string) => void): () => void {
   commandCallback = callback;
+  // Devuelve una función que anula el registro del callback
   return () => {
     commandCallback = null;
   };
@@ -111,9 +112,11 @@ export function startTranscription(): Promise<void> {
       for (let i = event.resultIndex; i < event.results.length; ++i) {
         const transcript = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
+          // Primero, procesa el comando si hay un callback registrado
           if (commandCallback) {
             commandCallback(transcript.trim());
           }
+          // Luego, añade el texto a la transcripción final
           finalTranscription += transcript.charAt(0).toUpperCase() + transcript.slice(1) + '. ';
         } else {
           interimTranscription += transcript;
