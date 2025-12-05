@@ -21,17 +21,14 @@ import {
   stopServerTranscription,
 } from '../lib/transcription/server-proxy';
 
-export type TranscriptionModel =
-  | 'web-speech-api'
-  | 'whisper-wasm'
-  | 'whisper-server'
-  | 'whisper-translate'
-  | 'vosk-server'
-  | 'silero-server';
+import type { TranscriptionModel } from '@/lib/models-config';
+
+export type { TranscriptionModel };
 
 export interface TranscriptionContextType {
   transcription: string;
   isRecording: boolean;
+  isLoading: boolean;
   startRecording: () => void;
   stopRecording: () => void;
   transcriptionModel: TranscriptionModel;
@@ -50,6 +47,7 @@ export const TranscriptionProvider: React.FC<TranscriptionProviderProps> = ({
   children,
 }) => {
   const [isRecording, setIsRecording] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [transcription, setTranscription] = useState(
     'La transcripción de la clase aparecerá aquí cuando inicies la grabación...'
   );
@@ -62,6 +60,7 @@ export const TranscriptionProvider: React.FC<TranscriptionProviderProps> = ({
 
   const startRecording = useCallback(async () => {
     setIsRecording(true);
+    setIsLoading(true);
     setTranscription('');
 
     try {
@@ -70,7 +69,6 @@ export const TranscriptionProvider: React.FC<TranscriptionProviderProps> = ({
       } else if (transcriptionModel === 'whisper-wasm') {
         await startWhisperWasm(handleTranscriptionUpdate);
       } else {
-        // modelos server-side: whisper-server, whisper-translate, vosk-server, silero-server
         await startServerTranscription(transcriptionModel, handleTranscriptionUpdate);
       }
     } catch (error) {
@@ -78,6 +76,8 @@ export const TranscriptionProvider: React.FC<TranscriptionProviderProps> = ({
       const errorMessage = (error instanceof Error) ? error.message : 'Error desconocido al iniciar grabación.';
       setTranscription(`Error: ${errorMessage}`);
       setIsRecording(false);
+    } finally {
+      setIsLoading(false);
     }
   }, [handleTranscriptionUpdate, transcriptionModel]);
 
@@ -99,6 +99,7 @@ export const TranscriptionProvider: React.FC<TranscriptionProviderProps> = ({
 
   const value = {
     isRecording,
+    isLoading,
     transcription,
     startRecording,
     stopRecording,

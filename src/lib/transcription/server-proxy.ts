@@ -10,48 +10,107 @@
  *  - Servidor responde: { type: 'partial', text: '...' } o { type: 'final', text: '...' }
  */
 
-let ws: WebSocket | null = null;
+import type { TranscriptionModel } from '@/lib/models-config';
 
-export async function startServerTranscription(
-  model: string,
-  onTranscriptionUpdate: (t: string) => void
-): Promise<void> {
-  return new Promise((resolve, reject) => {
-    try {
-      ws = new WebSocket('ws://localhost:8000/ws/transcribe'); // ajustar URL
-      ws.onopen = () => {
-        // enviar metadata/selección de modelo
-        ws!.send(JSON.stringify({ type: 'config', model }));
-        resolve();
-      };
-      ws.onmessage = (ev) => {
-        try {
-          const msg = JSON.parse(ev.data);
-          if (msg.type === 'partial' || msg.type === 'final') {
-            onTranscriptionUpdate(msg.text);
-          }
-        } catch (e) {
-          console.error('mensaje ws no JSON', e);
-        }
-      };
-      ws.onclose = () => {
-        ws = null;
-      };
-      ws.onerror = (e) => {
-        console.error('WebSocket error', e);
-      };
-    } catch (err) {
-      reject(err);
-    }
-  });
-}
+let mediaRecorder: MediaRecorder | null = null;
+let audioChunks: Blob[] = [];
+let stream: MediaStream | null = null;
 
-export function stopServerTranscription(): void {
-  if (ws) {
-    try {
-      ws.send(JSON.stringify({ type: 'stop' }));
-      ws.close();
-    } catch {}
-    ws = null;
+export const startServerTranscription = async (
+  model: TranscriptionModel,
+  onTranscriptionUpdate: (text: string) => void
+): Promise<void> => {
+  const validServerModels: TranscriptionModel[] = [
+    'whisper-server',
+    'whisper-translate',
+    'vosk-server',
+    'silero-server',
+  ];
+
+  if (!validServerModels.includes(model)) {
+    throw new Error(`❌ Modelo de servidor no válido: ${model}`);
   }
-}
+
+  try {
+    // Iniciar grabación de audio
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    audioChunks = [];
+
+    mediaRecorder = new MediaRecorder(stream, {
+      mimeType: 'audio/webm;codecs=opus',
+    });
+
+    mediaRecorder.ondataavailable = (event) => {
+      audioChunks.push(event.data);
+    };
+
+    mediaRecorder.onerror = (event) => {
+      throw new Error(`Error en MediaRecorder: ${event.error}`);
+    };
+
+    // Notificar al backend que iniciamos
+    const initResponse = await fetch('/api/transcription/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model }),
+    });
+
+    if (!initResponse.ok) {
+      throw new Error(`Error iniciando ${model}: ${initResponse.statusText}`);
+    }
+
+    const initData = await initResponse.json();
+    console.log(`✅ ${initData.message}`);
+    onTranscriptionUpdate(`Grabando con ${model}...`);
+
+    mediaRecorder.start();
+  } catch (error) {
+    throw new Error(
+      `❌ Error iniciando ${model}: ${error instanceof Error ? error.message : 'Desconocido'}`
+    );
+  }
+};
+
+export const stopServerTranscription = async (): Promise<void> => {
+  if (!mediaRecorder || !stream) {
+    throw new Error('❌ No hay grabación activa');
+  }
+
+  return new Promise((resolve, reject) => {
+    mediaRecorder!.onstop = async () => {
+      try {
+        // Crear blob de audio
+        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+
+        // Enviar al servidor para procesamiento
+        const formData = new FormData();
+        formData.append('audio', audioBlob);
+        formData.append('model', mediaRecorder!.mimeType);
+
+        const processResponse = await fetch('/api/transcription/process', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!processResponse.ok) {
+          throw new Error(`Error procesando: ${processResponse.statusText}`);
+        }
+
+        // Notificar que detenemos
+        await fetch('/api/transcription/stop', { method: 'POST' });
+
+        // Detener stream
+        stream!.getTracks().forEach((track) => track.stop());
+        mediaRecorder = null;
+        stream = null;
+        audioChunks = [];
+
+        resolve();
+      } catch (error) {
+        reject(error);
+      }
+    };
+
+    mediaRecorder!.stop();
+  });
+};

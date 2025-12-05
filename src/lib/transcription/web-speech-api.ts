@@ -6,9 +6,12 @@
  * Contiene la lógica para usar la API de reconocimiento de voz nativa del navegador.
  */
 
-let recognition: SpeechRecognition | null = null;
-let finalTranscription = '';
-let onUpdate: (text: string) => void;
+const SpeechRecognition =
+  typeof window !== 'undefined'
+    ? (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    : null;
+
+let recognition: any = null;
 
 /**
  * Inicia la captura y el reconocimiento de audio.
@@ -16,67 +19,39 @@ let onUpdate: (text: string) => void;
 export async function startWebSpeechApi(
     onTranscriptionUpdate: (text: string) => void
 ): Promise<void> {
-  onUpdate = onTranscriptionUpdate;
-
-  // Comprobar la compatibilidad del navegador
-  const SpeechRecognition =
-    (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-
   if (!SpeechRecognition) {
-    throw new Error('Tu navegador no soporta la API de Reconocimiento de Voz. Prueba con Google Chrome.');
+    throw new Error('Web Speech API no soportado en este navegador');
   }
 
   recognition = new SpeechRecognition();
+  recognition.continuous = true;
   recognition.lang = 'es-ES';
-  recognition.interimResults = true; // Queremos resultados mientras hablamos
-  recognition.continuous = true; // Queremos que siga escuchando
-
-  finalTranscription = ''; // Reiniciar al comenzar
 
   recognition.onstart = () => {
-    onUpdate('🎙️ Grabación iniciada...');
+    console.log('Grabación iniciada');
   };
 
-  recognition.onend = () => {
-    onUpdate(finalTranscription || 'Grabación detenida.');
-    recognition = null;
-  };
-
-  recognition.onerror = (event) => {
-    if (event.error === 'no-speech' || event.error === 'aborted') {
-      return;
-    }
-    console.error('Error en el reconocimiento de voz:', event.error);
-    onUpdate(`Error: ${event.error}`);
-  };
-
-  recognition.onresult = (event) => {
-    let interimTranscription = '';
-    
-    for (let i = event.resultIndex; i < event.results.length; ++i) {
+  let finalTranscript = '';
+  recognition.onresult = (event: any) => {
+    let interimTranscript = '';
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const transcript = event.results[i][0].transcript;
       if (event.results[i].isFinal) {
-        // Concatenamos el resultado final con un salto de línea para legibilidad
-        finalTranscription += event.results[i][0].transcript.trim() + '\n\n';
+        finalTranscript += transcript + ' ';
+        onTranscriptionUpdate(finalTranscript);
       } else {
-        interimTranscription += event.results[i][0].transcript;
+        interimTranscript += transcript;
+        onTranscriptionUpdate(finalTranscript + interimTranscript);
       }
     }
-    
-    // Actualizamos la UI con la transcripción final más la provisional actual
-    onUpdate(finalTranscription + interimTranscription);
   };
 
-  try {
-    // Pedir permiso de micrófono
-    await navigator.mediaDevices.getUserMedia({ audio: true });
-    recognition.start();
-  } catch (err) {
-     console.error('No se pudo acceder al micrófono:', err);
-     if (recognition) {
-         recognition.stop();
-     }
-     throw new Error('No se pudo acceder al micrófono. Por favor, comprueba los permisos en tu navegador.');
-  }
+  recognition.onerror = (event: any) => {
+    console.error('Error en Web Speech API:', event.error);
+    throw new Error(`Error de reconocimiento: ${event.error}`);
+  };
+
+  recognition.start();
 }
 
 

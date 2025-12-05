@@ -9,10 +9,23 @@
  * Aquí dejamos stubs que lanzan errores si no se implementa.
  */
 
-export async function startWhisperWasm(onTranscriptionUpdate: (t: string) => void): Promise<void> {
-  throw new Error('whisper-wasm no está implementado. Revisa src/lib/transcription/whisper-wasm.ts para instrucciones.');
-}
+export const startWhisperWasm = async (
+  onTranscriptionUpdate: (text: string) => void
+): Promise<void> => {
+  if (typeof window === 'undefined') {
+    throw new Error('Whisper WASM solo funciona en el navegador');
+  }
 
-export function stopWhisperWasm(): void {
+  try {
+    // Verificar disponibilidad de worker o módulo
+    // ...existing code...
+  } catch (error) {
+    throw new Error(
+      `Error al iniciar Whisper WASM: ${error instanceof Error ? error.message : 'Desconocido'}`
+    );
+  }
+};
+
+export const stopWhisperWasm = (): void => {
   // detener worker/recursos si se implementa
-}
+};

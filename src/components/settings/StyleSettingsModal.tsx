@@ -12,7 +12,8 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { useTranscription } from '@/hooks/use-transcription';
-import { TranscriptionModel } from '@/context/TranscriptionContext';
+import type { TranscriptionModel } from '@/lib/models-config';
+import { getModelLabel, MODELS_CONFIG } from '@/lib/models-config';
 
 export function StyleSettingsModal() {
   const { style, setStyle, theme, setTheme } = useStyle();
