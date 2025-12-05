@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -6,7 +7,8 @@
  * @returns La definición como un string, o null si no se encuentra.
  */
 export async function defineWord(word: string): Promise<string | null> {
-  const cleanedWord = word.toLowerCase().replace(/[\p{P}\p{S}]/gu, '').trim();
+  // Limpia la palabra de puntuación común al inicio/final y la convierte a minúsculas.
+  const cleanedWord = word.trim().replace(/^[.,:;!?¿¡"']+|[.,:;!?¿¡"']+$/g, '').toLowerCase();
 
   if (!cleanedWord) {
     return null;
@@ -18,21 +20,33 @@ export async function defineWord(word: string): Promise<string | null> {
     );
 
     if (!response.ok) {
-      // Si la respuesta es 404, la palabra no fue encontrada. Para otros errores,
-      // la consola del servidor mostrará el código de estado.
-      console.error(`Dictionary API error for "${cleanedWord}": Status ${response.status}`);
+      console.error(`Error de la API del diccionario para "${cleanedWord}": Estado ${response.status}`);
       return null;
     }
 
     const data = await response.json();
 
-    // La API devuelve un array. Buscamos la primera definición en la primera entrada.
-    const firstDefinition = data?.[0]?.meanings?.[0]?.definitions?.[0]?.definition;
+    // La API devuelve un array. Buscamos de forma más robusta la primera definición disponible.
+    if (Array.isArray(data) && data.length > 0) {
+      for (const entry of data) {
+        if (entry.meanings && Array.isArray(entry.meanings)) {
+          for (const meaning of entry.meanings) {
+            if (meaning.definitions && Array.isArray(meaning.definitions)) {
+              const firstDefinition = meaning.definitions[0]?.definition;
+              if (firstDefinition) {
+                return firstDefinition; // Devolvemos la primera que encontremos.
+              }
+            }
+          }
+        }
+      }
+    }
 
-    return firstDefinition || null;
+    // Si no se encontró ninguna definición en la estructura esperada.
+    return null;
     
   } catch (error) {
-    console.error(`Failed to fetch definition for "${cleanedWord}":`, error);
+    console.error(`Fallo al obtener la definición para "${cleanedWord}":`, error);
     // Si hay un error de red o al parsear el JSON, devolvemos null.
     return null;
   }
