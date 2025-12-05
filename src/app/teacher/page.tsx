@@ -14,7 +14,6 @@ import {
   Pencil,
   Mic,
   MicOff,
-  Ear,
 } from 'lucide-react';
 import { DrawingToolbar } from './components/DrawingToolbar';
 import { useTranscription } from '@/hooks/use-transcription';
@@ -46,7 +45,6 @@ export default function TeacherPage() {
   const { setTranscription, isRecording, setIsRecording } = useTranscription();
   
   const [panelCommand, setPanelCommand] = useState<Command>(null);
-  const [isVuiListening, setIsVuiListening] = useState(false);
 
 
   // --- SINCRONIZACIÓN CON LA API DE TRANSCRIPCIÓN ---
@@ -69,8 +67,6 @@ export default function TeacherPage() {
   
   // --- MANEJO DE COMANDOS DE VOZ ---
   const executeCommand = useCallback((command: string) => {
-    if (!isVuiListening) return;
-
     // Eliminar espacios y convertir a minúsculas
     const cleanedCommand = command.toLowerCase().replace(/\s+/g, '');
     
@@ -93,7 +89,7 @@ export default function TeacherPage() {
         setTimeout(() => setPanelCommand(null), 100);
       }
     }
-  }, [isVuiListening]);
+  }, []);
 
   useEffect(() => {
     // Registrar la función que maneja los comandos
@@ -157,21 +153,6 @@ export default function TeacherPage() {
             </Button>
           </TooltipTrigger>
           <TooltipContent><p>{isRecording ? 'Detener' : 'Iniciar'} Transcripción</p></TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant={isVuiListening ? 'default' : 'outline'}
-              size="icon"
-              onClick={() => setIsVuiListening(!isVuiListening)}
-            >
-              <Ear className="h-4 w-4" />
-              <span className="sr-only">Activar comandos de voz</span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>{isVuiListening ? 'Desactivar' : 'Activar'} Comandos por Voz</p>
-          </TooltipContent>
         </Tooltip>
       </div>
       
