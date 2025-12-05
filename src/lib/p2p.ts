@@ -1,0 +1,169 @@
+'use client';
+
+/**
+ * ===================================================================================
+ * Lógica de Conexión Peer-to-Peer con PeerJS
+ * ===================================================================================
+ * Este archivo SÓLO debe ser importado en componentes de cliente ('use client').
+ * Contiene la lógica para la comunicación en tiempo real entre maestro y alumnos.
+ */
+
+import Peer, { DataConnection } from 'peerjs';
+
+export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
+
+let peer: Peer | null = null;
+let hostId: string | null = null;
+const connections: DataConnection[] = [];
+
+// --- Sistema de Eventos para la UI ---
+type DataCallback = (data: any) => void;
+const dataListeners: DataCallback[] = [];
+
+type StatusCallback = (status: ConnectionStatus) => void;
+const statusListeners: StatusCallback[] = [];
+
+type PeerStatusCallback = (peerCount: number) => void;
+const peerStatusListeners: PeerStatusCallback[] = [];
+
+
+export function onDataReceived(callback: DataCallback) {
+  dataListeners.push(callback);
+  return () => {
+    const index = dataListeners.indexOf(callback);
+    if (index > -1) dataListeners.splice(index, 1);
+  };
+}
+
+export function onConnectionStatusChange(callback: StatusCallback) {
+  statusListeners.push(callback);
+  return () => {
+    const index = statusListeners.indexOf(callback);
+    if (index > -1) statusListeners.splice(index, 1);
+  };
+}
+
+export function onPeerStatusChange(callback: PeerStatusCallback) {
+  peerStatusListeners.push(callback);
+  return () => {
+    const index = peerStatusListeners.indexOf(callback);
+    if (index > -1) peerStatusListeners.splice(index, 1);
+  };
+}
+
+function notifyDataListeners(data: any) {
+  dataListeners.forEach(listener => listener(data));
+}
+
+function notifyStatusListeners(status: ConnectionStatus) {
+  statusListeners.forEach(listener => listener(status));
+}
+
+function notifyPeerStatusListeners(count: number) {
+  peerStatusListeners.forEach(listener => listener(count));
+}
+
+
+function initializePeer(): Peer {
+  if (peer) {
+    return peer;
+  }
+  
+  // El servidor de PeerJS es gratuito y público. No requiere configuración.
+  const newPeer = new Peer();
+
+  newPeer.on('open', (id) => {
+    console.log('My peer ID is: ' + id);
+    hostId = id;
+    notifyStatusListeners('connected');
+  });
+
+  newPeer.on('connection', (conn) => {
+    console.log('New peer connected:', conn.peer);
+    setupConnection(conn);
+  });
+
+  newPeer.on('disconnected', () => {
+    console.log('Peer disconnected. Reconnecting...');
+    notifyStatusListeners('connecting');
+    peer?.reconnect();
+  });
+
+  newPeer.on('error', (err) => {
+    console.error('PeerJS error:', err);
+    notifyStatusListeners('error');
+  });
+
+  peer = newPeer;
+  return peer;
+}
+
+function setupConnection(conn: DataConnection) {
+    connections.push(conn);
+    notifyPeerStatusListeners(connections.length);
+
+    conn.on('data', (data) => {
+      console.log('Received data:', data);
+      notifyDataListeners(data);
+    });
+
+    conn.on('close', () => {
+      console.log('Peer disconnected:', conn.peer);
+      const index = connections.findIndex(c => c.peer === conn.peer);
+      if (index > -1) {
+        connections.splice(index, 1);
+        notifyPeerStatusListeners(connections.length);
+      }
+    });
+    
+    conn.on('open', () => {
+        notifyStatusListeners('connected');
+    });
+}
+
+/**
+ * Inicia una sesión de maestro, generando un ID para compartir.
+ * @returns El ID del peer del maestro.
+ */
+export function hostSession(): string {
+  const p = initializePeer();
+  // El ID se obtiene del evento 'open'
+  return p.id;
+}
+
+/**
+ * Se une a la sesión de un maestro usando su ID.
+ * @param teacherId El ID del peer del maestro.
+ */
+export function joinSession(teacherId: string) {
+  const p = initializePeer();
+  notifyStatusListeners('connecting');
+  
+  if (connections.some(c => c.peer === teacherId)) {
+      console.log('Already connected to this peer');
+      notifyStatusListeners('connected');
+      return;
+  }
+
+  const conn = p.connect(teacherId);
+  if (!conn) {
+    notifyStatusListeners('error');
+    return;
+  }
+  
+  setupConnection(conn);
+}
+
+/**
+ * Envía datos a todos los peers conectados.
+ * @param data Los datos a enviar (string, objeto, etc.).
+ */
+export function sendToPeers(data: any) {
+  if (connections.length > 0) {
+    connections.forEach(conn => {
+      if (conn.open) {
+        conn.send(data);
+      }
+    });
+  }
+}

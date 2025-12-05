@@ -26,7 +26,7 @@ export const TranscriptionProvider: React.FC<TranscriptionProviderProps> = ({
 }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [transcription, setTranscription] = useState(
-    'La transcripción de la clase aparecerá aquí cuando inicies la grabación...'
+    'Inicia una grabación o conéctate a una sala para ver la transcripción.'
   );
 
   const value = {

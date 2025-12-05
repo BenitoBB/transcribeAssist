@@ -14,6 +14,7 @@ import {
   Pencil,
   Mic,
   MicOff,
+  Copy,
 } from 'lucide-react';
 import { DrawingToolbar } from './components/DrawingToolbar';
 import { useTranscription } from '@/hooks/use-transcription';
@@ -25,6 +26,8 @@ import {
   onStateChange,
   onTranscriptionUpdate,
 } from '@/lib/transcription';
+import { hostSession, sendToPeers, onPeerStatusChange } from '@/lib/p2p';
+import { useToast } from '@/hooks/use-toast';
 
 // Carga dinámica de componentes que solo funcionan en el cliente
 const DrawingCanvas = dynamic(
@@ -45,6 +48,24 @@ export default function TeacherPage() {
   const { setTranscription, isRecording, setIsRecording } = useTranscription();
   
   const [panelCommand, setPanelCommand] = useState<Command>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [peerCount, setPeerCount] = useState(0);
+
+  const { toast } = useToast();
+
+  // --- SINCRONIZACIÓN P2P ---
+  useEffect(() => {
+    const peerId = hostSession();
+    setSessionId(peerId);
+
+    const unsubPeers = onPeerStatusChange((count) => {
+      setPeerCount(count);
+    });
+    
+    return () => {
+      unsubPeers();
+    }
+  }, []);
 
 
   // --- SINCRONIZACIÓN CON LA API DE TRANSCRIPCIÓN ---
@@ -52,7 +73,12 @@ export default function TeacherPage() {
     const handleStateChange = (newState: 'recording' | 'stopped' | 'idle') => {
       setIsRecording(newState === 'recording');
     };
-    const handleTextUpdate = (newText: string) => {
+
+    const handleTextUpdate = (newText: string, isFinal: boolean) => {
+      // Envía el texto a los alumnos
+      sendToPeers({ type: isFinal ? 'full_text' : 'interim_text', text: newText });
+      
+      // Actualiza la UI local del profesor
       setTranscription(newText);
     };
 
@@ -67,7 +93,6 @@ export default function TeacherPage() {
   
   // --- MANEJO DE COMANDOS DE VOZ ---
   const executeCommand = useCallback((command: string) => {
-    // Eliminar espacios y convertir a minúsculas
     const cleanedCommand = command.toLowerCase().replace(/\s+/g, '');
     
     const commandActions: { [key: string]: () => void } = {
@@ -84,7 +109,6 @@ export default function TeacherPage() {
 
     if (commandActions[cleanedCommand]) {
       commandActions[cleanedCommand]();
-      // Resetea el comando del panel después de un corto tiempo
       if (['top', 'bottom', 'right', 'left', 'free'].some(c => cleanedCommand.includes(c))) {
         setTimeout(() => setPanelCommand(null), 100);
       }
@@ -92,7 +116,6 @@ export default function TeacherPage() {
   }, []);
 
   useEffect(() => {
-    // Registrar la función que maneja los comandos
     registerCommands(executeCommand);
   }, [executeCommand]);
 
@@ -110,10 +133,40 @@ export default function TeacherPage() {
       startTranscription().catch(console.error);
     }
   };
-
+  
+  const handleCopySessionId = () => {
+    if (sessionId) {
+      navigator.clipboard.writeText(sessionId);
+      toast({
+        title: "ID de la Sala Copiado",
+        description: "Ahora puedes compartirlo con tus alumnos.",
+      });
+    }
+  };
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-background">
+      {/* Barra de ID de Sala */}
+      {sessionId && (
+        <div className="absolute top-4 right-4 sm:top-8 sm:right-8 z-30">
+          <div className="flex items-center gap-2 bg-card p-2 rounded-lg shadow-lg border">
+            <span className="text-sm font-medium text-muted-foreground">ID de la Sala:</span>
+            <span className="font-mono text-sm text-primary">{sessionId}</span>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleCopySessionId}>
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Copiar ID de la sala</TooltipContent>
+            </Tooltip>
+          </div>
+          <p className="text-xs text-muted-foreground text-right mt-1">
+            Alumnos conectados: {peerCount}
+          </p>
+        </div>
+      )}
+
       {/* Barra de Herramientas Principal */}
       <div className="absolute top-4 left-4 sm:top-8 sm:left-8 z-30 flex gap-2">
         <Link href="/">
