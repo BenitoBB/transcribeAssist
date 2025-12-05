@@ -11,12 +11,21 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 
 export function StyleSettingsModal() {
-  const { style, setStyle, theme, setTheme } = useStyle();
+  const { style, setStyle, theme, setTheme, isBionic, setIsBionic } = useStyle();
 
   return (
     <div className="grid gap-6 py-4">
+       <div className="flex items-center justify-between">
+        <Label htmlFor="bionic-mode" className="text-base">Modo de Lectura Biónica</Label>
+        <Switch
+          id="bionic-mode"
+          checked={isBionic}
+          onCheckedChange={setIsBionic}
+        />
+      </div>
       <div className="grid gap-2">
         <Label htmlFor="font-size">Tamaño de Fuente: {style.fontSize}px</Label>
         <Slider

@@ -40,10 +40,11 @@ import { useToast } from '@/hooks/use-toast';
 import { useStyle } from '@/context/StyleContext';
 import { useTranscription } from '@/hooks/use-transcription';
 import { joinSession, onDataReceived, onConnectionStatusChange, ConnectionStatus } from '@/lib/p2p';
+import { BionicReadingText } from '@/components/BionicReadingText';
 
 export default function StudentPage() {
   const { transcription, setTranscription } = useTranscription();
-  const { style } = useStyle();
+  const { style, isBionic } = useStyle();
   const { toast } = useToast();
 
   const [sessionId, setSessionId] = useState('');
@@ -300,7 +301,11 @@ export default function StudentPage() {
                     color: 'var(--foreground)',
                   }}
                 >
-                  {transcription || "Esperando transcripción del maestro..."}
+                  {isBionic ? (
+                    <BionicReadingText text={transcription || "Esperando transcripción del maestro..."} />
+                  ) : (
+                    transcription || "Esperando transcripción del maestro..."
+                  )}
                 </div>
               </ScrollArea>
             </CardContent>

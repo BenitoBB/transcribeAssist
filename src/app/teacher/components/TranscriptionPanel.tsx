@@ -21,13 +21,14 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useTranscription } from '@/hooks/use-transcription';
 import { useStyle } from '@/context/StyleContext';
 import { SettingsButton } from '@/components/settings/SettingsButton';
+import { BionicReadingText } from '@/components/BionicReadingText';
 
 type Position = 'top' | 'bottom' | 'left' | 'right' | 'free';
 export type Command = Position | 'free' | null;
 
 export function TranscriptionPanel({ command }: { command: Command }) {
   const { transcription } = useTranscription();
-  const { style } = useStyle();
+  const { style, isBionic } = useStyle();
 
   const [currentPosition, setCurrentPosition] = useState<Position>('free');
   const [size, setSize] = useState({ width: 500, height: 300 });
@@ -144,7 +145,7 @@ export function TranscriptionPanel({ command }: { command: Command }) {
         className="p-4 prose bg-transparent"
         style={{ ...style, height: '100%', color: 'inherit' }}
       >
-        {transcription}
+        {isBionic ? <BionicReadingText text={transcription} /> : transcription}
       </div>
     </ScrollArea>
   );
