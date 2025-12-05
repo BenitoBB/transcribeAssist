@@ -6,6 +6,7 @@
  */
 
 import { ai } from '@/ai/genkit';
+import { googleAI } from '@genkit-ai/google-genai';
 import { z } from 'zod';
 
 // No se necesita un schema de salida complejo, solo un string.
@@ -14,6 +15,7 @@ const SummarizeTextOutputSchema = z.string().describe('El resumen conciso del te
 // Definir el prompt para la tarea de resumen
 const summarizePrompt = ai.definePrompt({
   name: 'summarizePrompt',
+  model: googleAI.model('gemini-pro'), // Especificar el modelo aquí
   input: { schema: z.string() }, // El input es el texto a resumir
   output: { schema: SummarizeTextOutputSchema },
   prompt: `Eres un asistente experto en educación. Tu tarea es leer la siguiente transcripción de una clase y generar un resumen conciso y claro en español. El resumen debe capturar los puntos más importantes y los conceptos clave de la lección.
