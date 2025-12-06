@@ -28,7 +28,6 @@ import {
 } from '@/lib/transcription';
 import { hostSession, sendToPeers, onPeerStatusChange } from '@/lib/p2p';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
 
 // Carga dinámica de componentes que solo funcionan en el cliente
 const DrawingCanvas = dynamic(
@@ -157,72 +156,69 @@ export default function TeacherPage() {
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-background">
-      {/* Barra de ID de Sala */}
-      {sessionId && (
-        <div className={cn(
-            "absolute top-4 sm:top-8 z-30 transition-all duration-300",
-            panelPosition === 'left' ? 'right-4 sm:right-8' : 'left-4 sm:left-8',
-            panelPosition === 'right' ? 'left-4 sm:left-8' : 'right-4 sm:right-8',
-            (panelPosition === 'top' || panelPosition === 'bottom') && 'right-4 sm:right-8'
-          )}>
-          <div className="flex items-center gap-2 bg-card p-2 rounded-lg shadow-lg border">
-            <span className="text-sm font-medium text-muted-foreground">ID de la Sala:</span>
-            <span className="font-mono text-sm text-primary">{sessionId}</span>
+      {/* Barra de Herramientas Principal */}
+      <div className="absolute top-4 left-4 right-4 sm:top-8 sm:left-8 sm:right-8 z-30 flex justify-between items-center w-auto gap-2">
+        <div className="flex gap-2">
+          <Link href="/">
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleCopySessionId}>
-                  <Copy className="h-4 w-4" />
+                <Button variant="outline" size="icon">
+                  <ArrowLeft className="h-4 w-4" />
+                  <span className="sr-only">Volver</span>
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Copiar ID de la sala</TooltipContent>
+              <TooltipContent><p>Volver a la página principal</p></TooltipContent>
             </Tooltip>
-          </div>
-          <p className="text-xs text-muted-foreground text-right mt-1">
-            Alumnos conectados: {peerCount}
-          </p>
-        </div>
-      )}
-
-      {/* Barra de Herramientas Principal */}
-      <div className="absolute top-4 left-4 sm:top-8 sm:left-8 z-30 flex gap-2">
-        <Link href="/">
+          </Link>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="outline" size="icon">
-                <ArrowLeft className="h-4 w-4" />
-                <span className="sr-only">Volver</span>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setIsDrawingMode(!isDrawingMode)}
+                aria-pressed={isDrawingMode}
+              >
+                <Pencil className="h-4 w-4" />
+                <span className="sr-only">Activar modo dibujo</span>
               </Button>
             </TooltipTrigger>
-            <TooltipContent><p>Volver a la página principal</p></TooltipContent>
+            <TooltipContent><p>Activar/Desactivar Pizarra</p></TooltipContent>
           </Tooltip>
-        </Link>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setIsDrawingMode(!isDrawingMode)}
-              aria-pressed={isDrawingMode}
-            >
-              <Pencil className="h-4 w-4" />
-              <span className="sr-only">Activar modo dibujo</span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent><p>Activar/Desactivar Pizarra</p></TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant={isRecording ? 'destructive' : 'outline'}
-              size="icon"
-              onClick={handleToggleRecording}
-            >
-              {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-              <span className="sr-only">{isRecording ? 'Detener' : 'Iniciar'} transcripción</span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent><p>{isRecording ? 'Detener' : 'Iniciar'} Transcripción</p></TooltipContent>
-        </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={isRecording ? 'destructive' : 'outline'}
+                size="icon"
+                onClick={handleToggleRecording}
+              >
+                {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                <span className="sr-only">{isRecording ? 'Detener' : 'Iniciar'} transcripción</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent><p>{isRecording ? 'Detener' : 'Iniciar'} Transcripción</p></TooltipContent>
+          </Tooltip>
+        </div>
+
+        {/* Widget de ID de Sala y Alumnos */}
+        {sessionId && (
+          <div className="flex flex-col items-end">
+            <div className="flex items-center gap-2 bg-card p-2 rounded-lg shadow-lg border">
+              <span className="text-sm font-medium text-muted-foreground">ID de la Sala:</span>
+              <span className="font-mono text-sm text-primary">{sessionId}</span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleCopySessionId}>
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Copiar ID de la sala</TooltipContent>
+              </Tooltip>
+            </div>
+            <p className="text-xs text-muted-foreground text-right mt-1">
+              Alumnos conectados: {peerCount}
+            </p>
+          </div>
+        )}
       </div>
       
       {isDrawingMode && (
@@ -238,7 +234,7 @@ export default function TeacherPage() {
       )}
 
       {/* El div contenedor para el posicionamiento del panel */}
-      <div className="relative w-full h-full pointer-events-none z-10">
+      <div className="relative w-full h-full pointer-events-none z-20">
         <TranscriptionPanel command={panelCommand} onPositionChange={setPanelPosition} />
       </div>
 
