@@ -15,6 +15,7 @@ import {
   Mic,
   MicOff,
   Copy,
+  Sparkles,
 } from 'lucide-react';
 import { DrawingToolbar } from './components/DrawingToolbar';
 import { useTranscription } from '@/hooks/use-transcription';
@@ -196,6 +197,19 @@ export default function TeacherPage() {
             </Button>
           </TooltipTrigger>
           <TooltipContent><p>{isRecording ? 'Detener' : 'Iniciar'} Transcripción</p></TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+             <Button
+                variant="outline"
+                size="icon"
+                onClick={() => alert("Función de resumen no implementada.")}
+              >
+                <Sparkles className="h-4 w-4" />
+                <span className="sr-only">Generar resumen de la clase</span>
+              </Button>
+          </TooltipTrigger>
+           <TooltipContent><p>Generar Resumen (Próximamente)</p></TooltipContent>
         </Tooltip>
       </div>
 
