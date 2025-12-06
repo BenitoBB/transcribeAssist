@@ -41,6 +41,7 @@ import { useStyle } from '@/context/StyleContext';
 import { useTranscription } from '@/hooks/use-transcription';
 import { joinSession, onDataReceived, onConnectionStatusChange, ConnectionStatus } from '@/lib/p2p';
 import { BionicReadingText } from '@/components/BionicReadingText';
+import { SummaryDialog } from '../teacher/components/SummaryDialog';
 
 export default function StudentPage() {
   const { transcription, setTranscription } = useTranscription();
@@ -53,6 +54,9 @@ export default function StudentPage() {
 
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected');
   const hasConnected = useRef(false);
+  const [isSummaryOpen, setIsSummaryOpen] = useState(false);
+  const [summary, setSummary] = useState('');
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
 
   useEffect(() => {
     const unsubData = onDataReceived((data: any) => {
@@ -189,6 +193,10 @@ export default function StudentPage() {
     });
   };
 
+  const handleGenerateSummary = async () => {
+    setIsSummaryOpen(true);
+  };
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-4 relative overflow-hidden">
       <div className="absolute top-4 left-4 sm:top-8 sm:left-8 flex items-center gap-4">
@@ -284,6 +292,11 @@ export default function StudentPage() {
                     <FileText className="mr-2 h-4 w-4" />
                     <span>Exportar como PDF</span>
                   </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onSelect={handleGenerateSummary}>
+                    <FileText className="mr-2 h-4 w-4" />
+                    <span>Generar Resumen</span>
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </CardHeader>
@@ -309,6 +322,12 @@ export default function StudentPage() {
           </Card>
         </>
       )}
+       <SummaryDialog
+        isOpen={isSummaryOpen}
+        onOpenChange={setIsSummaryOpen}
+        summary={summary}
+        isLoading={isGeneratingSummary}
+      />
     </div>
   );
 }

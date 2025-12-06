@@ -15,7 +15,7 @@ import {
   Mic,
   MicOff,
   Copy,
-  Sparkles,
+  FileText,
 } from 'lucide-react';
 import { DrawingToolbar } from './components/DrawingToolbar';
 import { useTranscription } from '@/hooks/use-transcription';
@@ -30,6 +30,7 @@ import {
 import { hostSession, sendToPeers, onPeerStatusChange } from '@/lib/p2p';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { SummaryDialog } from './components/SummaryDialog';
 
 // Carga dinámica de componentes que solo funcionan en el cliente
 const DrawingCanvas = dynamic(
@@ -47,13 +48,17 @@ export default function TeacherPage() {
   const [brushColor, setBrushColor] = useState('#FF0000');
   const [clearCanvas, setClearCanvas] = useState(false);
   
-  const { setTranscription, isRecording, setIsRecording } = useTranscription();
+  const { transcription, setTranscription, isRecording, setIsRecording } = useTranscription();
   
   const [panelCommand, setPanelCommand] = useState<Command>(null);
   const [panelPosition, setPanelPosition] = useState<Position>('free');
 
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [peerCount, setPeerCount] = useState(0);
+
+  const [isSummaryOpen, setIsSummaryOpen] = useState(false);
+  const [summary, setSummary] = useState('');
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
 
   const { toast } = useToast();
 
@@ -156,9 +161,13 @@ export default function TeacherPage() {
     }
   };
 
+  const handleGenerateSummary = async () => {
+    setIsSummaryOpen(true);
+  };
+
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-background">
-      {/* Barra de Herramientas Principal (Fija) */}
+      {/* Contenedor Fijo para Controles Principales */}
       <div className="absolute top-4 left-4 sm:top-8 sm:left-8 z-30 flex items-center gap-2">
         <Link href="/">
           <Tooltip>
@@ -203,22 +212,22 @@ export default function TeacherPage() {
              <Button
                 variant="outline"
                 size="icon"
-                onClick={() => alert("Función de resumen no implementada.")}
+                onClick={handleGenerateSummary}
               >
-                <Sparkles className="h-4 w-4" />
+                <FileText className="h-4 w-4" />
                 <span className="sr-only">Generar resumen de la clase</span>
               </Button>
           </TooltipTrigger>
-           <TooltipContent><p>Generar Resumen (Próximamente)</p></TooltipContent>
+           <TooltipContent><p>Generar Resumen</p></TooltipContent>
         </Tooltip>
       </div>
 
-      {/* Widget de ID de Sala y Alumnos (Posicionamiento dinámico) */}
+      {/* Contenedor Dinámico para ID de Sala y Alumnos */}
       {sessionId && (
         <div className={cn(
             "absolute z-30 flex flex-col items-end transition-all duration-300",
             {
-                'top-4 right-4 sm:top-8 sm:right-8': panelPosition === 'left' || panelPosition === 'bottom' || panelPosition === 'free',
+                'top-4 right-4 sm:top-8 sm:right-8': panelPosition !== 'right',
                 'top-4 left-4 sm:top-8 sm:left-8': panelPosition === 'right',
                 'bottom-4 right-4 sm:bottom-8 sm:right-8': panelPosition === 'top',
             }
@@ -254,10 +263,16 @@ export default function TeacherPage() {
       )}
 
       {/* El div contenedor para el posicionamiento del panel */}
-      <div className="relative w-full h-full pointer-events-none z-20">
+      <div className="relative w-full h-full pointer-events-none z-10">
         <TranscriptionPanel command={panelCommand} onPositionChange={setPanelPosition} />
       </div>
 
+      <SummaryDialog
+        isOpen={isSummaryOpen}
+        onOpenChange={setIsSummaryOpen}
+        summary={summary}
+        isLoading={isGeneratingSummary}
+      />
     </div>
   );
 }
