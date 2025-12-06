@@ -157,7 +157,7 @@ export default function TeacherPage() {
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-background">
-      {/* Barra de Herramientas Principal */}
+      {/* Barra de Herramientas Principal (Fija) */}
       <div className="absolute top-4 left-4 sm:top-8 sm:left-8 z-30 flex items-center gap-2">
         <Link href="/">
           <Tooltip>
