@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
@@ -49,7 +49,6 @@ export default function StudentPage() {
   const { toast } = useToast();
 
   const [sessionId, setSessionId] = useState('');
-  
   const transcriptionDisplayRef = useRef<HTMLDivElement>(null);
 
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected');
@@ -67,9 +66,9 @@ export default function StudentPage() {
 
     const unsubStatus = onConnectionStatusChange(status => {
       setConnectionStatus(status);
-      if(status === 'connected') {
+      if (status === 'connected') {
         hasConnected.current = true;
-        setTranscription(''); // Limpiar transcripción inicial
+        setTranscription('');
       }
     });
 
@@ -111,20 +110,19 @@ export default function StudentPage() {
     URL.revokeObjectURL(url);
     toast({
       title: 'Guardado',
-      description:
-        'La transcripción se está descargando como transcripcion.txt.',
+      description: 'La transcripción se está descargando como transcripcion.txt.',
     });
   };
   
   const handleExportToPdf = async () => {
     const element = transcriptionDisplayRef.current;
     if (!element) {
-        toast({
-            variant: 'destructive',
-            title: 'Error',
-            description: 'No se pudo encontrar el contenido de la transcripción.',
-        });
-        return;
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'No se pudo encontrar el contenido de la transcripción.',
+      });
+      return;
     }
     
     toast({
@@ -132,26 +130,24 @@ export default function StudentPage() {
       description: 'Por favor, espera un momento.',
     });
 
-    // Usamos html2canvas para capturar el contenido estilizado
     const canvas = await html2canvas(element, {
-        scale: 2, // Aumentar la escala para mejor resolución
-        useCORS: true,
-        backgroundColor: null, // Mantiene el fondo transparente si lo tiene
+      scale: 2,
+      useCORS: true,
+      backgroundColor: null,
     });
 
     const imgData = canvas.toDataURL('image/png');
 
     const pdf = new jsPDF({
-        orientation: 'p',
-        unit: 'mm',
-        format: 'a4',
+      orientation: 'p',
+      unit: 'mm',
+      format: 'a4',
     });
 
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
     const margin = 15;
 
-    // --- Añadir Encabezado ---
     pdf.setFontSize(18);
     pdf.setFont('helvetica', 'bold');
     pdf.text('Transcripción de la Clase', margin, margin);
@@ -159,9 +155,9 @@ export default function StudentPage() {
     pdf.setFontSize(10);
     pdf.setFont('helvetica', 'normal');
     const date = new Date().toLocaleDateString('es-ES', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     });
     pdf.text(`Fecha: ${date}`, margin, margin + 8);
     pdf.text(`Sala: ${sessionId}`, margin, margin + 12);
@@ -169,7 +165,6 @@ export default function StudentPage() {
     pdf.setLineWidth(0.5);
     pdf.line(margin, margin + 15, pageWidth - margin, margin + 15);
     
-    // --- Añadir Contenido ---
     const imgWidth = pageWidth - margin * 2;
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
     let heightLeft = imgHeight;
@@ -179,22 +174,58 @@ export default function StudentPage() {
     heightLeft -= (pageHeight - position - margin);
 
     while (heightLeft > 0) {
-        position = -heightLeft - margin;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
-        heightLeft -= (pageHeight - margin * 2);
+      position = -heightLeft - margin;
+      pdf.addPage();
+      pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
+      heightLeft -= (pageHeight - margin * 2);
     }
     
     pdf.save(`transcripcion-${sessionId}.pdf`);
 
-     toast({
+    toast({
       title: 'PDF Generado',
       description: 'La descarga de tu transcripción ha comenzado.',
     });
   };
 
   const handleGenerateSummary = async () => {
+    if (!transcription || transcription.trim().length < 50) {
+      toast({
+        title: "No hay transcripción suficiente",
+        description: "Espera a que llegue más texto de la transcripción del maestro.",
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsSummaryOpen(true);
+    setIsGeneratingSummary(true);
+    setSummary('');
+
+    try {
+      const res = await fetch('/api/summarize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: transcription }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || 'Error al generar resumen');
+      }
+
+      setSummary(data.summary ?? '');
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      toast({
+        title: 'Error generando resumen',
+        description: msg,
+        variant: 'destructive',
+      });
+      setSummary('No se pudo generar el resumen.');
+    } finally {
+      setIsGeneratingSummary(false);
+    }
   };
 
   return (
@@ -218,7 +249,7 @@ export default function StudentPage() {
       <div className="absolute top-4 right-4 sm:top-8 sm:right-8 flex items-center gap-2">
         <Tooltip>
           <TooltipTrigger>
-             <div className={`flex items-center gap-2 text-sm ${connectionStatus === 'connected' ? 'text-green-600' : 'text-red-600'}`}>
+            <div className={`flex items-center gap-2 text-sm ${connectionStatus === 'connected' ? 'text-green-600' : 'text-red-600'}`}>
               {connectionStatus === 'connected' ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />}
               <span>{connectionStatus === 'connected' ? 'Conectado' : 'Desconectado'}</span>
             </div>
@@ -232,9 +263,9 @@ export default function StudentPage() {
 
       {!hasConnected.current ? (
         <div className="w-full max-w-sm space-y-4 text-center">
-           <h1 className="text-2xl sm:text-3xl font-bold">Unirse a una Sala</h1>
-           <p className="text-muted-foreground">Introduce el ID de la sala proporcionado por el maestro.</p>
-           <div className="flex w-full items-center space-x-2">
+          <h1 className="text-2xl sm:text-3xl font-bold">Unirse a una Sala</h1>
+          <p className="text-muted-foreground">Introduce el ID de la sala proporcionado por el maestro.</p>
+          <div className="flex w-full items-center space-x-2">
             <Input
               type="text"
               placeholder="ID de la Sala"
@@ -322,7 +353,7 @@ export default function StudentPage() {
           </Card>
         </>
       )}
-       <SummaryDialog
+      <SummaryDialog
         isOpen={isSummaryOpen}
         onOpenChange={setIsSummaryOpen}
         summary={summary}

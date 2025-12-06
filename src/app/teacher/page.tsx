@@ -32,7 +32,6 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { SummaryDialog } from './components/SummaryDialog';
 
-// Carga dinámica de componentes que solo funcionan en el cliente
 const DrawingCanvas = dynamic(
   () => import('./components/DrawingCanvas').then(mod => mod.DrawingCanvas),
   { ssr: false }
@@ -62,7 +61,6 @@ export default function TeacherPage() {
 
   const { toast } = useToast();
 
-  // --- SINCRONIZACIÓN P2P ---
   useEffect(() => {
     const peerId = hostSession();
     setSessionId(peerId);
@@ -76,20 +74,15 @@ export default function TeacherPage() {
     }
   }, []);
 
-
-  // --- SINCRONIZACIÓN CON LA API DE TRANSCRIPCIÓN ---
   useEffect(() => {
     const handleStateChange = (newState: 'recording' | 'stopped' | 'idle') => {
       setIsRecording(newState === 'recording');
     };
 
     const handleTextUpdate = (newText: string, isFinal: boolean) => {
-      // Envía el texto a los alumnos si es el texto final
       if (isFinal) {
         sendToPeers({ type: 'full_text', text: newText });
       }
-      
-      // Actualiza la UI local del profesor
       setTranscription(newText);
     };
 
@@ -102,7 +95,6 @@ export default function TeacherPage() {
     };
   }, [setIsRecording, setTranscription]);
   
-  // --- MANEJO DE COMANDOS DE VOZ ---
   const executeCommand = useCallback((command: string) => {
     const cleanedCommand = command.toLowerCase().trim().replace(/[.,;:]/g, '');
     
@@ -120,7 +112,6 @@ export default function TeacherPage() {
     
     if (commandActions[cleanedCommand]) {
       commandActions[cleanedCommand]();
-      // Resetear el comando de panel para que pueda ser re-ejecutado
       if (['top', 'bottom', 'right', 'left', 'free'].some(c => cleanedCommand.includes(c))) {
         setTimeout(() => setPanelCommand(null), 100);
       }
@@ -136,8 +127,6 @@ export default function TeacherPage() {
     };
   }, [executeCommand]);
 
-
-  // --- MANEJO DE FUNCIONALIDADES DE LA UI ---
   const handleClearCanvas = () => {
     setClearCanvas(true);
     setTimeout(() => setClearCanvas(false), 50);
@@ -162,12 +151,47 @@ export default function TeacherPage() {
   };
 
   const handleGenerateSummary = async () => {
+    if (!transcription || transcription.trim().length < 50) {
+      toast({
+        title: "No hay transcripción suficiente",
+        description: "Espera a más texto o inicia la grabación.",
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsSummaryOpen(true);
+    setIsGeneratingSummary(true);
+    setSummary('');
+
+    try {
+      const res = await fetch('/api/summarize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: transcription }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || 'Error al generar resumen');
+      }
+
+      setSummary(data.summary ?? '');
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      toast({
+        title: 'Error generando resumen',
+        description: msg,
+        variant: 'destructive',
+      });
+      setSummary('No se pudo generar el resumen.');
+    } finally {
+      setIsGeneratingSummary(false);
+    }
   };
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-background">
-      {/* Contenedor Fijo para Controles Principales */}
       <div className="absolute top-4 left-4 sm:top-8 sm:left-8 z-30 flex items-center gap-2">
         <Link href="/">
           <Tooltip>
@@ -209,20 +233,20 @@ export default function TeacherPage() {
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
-             <Button
-                variant="outline"
-                size="icon"
-                onClick={handleGenerateSummary}
-              >
-                <FileText className="h-4 w-4" />
-                <span className="sr-only">Generar resumen de la clase</span>
-              </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleGenerateSummary}
+              disabled={isGeneratingSummary}
+            >
+              <FileText className="h-4 w-4" />
+              <span className="sr-only">Generar resumen de la clase</span>
+            </Button>
           </TooltipTrigger>
-           <TooltipContent><p>Generar Resumen</p></TooltipContent>
+          <TooltipContent><p>Generar Resumen</p></TooltipContent>
         </Tooltip>
       </div>
 
-      {/* Contenedor Dinámico para ID de Sala y Alumnos */}
       {sessionId && (
         <div className={cn(
             "absolute z-30 flex flex-col items-end transition-all duration-300",
@@ -262,7 +286,6 @@ export default function TeacherPage() {
         </>
       )}
 
-      {/* El div contenedor para el posicionamiento del panel */}
       <div className="relative w-full h-full pointer-events-none z-10">
         <TranscriptionPanel command={panelCommand} onPositionChange={setPanelPosition} />
       </div>
