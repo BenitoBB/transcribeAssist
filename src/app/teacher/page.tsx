@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { DrawingToolbar } from './components/DrawingToolbar';
 import { useTranscription } from '@/hooks/use-transcription';
-import { Command } from './components/TranscriptionPanel';
+import { Command, Position } from './components/TranscriptionPanel';
 import {
   startTranscription,
   stopTranscription,
@@ -28,6 +28,7 @@ import {
 } from '@/lib/transcription';
 import { hostSession, sendToPeers, onPeerStatusChange } from '@/lib/p2p';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 // Carga dinámica de componentes que solo funcionan en el cliente
 const DrawingCanvas = dynamic(
@@ -48,6 +49,8 @@ export default function TeacherPage() {
   const { setTranscription, isRecording, setIsRecording } = useTranscription();
   
   const [panelCommand, setPanelCommand] = useState<Command>(null);
+  const [panelPosition, setPanelPosition] = useState<Position>('free');
+
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [peerCount, setPeerCount] = useState(0);
 
@@ -156,7 +159,12 @@ export default function TeacherPage() {
     <div className="relative h-screen w-screen overflow-hidden bg-background">
       {/* Barra de ID de Sala */}
       {sessionId && (
-        <div className="absolute top-4 right-4 sm:top-8 sm:right-8 z-30">
+        <div className={cn(
+            "absolute top-4 sm:top-8 z-30 transition-all duration-300",
+            panelPosition === 'left' ? 'right-4 sm:right-8' : 'left-4 sm:left-8',
+            panelPosition === 'right' ? 'left-4 sm:left-8' : 'right-4 sm:right-8',
+            (panelPosition === 'top' || panelPosition === 'bottom') && 'right-4 sm:right-8'
+          )}>
           <div className="flex items-center gap-2 bg-card p-2 rounded-lg shadow-lg border">
             <span className="text-sm font-medium text-muted-foreground">ID de la Sala:</span>
             <span className="font-mono text-sm text-primary">{sessionId}</span>
@@ -231,7 +239,7 @@ export default function TeacherPage() {
 
       {/* El div contenedor para el posicionamiento del panel */}
       <div className="relative w-full h-full pointer-events-none z-10">
-        <TranscriptionPanel command={panelCommand} />
+        <TranscriptionPanel command={panelCommand} onPositionChange={setPanelPosition} />
       </div>
 
     </div>

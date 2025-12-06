@@ -23,10 +23,15 @@ import { useStyle } from '@/context/StyleContext';
 import { SettingsButton } from '@/components/settings/SettingsButton';
 import { BionicReadingText } from '@/components/BionicReadingText';
 
-type Position = 'top' | 'bottom' | 'left' | 'right' | 'free';
+export type Position = 'top' | 'bottom' | 'left' | 'right' | 'free';
 export type Command = Position | 'free' | null;
 
-export function TranscriptionPanel({ command }: { command: Command }) {
+interface TranscriptionPanelProps {
+  command: Command;
+  onPositionChange: (position: Position) => void;
+}
+
+export function TranscriptionPanel({ command, onPositionChange }: TranscriptionPanelProps) {
   const { transcription } = useTranscription();
   const { style, isBionic } = useStyle();
 
@@ -66,8 +71,9 @@ export function TranscriptionPanel({ command }: { command: Command }) {
     if (command) handleSetPosition(command);
   }, [command]);
 
-  const handleSetPosition = (newPosition: Position | 'free') => {
+  const handleSetPosition = useCallback((newPosition: Position) => {
     setCurrentPosition(newPosition);
+    onPositionChange(newPosition);
     if (!panelRef.current?.parentElement) return;
 
     const parentW = panelRef.current.parentElement.offsetWidth;
@@ -96,7 +102,7 @@ export function TranscriptionPanel({ command }: { command: Command }) {
         setPos({ x: parentW / 2 - 250, y: parentH / 2 - 150 });
         break;
     }
-  };
+  }, [isMobile, onPositionChange]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (currentPosition !== 'free') return;
