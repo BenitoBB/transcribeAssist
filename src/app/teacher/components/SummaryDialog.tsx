@@ -31,22 +31,22 @@ export function SummaryDialog({
         <DialogHeader>
           <DialogTitle>Resumen de la Transcripción</DialogTitle>
           <DialogDescription>
-            Este es un resumen generado por IA de los puntos clave de la clase.
+            Este es un resumen generado de los puntos clave de la clase.
           </DialogDescription>
         </DialogHeader>
         <div className="flex-grow overflow-hidden">
-            <ScrollArea className="h-full w-full rounded-md border p-4">
+          <ScrollArea className="h-full w-full rounded-md border p-4">
             {isLoading ? (
-                <div className="flex items-center justify-center h-full">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    <p className="ml-4 text-muted-foreground">Generando resumen...</p>
-                </div>
+              <div className="flex items-center justify-center h-full gap-2">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="text-muted-foreground">Generando resumen...</p>
+              </div>
             ) : (
-                <p className="text-sm text-foreground whitespace-pre-wrap">
-                {summary || 'La funcionalidad de resumen estará disponible próximamente.'}
-                </p>
+              <p className="text-sm text-foreground whitespace-pre-wrap">
+                {summary || 'No hay resumen disponible.'}
+              </p>
             )}
-            </ScrollArea>
+          </ScrollArea>
         </div>
         <DialogFooter>
           <Button onClick={() => onOpenChange(false)}>Cerrar</Button>
