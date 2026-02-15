@@ -78,10 +78,10 @@ export default function TeacherPage() {
       setIsRecording(newState === 'recording');
     };
 
+    // send every update to peers so the alumno sees the text as it evolves
     const handleTextUpdate = (newText: string, isFinal: boolean) => {
-      if (isFinal) {
-        sendToPeers({ type: 'full_text', text: newText });
-      }
+      // always transmit the latest string; the peer can decide si pinta solo finales
+      sendToPeers({ type: 'full_text', text: newText });
       setTranscription(newText);
     };
 

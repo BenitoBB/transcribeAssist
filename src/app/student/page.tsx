@@ -58,6 +58,7 @@ export default function StudentPage() {
 
   useEffect(() => {
     const unsubData = onDataReceived((data: any) => {
+      console.debug('p2p data received in student:', data);
       if (data.type === 'full_text') {
         setTranscription(data.text);
       }
@@ -78,8 +79,9 @@ export default function StudentPage() {
   }, [setTranscription]);
 
   const handleConnect = () => {
-    if (sessionId.trim()) {
-      joinSession(sessionId.trim());
+    const id = sessionId.trim().toLowerCase();
+    if (id) {
+      joinSession(id);
     } else {
       toast({
         variant: 'destructive',
@@ -227,9 +229,9 @@ export default function StudentPage() {
           <div className="flex w-full items-center space-x-2">
             <Input
               type="text"
-              placeholder="ID de la Sala"
+              placeholder="ID de la Sala (5 caracteres, minúsculas)"
               value={sessionId}
-              onChange={(e) => setSessionId(e.target.value)}
+              onChange={(e) => setSessionId(e.target.value.toLowerCase())}
               className="text-center"
             />
             <Button onClick={handleConnect} disabled={connectionStatus === 'connecting'}>

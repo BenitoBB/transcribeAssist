@@ -138,9 +138,9 @@ function setupConnection(conn: DataConnection) {
  * @returns El ID corto de 5 caracteres.
  */
 export function hostSession(): string {
-  // Usar solo caracteres alfanuméricos para evitar errores de ID inválido en PeerJS.
+  // generamos un id y lo normalizamos a minúsculas para evitar confusiones al copiar/pegar
   const nanoid = customAlphabet('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz', 5);
-  const newId = nanoid();
+  const newId = nanoid().toLowerCase();
   initializePeer(newId);
   return newId;
 }
@@ -150,13 +150,16 @@ export function hostSession(): string {
  * @param teacherId El ID del peer del maestro.
  */
 export function joinSession(teacherId: string) {
+  // for consistency, convert incoming id to lowercase (hostSession returns lowercase)
+  teacherId = teacherId.trim().toLowerCase();
+
   // Inicializamos nuestro propio peer sin ID específico
   const p = initializePeer();
   
   notifyStatusListeners('connecting');
   
   if (connections.some(c => c.peer === teacherId)) {
-      console.log('Already connected to this peer');
+      console.log('Already connected to this peer', teacherId);
       notifyStatusListeners('connected');
       return;
   }
