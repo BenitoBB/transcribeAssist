@@ -15,6 +15,18 @@ export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'er
 
 let peer: Peer | null = null;
 const connections: DataConnection[] = [];
+let heartbeatStarted = false;
+
+// Sistema de keep-alive para detectar desconexiones
+interface PeerWithHeartbeat {
+  conn: DataConnection;
+  lastPong: number;
+  heartbeatTimeout?: NodeJS.Timeout;
+}
+const peersWithHeartbeat: Map<string, PeerWithHeartbeat> = new Map();
+
+const HEARTBEAT_INTERVAL = 5000; // cada 5 segundos
+const HEARTBEAT_TIMEOUT = 15000; // timeout si no hay pong en 15 segundos
 
 // --- Sistema de Eventos para la UI ---
 type DataCallback = (data: any) => void;
@@ -111,15 +123,49 @@ function setupConnection(conn: DataConnection) {
     }
 
     connections.push(conn);
+    
+    // Inicializar keep-alive para este peer
+    const peerHeartbeat: PeerWithHeartbeat = {
+      conn,
+      lastPong: Date.now(),
+    };
+    peersWithHeartbeat.set(conn.peer, peerHeartbeat);
     notifyPeerStatusListeners(connections.length);
 
-    conn.on('data', (data) => {
+    conn.on('data', (data: unknown) => {
       console.log('Received data:', data);
+      
+      // Si es un ping, responder automáticamente con pong
+      if (typeof data === 'object' && data !== null && 'type' in data && data.type === 'ping') {
+        if (conn.open) {
+          conn.send({ type: 'pong' });
+        }
+        return; // no notificar pings a la UI
+      }
+      
+      // Si es un pong, actualizar timestamp
+      if (typeof data === 'object' && data !== null && 'type' in data && data.type === 'pong') {
+        const peer = peersWithHeartbeat.get(conn.peer);
+        if (peer) {
+          peer.lastPong = Date.now();
+          console.log('Pong received from', conn.peer);
+        }
+        return; // no notificar pings/pongs a la UI
+      }
+      
       notifyDataListeners(data);
     });
 
     conn.on('close', () => {
       console.log('Peer disconnected:', conn.peer);
+      
+      // Limpiar heartbeat
+      const peer = peersWithHeartbeat.get(conn.peer);
+      if (peer?.heartbeatTimeout) {
+        clearTimeout(peer.heartbeatTimeout);
+      }
+      peersWithHeartbeat.delete(conn.peer);
+      
       const index = connections.findIndex(c => c.peer === conn.peer);
       if (index > -1) {
         connections.splice(index, 1);
@@ -127,10 +173,46 @@ function setupConnection(conn: DataConnection) {
       }
     });
     
+    conn.on('error', (err) => {
+      console.error('Connection error with', conn.peer, ':', err);
+      // Los errores de conexión a menudo preceden a close(), pero los capturamos igual
+    });
+    
     conn.on('open', () => {
         console.log('Connection opened with:', conn.peer);
         notifyStatusListeners('connected');
     });
+}
+
+/**
+ * Inicia un heartbeat periódico que envía pings a todos los alumnos.
+ * Si un alumno no responde en tiempo, se desconecta automáticamente.
+ */
+function startHeartbeat() {
+  setInterval(() => {
+    const now = Date.now();
+    const peersToRemove: string[] = [];
+    
+    peersWithHeartbeat.forEach((peer, peerId) => {
+      // Si no hubo pong en los últimos 15 segundos, desconectar
+      if (now - peer.lastPong > HEARTBEAT_TIMEOUT) {
+        console.warn('No heartbeat from peer', peerId, '- closing connection');
+        peersToRemove.push(peerId);
+        peer.conn.close();
+        return;
+      }
+      
+      // Enviar ping
+      if (peer.conn.open) {
+        peer.conn.send({ type: 'ping' });
+      }
+    });
+    
+    // Limpiar peers sin respuesta
+    peersToRemove.forEach(peerId => {
+      peersWithHeartbeat.delete(peerId);
+    });
+  }, HEARTBEAT_INTERVAL);
 }
 
 /**
@@ -142,6 +224,13 @@ export function hostSession(): string {
   const nanoid = customAlphabet('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz', 5);
   const newId = nanoid().toLowerCase();
   initializePeer(newId);
+  
+  // Iniciar heartbeat para detectar desconexiones de alumnos
+  if (!heartbeatStarted) {
+    heartbeatStarted = true;
+    startHeartbeat();
+  }
+  
   return newId;
 }
 
