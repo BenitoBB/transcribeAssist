@@ -30,7 +30,6 @@ import {
 import { hostSession, sendToPeers, onPeerStatusChange } from '@/lib/p2p';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { SummaryDialog } from './components/SummaryDialog';
 
 const DrawingCanvas = dynamic(
   () => import('./components/DrawingCanvas').then(mod => mod.DrawingCanvas),
@@ -231,20 +230,6 @@ export default function TeacherPage() {
           </TooltipTrigger>
           <TooltipContent><p>{isRecording ? 'Detener' : 'Iniciar'} Transcripción</p></TooltipContent>
         </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handleGenerateSummary}
-              disabled={isGeneratingSummary}
-            >
-              <FileText className="h-4 w-4" />
-              <span className="sr-only">Generar resumen de la clase</span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent><p>Generar Resumen</p></TooltipContent>
-        </Tooltip>
       </div>
 
       {sessionId && (
@@ -290,12 +275,6 @@ export default function TeacherPage() {
         <TranscriptionPanel command={panelCommand} onPositionChange={setPanelPosition} />
       </div>
 
-      <SummaryDialog
-        isOpen={isSummaryOpen}
-        onOpenChange={setIsSummaryOpen}
-        summary={summary}
-        isLoading={isGeneratingSummary}
-      />
     </div>
   );
 }

@@ -41,7 +41,6 @@ import { useStyle } from '@/context/StyleContext';
 import { useTranscription } from '@/hooks/use-transcription';
 import { joinSession, onDataReceived, onConnectionStatusChange, ConnectionStatus } from '@/lib/p2p';
 import { BionicReadingText } from '@/components/BionicReadingText';
-import { SummaryDialog } from '../teacher/components/SummaryDialog';
 
 export default function StudentPage() {
   const { transcription, setTranscription } = useTranscription();
@@ -188,46 +187,6 @@ export default function StudentPage() {
     });
   };
 
-  const handleGenerateSummary = async () => {
-    if (!transcription || transcription.trim().length < 50) {
-      toast({
-        title: "No hay transcripción suficiente",
-        description: "Espera a que llegue más texto de la transcripción del maestro.",
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setIsSummaryOpen(true);
-    setIsGeneratingSummary(true);
-    setSummary('');
-
-    try {
-      const res = await fetch('/api/summarize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: transcription }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data?.error || 'Error al generar resumen');
-      }
-
-      setSummary(data.summary ?? '');
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
-      toast({
-        title: 'Error generando resumen',
-        description: msg,
-        variant: 'destructive',
-      });
-      setSummary('No se pudo generar el resumen.');
-    } finally {
-      setIsGeneratingSummary(false);
-    }
-  };
-
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-4 relative overflow-hidden">
       <div className="absolute top-4 left-4 sm:top-8 sm:left-8 flex items-center gap-4">
@@ -324,10 +283,6 @@ export default function StudentPage() {
                     <span>Exportar como PDF</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onSelect={handleGenerateSummary}>
-                    <FileText className="mr-2 h-4 w-4" />
-                    <span>Generar Resumen</span>
-                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </CardHeader>
@@ -353,12 +308,7 @@ export default function StudentPage() {
           </Card>
         </>
       )}
-      <SummaryDialog
-        isOpen={isSummaryOpen}
-        onOpenChange={setIsSummaryOpen}
-        summary={summary}
-        isLoading={isGeneratingSummary}
-      />
+      
     </div>
   );
 }
