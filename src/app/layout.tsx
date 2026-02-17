@@ -9,7 +9,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 
 const inter = Inter({ subsets: ['latin'] });
 
-// We need a sub-component to access the useStyle hook
+// Layout principal que envuelve toda la aplicación, proporcionando contexto de estilo, transcripción y tooltips
 function ThemedLayout({ children }: { children: React.ReactNode }) {
   const { theme } = useStyle();
 

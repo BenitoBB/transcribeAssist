@@ -37,7 +37,7 @@ export function TranscriptionPanel({ command, onPositionChange }: TranscriptionP
   const [rulerY, setRulerY] = useState<number>(0);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  // resize state
+  // Estados para arrastrar y redimensionar
   const [isResizing, setIsResizing] = useState(false);
   const resizeStartRef = useRef({ x: 0, y: 0, width: 0, height: 0 });
 
@@ -196,7 +196,7 @@ export function TranscriptionPanel({ command, onPositionChange }: TranscriptionP
 
   const isDocked = currentPosition !== 'free';
 
-  // ref to the bottom marker that we scroll into view when transcription updates
+  // Referencia para autoscroll
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const renderContent = () => (

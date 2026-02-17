@@ -1,6 +1,6 @@
 "use client"
 
-// Inspired by react-hot-toast library
+// Este hook personalizado proporciona una interfaz para mostrar notificaciones tipo "toast" en la aplicación.
 import * as React from "react"
 
 import type {
@@ -93,8 +93,7 @@ export const reducer = (state: State, action: Action): State => {
     case "DISMISS_TOAST": {
       const { toastId } = action
 
-      // ! Side effects ! - This could be extracted into a dismissToast() action,
-      // but I'll keep it here for simplicity
+      // Si se proporciona un toastId, solo se programa la eliminación de ese toast específico. Si no se proporciona, se programan para eliminación todos los toasts actuales.
       if (toastId) {
         addToRemoveQueue(toastId)
       } else {

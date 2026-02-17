@@ -54,10 +54,6 @@ export default function TeacherPage() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [peerCount, setPeerCount] = useState(0);
 
-  const [isSummaryOpen, setIsSummaryOpen] = useState(false);
-  const [summary, setSummary] = useState('');
-  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
-
   const { toast } = useToast();
 
   useEffect(() => {
@@ -78,9 +74,8 @@ export default function TeacherPage() {
       setIsRecording(newState === 'recording');
     };
 
-    // send every update to peers so the alumno sees the text as it evolves
+    // Transmitir siempre el texto completo para que el peer pueda decidir si pinta solo finales o no
     const handleTextUpdate = (newText: string, isFinal: boolean) => {
-      // always transmit the latest string; the peer can decide si pinta solo finales
       sendToPeers({ type: 'full_text', text: newText });
       setTranscription(newText);
     };
@@ -146,46 +141,6 @@ export default function TeacherPage() {
         title: "ID de la Sala Copiado",
         description: "Ahora puedes compartirlo con tus alumnos.",
       });
-    }
-  };
-
-  const handleGenerateSummary = async () => {
-    if (!transcription || transcription.trim().length < 50) {
-      toast({
-        title: "No hay transcripción suficiente",
-        description: "Espera a más texto o inicia la grabación.",
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setIsSummaryOpen(true);
-    setIsGeneratingSummary(true);
-    setSummary('');
-
-    try {
-      const res = await fetch('/api/summarize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: transcription }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data?.error || 'Error al generar resumen');
-      }
-
-      setSummary(data.summary ?? '');
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
-      toast({
-        title: 'Error generando resumen',
-        description: msg,
-        variant: 'destructive',
-      });
-      setSummary('No se pudo generar el resumen.');
-    } finally {
-      setIsGeneratingSummary(false);
     }
   };
 
