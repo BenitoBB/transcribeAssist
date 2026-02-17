@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 
 export function StyleSettingsModal() {
-  const { style, setStyle, theme, setTheme, isBionic, setIsBionic } = useStyle();
+  const { style, setStyle, theme, setTheme, isBionic, setIsBionic, showRuler, setShowRuler } = useStyle();
 
   return (
     <div className="grid gap-6 py-4">
@@ -24,6 +24,14 @@ export function StyleSettingsModal() {
           id="bionic-mode"
           checked={isBionic}
           onCheckedChange={setIsBionic}
+        />
+      </div>
+      <div className="flex items-center justify-between">
+        <Label htmlFor="ruler-mode" className="text-base">Mostrar regla de lectura</Label>
+        <Switch
+          id="ruler-mode"
+          checked={showRuler}
+          onCheckedChange={setShowRuler}
         />
       </div>
       <div className="grid gap-2">

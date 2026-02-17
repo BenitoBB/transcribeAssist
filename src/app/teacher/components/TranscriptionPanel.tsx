@@ -33,7 +33,58 @@ interface TranscriptionPanelProps {
 
 export function TranscriptionPanel({ command, onPositionChange }: TranscriptionPanelProps) {
   const { transcription } = useTranscription();
-  const { style, isBionic } = useStyle();
+  const { style, isBionic, showRuler } = useStyle();
+  const [rulerY, setRulerY] = useState<number>(0);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // resize state
+  const [isResizing, setIsResizing] = useState(false);
+  const resizeStartRef = useRef({ x: 0, y: 0, width: 0, height: 0 });
+
+  const handleContentMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!contentRef.current) return;
+    const rect = contentRef.current.getBoundingClientRect();
+    const scrollTop = contentRef.current.scrollTop;
+    const y = e.clientY - rect.top + scrollTop;
+    setRulerY(y);
+  };
+
+  const handleResizeMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    setIsResizing(true);
+    resizeStartRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      width: size.width,
+      height: size.height,
+    };
+    e.preventDefault();
+  };
+
+  const handleResizeMouseMove = (e: MouseEvent) => {
+    if (!isResizing) return;
+    const dx = e.clientX - resizeStartRef.current.x;
+    const dy = e.clientY - resizeStartRef.current.y;
+    setSize({
+      width: Math.max(200, resizeStartRef.current.width + dx),
+      height: Math.max(100, resizeStartRef.current.height + dy),
+    });
+  };
+
+  const handleResizeMouseUp = () => {
+    setIsResizing(false);
+  };
+
+  useEffect(() => {
+    if (isResizing) {
+      document.addEventListener('mousemove', handleResizeMouseMove);
+      document.addEventListener('mouseup', handleResizeMouseUp);
+    }
+    return () => {
+      document.removeEventListener('mousemove', handleResizeMouseMove);
+      document.removeEventListener('mouseup', handleResizeMouseUp);
+    };
+  }, [isResizing]);
 
   const [currentPosition, setCurrentPosition] = useState<Position>('free');
   const [size, setSize] = useState({ width: 500, height: 300 });
@@ -145,16 +196,38 @@ export function TranscriptionPanel({ command, onPositionChange }: TranscriptionP
 
   const isDocked = currentPosition !== 'free';
 
+  // ref to the bottom marker that we scroll into view when transcription updates
+  const bottomRef = useRef<HTMLDivElement>(null);
+
   const renderContent = () => (
     <ScrollArea className="h-full">
       <div
-        className="p-4 break-words bg-transparent"
+        ref={contentRef}
+        className="p-4 break-words bg-transparent relative"
         style={{ ...style, minHeight: '100%', color: 'inherit' }}
+        onMouseMove={showRuler ? handleContentMouseMove : undefined}
       >
         {isBionic ? <BionicReadingText text={transcription} /> : transcription}
+        <div ref={bottomRef} />
+        {showRuler && (
+          <div
+            className="absolute left-0 right-0 bg-yellow-200/40 pointer-events-none"
+            style={{
+              top: rulerY - style.fontSize * style.lineHeight / 2,
+              height: style.fontSize * style.lineHeight,
+            }}
+          />
+        )}
       </div>
     </ScrollArea>
   );
+
+  // Autoscroll cada vez que cambie la transcripción
+  useEffect(() => {
+    if (bottomRef.current) {
+      bottomRef.current.scrollIntoView({ behavior: 'auto' });
+    }
+  }, [transcription]);
 
   // Vista para Móvil
   if (isMobile) {
@@ -182,6 +255,11 @@ export function TranscriptionPanel({ command, onPositionChange }: TranscriptionP
         transition: isDragging ? 'none' : 'all 0.2s ease-out',
       }}
     >
+      {/* esquina redimensionable */}
+      <div
+        className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize z-30"
+        onMouseDown={handleResizeMouseDown}
+      />
       <Card className="h-full w-full flex flex-col shadow-2xl" onDoubleClick={() => isDocked && handleSetPosition('free')}>
         <CardHeader
           className={`flex flex-row items-center justify-between p-3 border-b ${isDocked ? '' : 'cursor-move drag-handle'}`}

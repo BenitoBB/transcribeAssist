@@ -20,8 +20,8 @@ interface StyleContextType {
   theme: Theme;
   setTheme: React.Dispatch<React.SetStateAction<Theme>>;
   isBionic: boolean;
-  setIsBionic: React.Dispatch<React.SetStateAction<boolean>>;
-}
+  setIsBionic: React.Dispatch<React.SetStateAction<boolean>>;  showRuler: boolean;
+  setShowRuler: React.Dispatch<React.SetStateAction<boolean>>;}
 
 // Estilos por defecto
 const defaultStyle: CustomStyle = {
@@ -43,8 +43,9 @@ export const StyleProvider: React.FC<StyleProviderProps> = ({ children }) => {
   const [style, setStyle] = useState<CustomStyle>(defaultStyle);
   const [theme, setTheme] = useState<Theme>('light');
   const [isBionic, setIsBionic] = useState<boolean>(false);
+  const [showRuler, setShowRuler] = useState<boolean>(false);
 
-  const value = { style, setStyle, theme, setTheme, isBionic, setIsBionic };
+  const value = { style, setStyle, theme, setTheme, isBionic, setIsBionic, showRuler, setShowRuler };
 
   return <StyleContext.Provider value={value}>{children}</StyleContext.Provider>;
 };
