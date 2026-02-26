@@ -45,9 +45,9 @@ export default function TeacherPage() {
   const [isDrawingMode, setIsDrawingMode] = useState(false);
   const [brushColor, setBrushColor] = useState('#FF0000');
   const [clearCanvas, setClearCanvas] = useState(false);
-  
+
   const { transcription, setTranscription, isRecording, setIsRecording } = useTranscription();
-  
+
   const [panelCommand, setPanelCommand] = useState<Command>(null);
   const [panelPosition, setPanelPosition] = useState<Position>('free');
 
@@ -63,7 +63,7 @@ export default function TeacherPage() {
     const unsubPeers = onPeerStatusChange((count) => {
       setPeerCount(count);
     });
-    
+
     return () => {
       unsubPeers();
     }
@@ -88,10 +88,10 @@ export default function TeacherPage() {
       unsubText();
     };
   }, [setIsRecording, setTranscription]);
-  
+
   const executeCommand = useCallback((command: string) => {
     const cleanedCommand = command.toLowerCase().trim().replace(/[.,;:]/g, '');
-    
+
     const commandActions: { [key: string]: () => void } = {
       'iniciar grabación': () => startTranscription().catch(console.error),
       'detener grabación': stopTranscription,
@@ -103,7 +103,7 @@ export default function TeacherPage() {
       'pizarra izquierda': () => setPanelCommand('left'),
       'pizarra centro': () => setPanelCommand('free'),
     };
-    
+
     if (commandActions[cleanedCommand]) {
       commandActions[cleanedCommand]();
       if (['top', 'bottom', 'right', 'left', 'free'].some(c => cleanedCommand.includes(c))) {
@@ -133,7 +133,7 @@ export default function TeacherPage() {
       startTranscription().catch(console.error);
     }
   };
-  
+
   const handleCopySessionId = () => {
     if (sessionId) {
       navigator.clipboard.writeText(sessionId);
@@ -146,7 +146,14 @@ export default function TeacherPage() {
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-background">
-      <div className="absolute top-4 left-4 sm:top-8 sm:left-8 z-30 flex items-center gap-2">
+      <div className={cn(
+        "absolute z-30 flex items-center gap-2 transition-all duration-300",
+        {
+          'top-4 left-4 sm:top-8 sm:left-8': panelPosition === 'free' || panelPosition === 'right' || panelPosition === 'bottom',
+          'top-4 right-4 sm:top-8 sm:right-8': panelPosition === 'left',
+          'bottom-4 left-4 sm:bottom-8 sm:left-8': panelPosition === 'top',
+        }
+      )}>
         <Link href="/">
           <Tooltip>
             <TooltipTrigger asChild>
@@ -189,12 +196,12 @@ export default function TeacherPage() {
 
       {sessionId && (
         <div className={cn(
-            "absolute z-30 flex flex-col items-end transition-all duration-300",
-            {
-                'top-4 right-4 sm:top-8 sm:right-8': panelPosition !== 'right',
-                'top-4 left-4 sm:top-8 sm:left-8': panelPosition === 'right',
-                'bottom-4 right-4 sm:bottom-8 sm:right-8': panelPosition === 'top',
-            }
+          "absolute z-30 flex flex-col transition-all duration-300",
+          {
+            'top-4 right-4 sm:top-8 sm:right-8 items-end': panelPosition === 'free' || panelPosition === 'left' || panelPosition === 'bottom',
+            'top-4 left-4 sm:top-8 sm:left-8 items-start': panelPosition === 'right',
+            'bottom-4 right-4 sm:bottom-8 sm:right-8 items-end': panelPosition === 'top',
+          }
         )}>
           <div className="flex items-center gap-2 bg-card p-2 rounded-lg shadow-lg border">
             <span className="text-sm font-medium text-muted-foreground">ID de la Sala:</span>
@@ -213,7 +220,7 @@ export default function TeacherPage() {
           </p>
         </div>
       )}
-      
+
       {isDrawingMode && (
         <>
           <DrawingToolbar
