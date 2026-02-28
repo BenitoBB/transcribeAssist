@@ -16,7 +16,9 @@ import {
   ArrowBigRight,
   GripVertical,
   Maximize,
+  PictureInPicture2,
 } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useTranscription } from '@/hooks/use-transcription';
 import { useStyle } from '@/context/StyleContext';
@@ -91,9 +93,58 @@ export function TranscriptionPanel({ command, onPositionChange }: TranscriptionP
   const [pos, setPos] = useState({ x: 100, y: 100 });
   const [isMobile, setIsMobile] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  
+
   const panelRef = useRef<HTMLDivElement>(null);
   const dragStartRef = useRef({ x: 0, y: 0 }); // Posición del ratón relativa al panel
+
+  const [pipWindow, setPipWindow] = useState<Window | null>(null);
+
+  const togglePiP = async () => {
+    if (pipWindow) {
+      pipWindow.close();
+      return;
+    }
+
+    if (!('documentPictureInPicture' in window)) {
+      alert('Tu navegador no soporta la función flotante Document PiP (requiere Chrome/Edge en PC).');
+      return;
+    }
+
+    try {
+      const pip = await (window as any).documentPictureInPicture.requestWindow({
+        width: 450,
+        height: 350,
+      });
+
+      // Copiar hojas de estilo
+      [...document.styleSheets].forEach((styleSheet) => {
+        try {
+          const cssRules = [...styleSheet.cssRules].map((rule) => rule.cssText).join('');
+          const style = document.createElement('style');
+          style.textContent = cssRules;
+          pip.document.head.appendChild(style);
+        } catch (e) {
+          if (styleSheet.href) {
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = styleSheet.href;
+            pip.document.head.appendChild(link);
+          }
+        }
+      });
+
+      pip.document.documentElement.className = document.documentElement.className;
+      pip.document.body.className = "bg-background text-foreground";
+
+      setPipWindow(pip);
+
+      pip.addEventListener('pagehide', () => {
+        setPipWindow(null);
+      });
+    } catch (error) {
+      console.error('Error al abrir PiP:', error);
+    }
+  };
 
   // Detectar si es móvil
   useEffect(() => {
@@ -166,10 +217,10 @@ export function TranscriptionPanel({ command, onPositionChange }: TranscriptionP
   }, [pos, currentPosition]);
 
   const handleMouseUp = useCallback(() => setIsDragging(false), []);
-  
+
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!isDragging || !panelRef.current?.parentElement) return;
-    
+
     const parentBounds = panelRef.current.parentElement.getBoundingClientRect();
     let newX = e.clientX - dragStartRef.current.x;
     let newY = e.clientY - dragStartRef.current.y;
@@ -177,7 +228,7 @@ export function TranscriptionPanel({ command, onPositionChange }: TranscriptionP
     // Limitar al viewport
     newX = Math.max(0, Math.min(newX, parentBounds.width - size.width));
     newY = Math.max(0, Math.min(newY, parentBounds.height - size.height));
-    
+
     setPos({ x: newX, y: newY });
   }, [isDragging, size.width, size.height]);
 
@@ -242,6 +293,56 @@ export function TranscriptionPanel({ command, onPositionChange }: TranscriptionP
     );
   }
 
+  if (pipWindow) {
+    const originalPanel = (
+      <div
+        ref={panelRef}
+        className={`absolute pointer-events-auto z-20 ${isDragging ? 'select-none' : ''}`}
+        style={{
+          left: pos.x,
+          top: pos.y,
+          width: size.width,
+          height: size.height,
+          transition: isDragging ? 'none' : 'all 0.2s ease-out',
+        }}
+      >
+        <Card className="h-full w-full flex flex-col shadow-2xl items-center justify-center p-6 text-center border-dashed border-2 border-muted">
+          <PictureInPicture2 className="h-10 w-10 text-muted-foreground mb-4" />
+          <h3 className="font-semibold text-lg mb-2">Pantalla Flotante Activa</h3>
+          <p className="text-muted-foreground text-sm mb-6">
+            La transcripción está ahora en una ventana que siempre se mantiene encima. Ideal para usar PowerPoint o Canva al mismo tiempo.
+          </p>
+          <Button onClick={() => pipWindow.close()} variant="outline">
+            Regresar transcripción aquí
+          </Button>
+        </Card>
+      </div>
+    );
+
+    const pipContent = createPortal(
+      <div className="h-[100vh] w-[100vw] bg-background flex flex-col overflow-hidden text-foreground">
+        <div className="p-2 border-b bg-muted/30 flex justify-between items-center shadow-sm select-none">
+          <div className="flex items-center gap-2">
+            <PictureInPicture2 className="h-4 w-4 text-primary" />
+            <span className="font-semibold text-sm">TranscribeAssist (Siempre encima)</span>
+          </div>
+          <SettingsButton />
+        </div>
+        <div className="flex-grow p-0 min-h-0 bg-background overflow-hidden relative">
+          {renderContent()}
+        </div>
+      </div>,
+      pipWindow.document.body
+    );
+
+    return (
+      <>
+        {originalPanel}
+        {pipContent}
+      </>
+    );
+  }
+
   // Vista para Escritorio
   return (
     <div
@@ -265,53 +366,60 @@ export function TranscriptionPanel({ command, onPositionChange }: TranscriptionP
           className={`flex flex-row items-center justify-between p-3 border-b ${isDocked ? '' : 'cursor-move drag-handle'}`}
           onMouseDown={handleMouseDown}
         >
-            <div className="flex items-center gap-2">
-              <GripVertical className="text-muted-foreground" />
-              <CardTitle className="text-base font-semibold">Transcripción</CardTitle>
-            </div>
-            <div className="flex items-center gap-1">
-              <SettingsButton />
-              {/* Botones de anclaje... */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleSetPosition('top')}>
-                    <ArrowBigUp className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger><TooltipContent><p>Anclar arriba</p></TooltipContent>
-              </Tooltip>
-               <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleSetPosition('bottom')}>
-                    <ArrowBigDown className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger><TooltipContent><p>Anclar abajo</p></TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleSetPosition('left')}>
-                    <ArrowBigLeft className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger><TooltipContent><p>Anclar izquierda</p></TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleSetPosition('right')}>
-                    <ArrowBigRight className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger><TooltipContent><p>Anclar derecha</p></TooltipContent>
-              </Tooltip>
-               <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleSetPosition('free')}>
-                    <Maximize className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger><TooltipContent><p>Modo flotante</p></TooltipContent>
-              </Tooltip>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0 flex-grow overflow-hidden min-h-0">
-            {renderContent()}
-          </CardContent>
+          <div className="flex items-center gap-2">
+            <GripVertical className="text-muted-foreground" />
+            <CardTitle className="text-base font-semibold">Transcripción</CardTitle>
+          </div>
+          <div className="flex items-center gap-1">
+            <SettingsButton />
+            {/* Botones de anclaje... */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleSetPosition('top')}>
+                  <ArrowBigUp className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger><TooltipContent><p>Anclar arriba</p></TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleSetPosition('bottom')}>
+                  <ArrowBigDown className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger><TooltipContent><p>Anclar abajo</p></TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-primary" onClick={togglePiP}>
+                  <PictureInPicture2 className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger><TooltipContent><p>Pantalla Flotante (Siempre Encima)</p></TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleSetPosition('left')}>
+                  <ArrowBigLeft className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger><TooltipContent><p>Anclar izquierda</p></TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleSetPosition('right')}>
+                  <ArrowBigRight className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger><TooltipContent><p>Anclar derecha</p></TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleSetPosition('free')}>
+                  <Maximize className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger><TooltipContent><p>Modo flotante</p></TooltipContent>
+            </Tooltip>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0 flex-grow overflow-hidden min-h-0">
+          {renderContent()}
+        </CardContent>
       </Card>
     </div>
   );
