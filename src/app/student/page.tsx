@@ -13,6 +13,7 @@ import {
   WifiOff,
   FileText,
   Pencil,
+  Search,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -78,6 +79,11 @@ export default function StudentPage() {
   const [isEditingClassName, setIsEditingClassName] = useState(false);
   const [startTime, setStartTime] = useState<Date | null>(null);
   const classNameInputRef = useRef<HTMLInputElement>(null);
+
+  // Búsqueda
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const unsubData = onDataReceived((data: any) => {
@@ -257,6 +263,76 @@ export default function StudentPage() {
     setIsEditingClassName(false);
   };
 
+  // Función para renderizar el texto con resaltado de búsqueda
+  const renderHighlightedText = (textToRender: string) => {
+    if (!textToRender) return "Esperando transcripción del maestro...";
+    if (!searchQuery.trim()) {
+      return isBionic ? <BionicReadingText text={textToRender} /> : textToRender;
+    }
+
+    const query = searchQuery.trim().toLowerCase();
+
+    // Función auxiliar para resaltar dentro de una cadena normal
+    const highlightString = (str: string) => {
+      const parts = str.split(new RegExp(`(${query})`, 'gi'));
+      return (
+        <>
+          {parts.map((part, i) =>
+            part.toLowerCase() === query ? (
+              <mark key={i} className="bg-yellow-300 text-black px-1 rounded" id={i === 1 ? 'first-search-match' : undefined}>{part}</mark>
+            ) : part
+          )}
+        </>
+      );
+    };
+
+    if (isBionic) {
+      // Para bionic reading, separamos primero y luego resaltamos cada trozo
+      const parts = textToRender.split(/(\s+)/);
+      return (
+        <>
+          {parts.map((word, index) => {
+            if (/\s+/.test(word)) return <React.Fragment key={index}>{word}</React.Fragment>;
+
+            // Aplicar lógica bionic
+            const mid = Math.ceil(word.length / 2);
+            const boldPart = word.slice(0, mid);
+            const normalPart = word.slice(mid);
+
+            // Si la palabra entera incluye nuestra búsqueda buscamos la forma de resaltarla
+            if (word.toLowerCase().includes(query)) {
+              return (
+                <mark key={index} className="bg-yellow-300 text-black px-0.5 rounded" id={index === 1 ? 'first-search-match' : undefined}>
+                  <span className="font-bold">{boldPart}</span>{normalPart}
+                </mark>
+              );
+            }
+
+            // Si no, renderizado normal bionic
+            return (
+              <React.Fragment key={index}>
+                <span className="font-bold">{boldPart}</span>{normalPart}
+              </React.Fragment>
+            );
+          })}
+        </>
+      )
+    }
+
+    return highlightString(textToRender);
+  };
+
+  // Auto-scroll al primer resultado cuando se busca
+  useEffect(() => {
+    if (searchQuery.trim()) {
+      const match = document.getElementById('first-search-match');
+      if (match) {
+        match.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  }, [searchQuery, transcription]);
+
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-4 relative overflow-hidden">
       <div className="absolute top-4 left-4 sm:top-8 sm:left-8 flex items-center gap-4">
@@ -354,10 +430,34 @@ export default function StudentPage() {
           </div>
 
           <Card className="w-full max-w-4xl h-[60vh] flex flex-col shadow-lg">
-            <CardHeader className="flex flex-row items-center justify-between p-3 border-b">
-              <CardTitle className="text-base font-semibold">
-                Transcripción en Tiempo Real
+            <CardHeader className="flex flex-row items-center justify-between p-3 border-b gap-4">
+              <CardTitle className="text-base font-semibold whitespace-nowrap">
+                Transcripción
               </CardTitle>
+
+              {/* Barra de Búsqueda */}
+              <div className="flex-1 flex justify-end max-w-xs ml-auto items-center">
+                {isSearching ? (
+                  <div className="flex items-center gap-2 w-full animate-in fade-in slide-in-from-right-4 duration-200">
+                    <Input
+                      ref={searchInputRef}
+                      type="search"
+                      placeholder="Buscar en el texto..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="h-8 text-sm w-full"
+                      autoFocus
+                      onBlur={() => !searchQuery && setIsSearching(false)}
+                    />
+                  </div>
+                ) : (
+                  <Button variant="ghost" size="sm" onClick={() => setIsSearching(true)} className="h-8 px-2 text-muted-foreground hover:text-foreground">
+                    <Search className="h-4 w-4 mr-2" />
+                    <span className="text-sm">Buscar</span>
+                  </Button>
+                )}
+              </div>
+
               <DropdownMenu>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -401,11 +501,7 @@ export default function StudentPage() {
                     color: 'var(--foreground)',
                   }}
                 >
-                  {isBionic ? (
-                    <BionicReadingText text={transcription || "Esperando transcripción del maestro..."} />
-                  ) : (
-                    transcription || "Esperando transcripción del maestro..."
-                  )}
+                  {renderHighlightedText(transcription)}
                 </div>
               </ScrollArea>
             </CardContent>
