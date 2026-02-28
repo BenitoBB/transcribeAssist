@@ -18,7 +18,7 @@ export function StyleSettingsModal() {
 
   return (
     <div className="grid gap-6 py-4">
-       <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between">
         <Label htmlFor="bionic-mode" className="text-base">Modo de Lectura Biónica</Label>
         <Switch
           id="bionic-mode"
@@ -27,7 +27,7 @@ export function StyleSettingsModal() {
         />
       </div>
       <div className="flex items-center justify-between">
-        <Label htmlFor="ruler-mode" className="text-base">Mostrar regla de lectura</Label>
+        <Label htmlFor="ruler-mode" className="text-base">Mostrar Regla de Lectura</Label>
         <Switch
           id="ruler-mode"
           checked={showRuler}
@@ -84,7 +84,7 @@ export function StyleSettingsModal() {
           </SelectContent>
         </Select>
       </div>
-       <div className="grid gap-2">
+      <div className="grid gap-2">
         <Label>Tema de Color</Label>
         <div className="grid grid-cols-2 gap-2">
           <Button variant={theme === 'light' ? 'default' : 'outline'} onClick={() => setTheme('light')}>Claro</Button>

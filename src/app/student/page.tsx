@@ -62,8 +62,18 @@ function formatDate(date: Date): string {
 
 export default function StudentPage() {
   const { transcription, setTranscription } = useTranscription();
-  const { style, isBionic } = useStyle();
+  const { style, isBionic, showRuler } = useStyle();
   const { toast } = useToast();
+
+  const [rulerY, setRulerY] = useState<number>(0);
+
+  const handleContentMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!transcriptionDisplayRef.current) return;
+    const rect = transcriptionDisplayRef.current.getBoundingClientRect();
+    const scrollTop = transcriptionDisplayRef.current.scrollTop;
+    const y = e.clientY - rect.top + scrollTop;
+    setRulerY(y);
+  };
 
   const [sessionId, setSessionId] = useState('');
   const transcriptionDisplayRef = useRef<HTMLDivElement>(null);
@@ -494,7 +504,8 @@ export default function StudentPage() {
               <ScrollArea className="h-full w-full">
                 <div
                   ref={transcriptionDisplayRef}
-                  className="p-6 break-words bg-background"
+                  className="p-6 break-words bg-background relative"
+                  onMouseMove={showRuler ? handleContentMouseMove : undefined}
                   style={{
                     ...style,
                     minHeight: '100%',
@@ -502,6 +513,15 @@ export default function StudentPage() {
                   }}
                 >
                   {renderHighlightedText(transcription)}
+                  {showRuler && (
+                    <div
+                      className="absolute left-0 right-0 bg-yellow-200/40 pointer-events-none"
+                      style={{
+                        top: rulerY - style.fontSize * style.lineHeight / 2,
+                        height: style.fontSize * style.lineHeight,
+                      }}
+                    />
+                  )}
                 </div>
               </ScrollArea>
             </CardContent>
