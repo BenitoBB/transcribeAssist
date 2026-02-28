@@ -72,6 +72,9 @@ export default function TeacherPage() {
   useEffect(() => {
     const handleStateChange = (newState: 'recording' | 'stopped' | 'idle') => {
       setIsRecording(newState === 'recording');
+      if (newState === 'recording') {
+        sendToPeers({ type: 'recording_started', timestamp: new Date().toISOString() });
+      }
     };
 
     // Transmitir siempre el texto completo para que el peer pueda decidir si pinta solo finales o no

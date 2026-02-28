@@ -12,6 +12,7 @@ import {
   Wifi,
   WifiOff,
   FileText,
+  Pencil,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -42,6 +43,22 @@ import { useTranscription } from '@/hooks/use-transcription';
 import { joinSession, onDataReceived, onConnectionStatusChange, ConnectionStatus } from '@/lib/p2p';
 import { BionicReadingText } from '@/components/BionicReadingText';
 
+function formatTime(date: Date): string {
+  return date.toLocaleTimeString('es-ES', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+}
+
+function formatDate(date: Date): string {
+  return date.toLocaleDateString('es-ES', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+}
+
 export default function StudentPage() {
   const { transcription, setTranscription } = useTranscription();
   const { style, isBionic } = useStyle();
@@ -56,11 +73,21 @@ export default function StudentPage() {
   const [summary, setSummary] = useState('');
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
 
+  // Metadata de la clase
+  const [className, setClassName] = useState('');
+  const [isEditingClassName, setIsEditingClassName] = useState(false);
+  const [startTime, setStartTime] = useState<Date | null>(null);
+  const classNameInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     const unsubData = onDataReceived((data: any) => {
       console.debug('p2p data received in student:', data);
       if (data.type === 'full_text') {
         setTranscription(data.text);
+      }
+      if (data.type === 'recording_started' && data.timestamp) {
+        // Solo establecer la hora de inicio la primera vez
+        setStartTime(prev => prev ?? new Date(data.timestamp));
       }
     });
 
@@ -78,21 +105,26 @@ export default function StudentPage() {
     };
   }, [setTranscription]);
 
-  const handleConnect = () => {
-    const id = sessionId.trim().toLowerCase();
-    if (id) {
-      joinSession(id);
-    } else {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Por favor, introduce un ID de sala válido.',
-      });
-    }
+  // Generar el encabezado de metadata para exportaciones de texto
+  const buildTextHeader = (endTime: Date): string => {
+    const lines: string[] = [];
+    lines.push('═══════════════════════════════════════════');
+    lines.push('  TRANSCRIPCIÓN DE CLASE');
+    lines.push('═══════════════════════════════════════════');
+    if (className) lines.push(`  Clase: ${className}`);
+    lines.push(`  Sala: ${sessionId}`);
+    lines.push(`  Fecha: ${formatDate(endTime)}`);
+    if (startTime) lines.push(`  Hora de inicio: ${formatTime(startTime)}`);
+    lines.push(`  Hora de finalización: ${formatTime(endTime)}`);
+    lines.push('═══════════════════════════════════════════');
+    lines.push('');
+    return lines.join('\n');
   };
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(transcription);
+    const endTime = new Date();
+    const header = buildTextHeader(endTime);
+    navigator.clipboard.writeText(header + transcription);
     toast({
       title: 'Copiado',
       description: 'La transcripción ha sido copiada al portapapeles.',
@@ -100,18 +132,23 @@ export default function StudentPage() {
   };
 
   const handleSave = () => {
-    const blob = new Blob([transcription], { type: 'text/plain' });
+    const endTime = new Date();
+    const header = buildTextHeader(endTime);
+    const blob = new Blob([header + transcription], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'transcripcion.txt';
+    const fileName = className
+      ? `transcripcion-${className.replace(/\s+/g, '_')}.txt`
+      : 'transcripcion.txt';
+    a.download = fileName;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     toast({
       title: 'Guardado',
-      description: 'La transcripción se está descargando como transcripcion.txt.',
+      description: `La transcripción se está descargando como ${fileName}.`,
     });
   };
 
@@ -125,6 +162,8 @@ export default function StudentPage() {
       });
       return;
     }
+
+    const endTime = new Date();
 
     toast({
       title: 'Generando PDF...',
@@ -149,27 +188,36 @@ export default function StudentPage() {
     const pageHeight = pdf.internal.pageSize.getHeight();
     const margin = 15;
 
+    // Título
     pdf.setFontSize(18);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('Transcripción de la Clase', margin, margin);
+    const title = className
+      ? `Transcripcion: ${className}`
+      : 'Transcripcion de la Clase';
+    pdf.text(title, margin, margin);
 
+    // Metadata
     pdf.setFontSize(10);
     pdf.setFont('helvetica', 'normal');
-    const date = new Date().toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-    pdf.text(`Fecha: ${date}`, margin, margin + 8);
-    pdf.text(`Sala: ${sessionId}`, margin, margin + 12);
+    let metaY = margin + 8;
+    pdf.text(`Fecha: ${formatDate(endTime)}`, margin, metaY);
+    metaY += 4;
+    pdf.text(`Sala: ${sessionId}`, margin, metaY);
+    metaY += 4;
+    if (startTime) {
+      pdf.text(`Hora de inicio: ${formatTime(startTime)}`, margin, metaY);
+      metaY += 4;
+    }
+    pdf.text(`Hora de finalizacion: ${formatTime(endTime)}`, margin, metaY);
+    metaY += 4;
 
     pdf.setLineWidth(0.5);
-    pdf.line(margin, margin + 15, pageWidth - margin, margin + 15);
+    pdf.line(margin, metaY + 2, pageWidth - margin, metaY + 2);
 
     const imgWidth = pageWidth - margin * 2;
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
     let heightLeft = imgHeight;
-    let position = margin + 20;
+    let position = metaY + 7;
 
     pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
     heightLeft -= (pageHeight - position - margin);
@@ -181,12 +229,32 @@ export default function StudentPage() {
       heightLeft -= (pageHeight - margin * 2);
     }
 
-    pdf.save(`transcripcion-${sessionId}.pdf`);
+    const fileName = className
+      ? `transcripcion-${className.replace(/\s+/g, '_')}.pdf`
+      : `transcripcion-${sessionId}.pdf`;
+    pdf.save(fileName);
 
     toast({
       title: 'PDF Generado',
       description: 'La descarga de tu transcripción ha comenzado.',
     });
+  };
+
+  const handleConnect = () => {
+    const id = sessionId.trim().toLowerCase();
+    if (id) {
+      joinSession(id);
+    } else {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Por favor, introduce un ID de sala válido.',
+      });
+    }
+  };
+
+  const handleClassNameSubmit = () => {
+    setIsEditingClassName(false);
   };
 
   return (
@@ -244,11 +312,45 @@ export default function StudentPage() {
         </div>
       ) : (
         <>
-          <div className="text-center mb-6 sm:mb-8">
+          <div className="text-center mb-4 sm:mb-6">
             <h1 className="text-2xl sm:text-3xl font-bold">Vista del Alumno</h1>
             <p className="mt-2 text-sm sm:text-base text-muted-foreground">
               Viendo la transcripción de la sala: <span className="font-mono text-primary">{sessionId}</span>
             </p>
+          </div>
+
+          {/* Nombre de la clase y metadata */}
+          <div className="w-full max-w-4xl mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              {isEditingClassName ? (
+                <Input
+                  ref={classNameInputRef}
+                  type="text"
+                  placeholder="Nombre de la clase"
+                  value={className}
+                  onChange={(e) => setClassName(e.target.value)}
+                  onBlur={handleClassNameSubmit}
+                  onKeyDown={(e) => e.key === 'Enter' && handleClassNameSubmit()}
+                  className="w-64 h-8 text-sm"
+                  autoFocus
+                />
+              ) : (
+                <button
+                  onClick={() => setIsEditingClassName(true)}
+                  className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors group"
+                >
+                  <Pencil className="h-3.5 w-3.5 opacity-50 group-hover:opacity-100" />
+                  <span className={className ? 'text-foreground font-medium' : 'italic'}>
+                    {className || 'Agregar nombre de clase...'}
+                  </span>
+                </button>
+              )}
+            </div>
+            {startTime && (
+              <span className="text-xs text-muted-foreground">
+                Inicio: {formatTime(startTime)}
+              </span>
+            )}
           </div>
 
           <Card className="w-full max-w-4xl h-[60vh] flex flex-col shadow-lg">
