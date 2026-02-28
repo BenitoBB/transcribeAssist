@@ -11,6 +11,7 @@ export type TranscriptionState = 'idle' | 'recording' | 'stopped';
 let recognition: SpeechRecognition | null = null;
 let finalTranscription = '';
 let commandCallback: ((command: string) => void) | null = null;
+let intentionalStop = false;
 
 // --- Sistema de Eventos para la UI ---
 type TranscriptionCallback = (text: string, isFinal: boolean) => void;
@@ -40,7 +41,7 @@ function notifyTextListeners(text: string, isFinal: boolean) {
 }
 
 function notifyStateListeners(state: TranscriptionState) {
-  stateListeners.forEach(listener => listener(state, state));
+  stateListeners.forEach(listener => listener(state));
 }
 
 /**
@@ -86,12 +87,22 @@ export function startTranscription(): Promise<void> {
 
     recognition.onstart = () => {
       finalTranscription = '';
+      intentionalStop = false;
       notifyTextListeners('🎙️ Grabación iniciada...', true);
       notifyStateListeners('recording');
       resolve();
     };
 
     recognition.onend = () => {
+      if (!intentionalStop && recognition) {
+        // La API se detuvo por silencio, reiniciar automáticamente
+        try {
+          recognition.start();
+          return;
+        } catch (e) {
+          // Si falla el reinicio, detenemos normalmente
+        }
+      }
       notifyTextListeners(finalTranscription || 'Grabación detenida.', true);
       notifyStateListeners('stopped');
       recognition = null;
@@ -124,7 +135,7 @@ export function startTranscription(): Promise<void> {
       }
       const fullText = finalTranscription + interimTranscription;
       notifyTextListeners(fullText, false); // Interim update
-      
+
       // Send a final update when the final transcription changes
       if (event.results[event.results.length - 1].isFinal) {
         notifyTextListeners(finalTranscription, true);
@@ -144,7 +155,7 @@ export function startTranscription(): Promise<void> {
         notifyTextListeners(errorMsg, true);
         console.error(errorMsg, err);
         if (recognition) {
-            recognition.stop();
+          recognition.stop();
         }
         reject(err);
       });
@@ -159,5 +170,6 @@ export function stopTranscription(): void {
   if (!recognition) {
     return;
   }
+  intentionalStop = true;
   recognition.stop();
 }

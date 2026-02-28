@@ -114,7 +114,7 @@ export default function StudentPage() {
       description: 'La transcripción se está descargando como transcripcion.txt.',
     });
   };
-  
+
   const handleExportToPdf = async () => {
     const element = transcriptionDisplayRef.current;
     if (!element) {
@@ -125,7 +125,7 @@ export default function StudentPage() {
       });
       return;
     }
-    
+
     toast({
       title: 'Generando PDF...',
       description: 'Por favor, espera un momento.',
@@ -162,10 +162,10 @@ export default function StudentPage() {
     });
     pdf.text(`Fecha: ${date}`, margin, margin + 8);
     pdf.text(`Sala: ${sessionId}`, margin, margin + 12);
-    
+
     pdf.setLineWidth(0.5);
     pdf.line(margin, margin + 15, pageWidth - margin, margin + 15);
-    
+
     const imgWidth = pageWidth - margin * 2;
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
     let heightLeft = imgHeight;
@@ -180,7 +180,7 @@ export default function StudentPage() {
       pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
       heightLeft -= (pageHeight - margin * 2);
     }
-    
+
     pdf.save(`transcripcion-${sessionId}.pdf`);
 
     toast({
@@ -206,7 +206,7 @@ export default function StudentPage() {
           </Tooltip>
         </Link>
       </div>
-      
+
       <div className="absolute top-4 right-4 sm:top-8 sm:right-8 flex items-center gap-2">
         <Tooltip>
           <TooltipTrigger>
@@ -288,7 +288,7 @@ export default function StudentPage() {
                 </DropdownMenuContent>
               </DropdownMenu>
             </CardHeader>
-            <CardContent className="p-0 flex-grow">
+            <CardContent className="p-0 flex-grow overflow-hidden min-h-0">
               <ScrollArea className="h-full w-full">
                 <div
                   ref={transcriptionDisplayRef}
@@ -310,7 +310,7 @@ export default function StudentPage() {
           </Card>
         </>
       )}
-      
+
     </div>
   );
 }
