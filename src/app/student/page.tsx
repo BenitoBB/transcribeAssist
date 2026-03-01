@@ -14,7 +14,15 @@ import {
   FileText,
   Pencil,
   Search,
+  Highlighter,
 } from 'lucide-react';
+
+export type HighlightColor = 'amarillo' | 'verde' | 'rojo';
+
+interface Highlight {
+  text: string;
+  color: HighlightColor;
+}
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -62,7 +70,7 @@ function formatDate(date: Date): string {
 
 export default function StudentPage() {
   const { transcription, setTranscription } = useTranscription();
-  const { style, isBionic, showRuler } = useStyle();
+  const { style, isBionic, showRuler, theme } = useStyle();
   const { toast } = useToast();
 
   const [rulerY, setRulerY] = useState<number>(0);
@@ -94,6 +102,47 @@ export default function StudentPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Marcatextos / Highlights
+  const [highlights, setHighlights] = useState<Highlight[]>([]);
+
+  // Función para resolver colores del marcatextos basados en el `theme` activo
+  const getThemeHighlightColor = (baseColor: HighlightColor): { bg: string; text: string; label: string; hex: string } => {
+    if (theme === 'protanopia' || theme === 'deuteranopia') {
+      if (baseColor === 'amarillo') return { bg: 'bg-blue-200', text: 'text-blue-900', label: 'Azul', hex: '#bfdbfe' };
+      if (baseColor === 'verde') return { bg: 'bg-orange-200', text: 'text-orange-900', label: 'Naranja', hex: '#fed7aa' };
+      if (baseColor === 'rojo') return { bg: 'bg-purple-200', text: 'text-purple-900', label: 'Morado', hex: '#e9d5ff' };
+    }
+    if (theme === 'dark') {
+      if (baseColor === 'amarillo') return { bg: 'bg-yellow-500/40', text: 'text-yellow-100', label: 'Amarillo', hex: '#ca8a04' };
+      if (baseColor === 'verde') return { bg: 'bg-green-500/40', text: 'text-green-100', label: 'Verde', hex: '#16a34a' };
+      if (baseColor === 'rojo') return { bg: 'bg-red-500/40', text: 'text-red-100', label: 'Rojo', hex: '#dc2626' };
+    }
+    // light, accessible, tritanopia (tritanopia usa colores estándar porque ven amarillo/rojo bien, el problema es azul)
+    if (baseColor === 'amarillo') return { bg: 'bg-yellow-200', text: 'text-yellow-900', label: 'Amarillo', hex: '#fef08a' };
+    if (baseColor === 'verde') return { bg: 'bg-green-200', text: 'text-green-900', label: 'Verde', hex: '#bbf7d0' };
+    if (baseColor === 'rojo') return { bg: 'bg-red-200', text: 'text-red-900', label: 'Rojo', hex: '#fecaca' };
+
+    return { bg: 'bg-yellow-200', text: 'text-yellow-900', label: 'Marcado', hex: '#fef08a' };
+  };
+
+  const handleApplyHighlight = (color: HighlightColor) => {
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed) return;
+    const text = selection.toString().trim();
+    if (text.length > 0) {
+      setHighlights(prev => {
+        // Evitar duplicados exactos superpuestos
+        if (prev.some(h => h.text === text && h.color === color)) return prev;
+        return [...prev, { text, color }];
+      });
+      toast({
+        title: 'Texto resaltado',
+        description: `Se ha marcado con color ${getThemeHighlightColor(color).label}.`,
+      });
+    }
+    selection.removeAllRanges();
+  };
 
   useEffect(() => {
     const unsubData = onDataReceived((data: any) => {
@@ -147,10 +196,23 @@ export default function StudentPage() {
     return lines.join('\n');
   };
 
+  // Prepara el texto a exportar, incluyendo los marcadores de colores para TXT y Copiado
+  const getExportTextWithHighlights = () => {
+    let exportText = transcription;
+    // Ordenar de mayor a menor longitud para no reemplazar partes subyacentes
+    const sortedHighlights = [...highlights].sort((a, b) => b.text.length - a.text.length);
+    sortedHighlights.forEach(h => {
+      const label = getThemeHighlightColor(h.color).label;
+      // reemplazar globalmente sin afectar los que ya modificamos a menos que se crucen
+      exportText = exportText.split(h.text).join(`[📌 ${label}: ${h.text}]`);
+    });
+    return exportText;
+  };
+
   const handleCopy = () => {
     const endTime = new Date();
     const header = buildTextHeader(endTime);
-    navigator.clipboard.writeText(header + transcription);
+    navigator.clipboard.writeText(header + getExportTextWithHighlights());
     toast({
       title: 'Copiado',
       description: 'La transcripción ha sido copiada al portapapeles.',
@@ -160,7 +222,7 @@ export default function StudentPage() {
   const handleSave = () => {
     const endTime = new Date();
     const header = buildTextHeader(endTime);
-    const blob = new Blob([header + transcription], { type: 'text/plain' });
+    const blob = new Blob([header + getExportTextWithHighlights()], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -283,63 +345,83 @@ export default function StudentPage() {
     setIsEditingClassName(false);
   };
 
-  // Función para renderizar el texto con resaltado de búsqueda
+  // Función para renderizar el texto con resaltado de búsqueda y marcatextos manuales
   const renderHighlightedText = (textToRender: string) => {
     if (!textToRender) return "Esperando transcripción del maestro...";
-    if (!searchQuery.trim()) {
-      return isBionic ? <BionicReadingText text={textToRender} /> : textToRender;
+
+    // Preparar término de búsqueda y marcadores manuales
+    const searchMatch = searchQuery.trim().toLowerCase();
+    const matchers: { text: string; type: 'search' | HighlightColor }[] = [];
+
+    if (searchMatch) {
+      matchers.push({ text: searchMatch, type: 'search' });
     }
 
-    const query = searchQuery.trim().toLowerCase();
+    // Evitar procesar sub-strings vacías o muy pequeñas y ordenar los matchers largos primero
+    [...highlights]
+      .sort((a, b) => b.text.length - a.text.length)
+      .forEach(h => {
+        if (h.text.trim()) matchers.push({ text: h.text.toLowerCase(), type: h.color });
+      });
 
-    // Función auxiliar para resaltar dentro de una cadena normal
-    const highlightString = (str: string) => {
-      const parts = str.split(new RegExp(`(${query})`, 'gi'));
-      return (
-        <>
-          {parts.map((part, i) =>
-            part.toLowerCase() === query ? (
-              <mark key={i} className="bg-yellow-300 text-black px-1 rounded" id={i === 1 ? 'first-search-match' : undefined}>{part}</mark>
-            ) : part
-          )}
-        </>
-      );
+    // Función auxiliar para aplicar bionic a un texto simple
+    const applyBionic = (str: string, keyPrefix: string) => {
+      if (!isBionic) return str;
+      return str.split(/(\s+)/).map((word, k) => {
+        if (/\s+/.test(word)) return <React.Fragment key={`${keyPrefix}-${k}`}>{word}</React.Fragment>;
+        const mid = Math.ceil(word.length / 2);
+        return (
+          <React.Fragment key={`${keyPrefix}-${k}`}>
+            <span className="font-bold">{word.slice(0, mid)}</span>{word.slice(mid)}
+          </React.Fragment>
+        );
+      });
     };
 
-    if (isBionic) {
-      // Para bionic reading, separamos primero y luego resaltamos cada trozo
-      const parts = textToRender.split(/(\s+)/);
-      return (
-        <>
-          {parts.map((word, index) => {
-            if (/\s+/.test(word)) return <React.Fragment key={index}>{word}</React.Fragment>;
-
-            // Aplicar lógica bionic
-            const mid = Math.ceil(word.length / 2);
-            const boldPart = word.slice(0, mid);
-            const normalPart = word.slice(mid);
-
-            // Si la palabra entera incluye nuestra búsqueda buscamos la forma de resaltarla
-            if (word.toLowerCase().includes(query)) {
-              return (
-                <mark key={index} className="bg-yellow-300 text-black px-0.5 rounded" id={index === 1 ? 'first-search-match' : undefined}>
-                  <span className="font-bold">{boldPart}</span>{normalPart}
-                </mark>
-              );
-            }
-
-            // Si no, renderizado normal bionic
-            return (
-              <React.Fragment key={index}>
-                <span className="font-bold">{boldPart}</span>{normalPart}
-              </React.Fragment>
-            );
-          })}
-        </>
-      )
+    if (matchers.length === 0) {
+      return applyBionic(textToRender, 'base');
     }
 
-    return highlightString(textToRender);
+    // Escapar para regex seguro
+    const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regexPattern = matchers.map(m => escapeRegExp(m.text)).join('|');
+
+    // Split capturando el grupo, lo que nos deja: [no_match, match, no_match, match, ...]
+    const parts = textToRender.split(new RegExp(`(${regexPattern})`, 'gi'));
+    let searchHitCount = 0;
+
+    return (
+      <>
+        {parts.map((part, index) => {
+          const lowerPart = part.toLowerCase();
+          const matchedTheme = matchers.find(m => m.text === lowerPart);
+
+          if (matchedTheme) {
+            let className = '';
+            let id = undefined;
+
+            if (matchedTheme.type === 'search') {
+              className = 'bg-yellow-300 text-black px-1 rounded shadow-sm';
+              if (searchHitCount === 0) {
+                id = 'first-search-match';
+              }
+              searchHitCount++;
+            } else {
+              const styles = getThemeHighlightColor(matchedTheme.type as HighlightColor);
+              className = `${styles.bg} ${styles.text} px-1 rounded transition-colors`;
+            }
+
+            return (
+              <mark key={index} className={className} id={id}>
+                {applyBionic(part, `mark-${index}`)}
+              </mark>
+            );
+          } else {
+            return <React.Fragment key={index}>{applyBionic(part, `text-${index}`)}</React.Fragment>;
+          }
+        })}
+      </>
+    );
   };
 
   // Auto-scroll al primer resultado cuando se busca
@@ -455,14 +537,63 @@ export default function StudentPage() {
                 Transcripción
               </CardTitle>
 
-              {/* Barra de Búsqueda */}
-              <div className="flex-1 flex justify-end max-w-xs ml-auto items-center">
+              {/* Barra de Búsqueda y Marcatextos */}
+              <div className="flex-1 flex justify-end items-center gap-1">
+
+                {/* Botones de Marcatextos */}
+                <div className="flex items-center gap-1 border-r pr-2 mr-1">
+                  {/* Amarillo */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 hover:bg-muted"
+                        onClick={() => handleApplyHighlight('amarillo')}
+                      >
+                        <div className={`h-4 w-4 rounded-full border border-black/10 transition-colors ${getThemeHighlightColor('amarillo').bg}`}></div>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent><p>Destacar ({getThemeHighlightColor('amarillo').label})</p></TooltipContent>
+                  </Tooltip>
+
+                  {/* Verde */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 hover:bg-muted"
+                        onClick={() => handleApplyHighlight('verde')}
+                      >
+                        <div className={`h-4 w-4 rounded-full border border-black/10 transition-colors ${getThemeHighlightColor('verde').bg}`}></div>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent><p>Destacar ({getThemeHighlightColor('verde').label})</p></TooltipContent>
+                  </Tooltip>
+
+                  {/* Rojo */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 hover:bg-muted"
+                        onClick={() => handleApplyHighlight('rojo')}
+                      >
+                        <div className={`h-4 w-4 rounded-full border border-black/10 transition-colors ${getThemeHighlightColor('rojo').bg}`}></div>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent><p>Destacar ({getThemeHighlightColor('rojo').label})</p></TooltipContent>
+                  </Tooltip>
+                </div>
+
                 {isSearching ? (
-                  <div className="flex items-center gap-2 w-full animate-in fade-in slide-in-from-right-4 duration-200">
+                  <div className="flex items-center gap-2 max-w-[150px] animate-in fade-in slide-in-from-right-4 duration-200">
                     <Input
                       ref={searchInputRef}
                       type="search"
-                      placeholder="Buscar en el texto..."
+                      placeholder="Buscar..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="h-8 text-sm w-full"
@@ -471,9 +602,8 @@ export default function StudentPage() {
                     />
                   </div>
                 ) : (
-                  <Button variant="ghost" size="sm" onClick={() => setIsSearching(true)} className="h-8 px-2 text-muted-foreground hover:text-foreground">
-                    <Search className="h-4 w-4 mr-2" />
-                    <span className="text-sm">Buscar</span>
+                  <Button variant="ghost" size="icon" onClick={() => setIsSearching(true)} className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                    <Search className="h-4 w-4" />
                   </Button>
                 )}
               </div>
