@@ -112,6 +112,16 @@ export default function StudentPage() {
       if (status === 'connected') {
         hasConnected.current = true;
         setTranscription('');
+        toast({
+          title: 'Conectado a la sala',
+          description: 'Recibiendo transcripción...',
+        });
+      } else if (status === 'error') {
+        toast({
+          variant: 'destructive',
+          title: 'Sala no encontrada',
+          description: 'No pudimos encontrar una sala con ese ID, o el maestro ya se desconectó.',
+        });
       }
     });
 

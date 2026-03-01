@@ -80,12 +80,12 @@ function initializePeer(peerId?: string): Peer {
   if (peer) {
     // Si ya existe un peer y el ID es el mismo, lo retornamos.
     if (peer.id === peerId || !peerId) {
-        return peer;
+      return peer;
     }
     // Si el ID es diferente, destruimos el peer actual para crear uno nuevo.
     peer.destroy();
   }
-  
+
   // El servidor de PeerJS es gratuito y público. No requiere configuración.
   const newPeer = peerId ? new Peer(peerId) : new Peer();
 
@@ -106,9 +106,11 @@ function initializePeer(peerId?: string): Peer {
   });
 
   newPeer.on('error', (err) => {
-    console.error('PeerJS error:', err);
-    if (err.type === 'peer-unavailable' || err.type === 'invalid-id') {
-        notifyStatusListeners('error');
+    // Usamos warn en lugar de error para evitar la pantalla roja de Next.js en desarrollo,
+    // ya que no encontrar una sala es un comportamiento esperado del usuario, no un crash real.
+    console.warn('PeerJS connection info:', err.type);
+    if (err.type === 'peer-unavailable' || err.type === 'invalid-id' || err.type === 'network') {
+      notifyStatusListeners('error');
     }
   });
 
@@ -117,71 +119,71 @@ function initializePeer(peerId?: string): Peer {
 }
 
 function setupConnection(conn: DataConnection) {
-    // Evitar conexiones duplicadas
-    if (connections.some(c => c.peer === conn.peer)) {
-      return;
+  // Evitar conexiones duplicadas
+  if (connections.some(c => c.peer === conn.peer)) {
+    return;
+  }
+
+  connections.push(conn);
+
+  // Inicializar keep-alive para este peer
+  const peerHeartbeat: PeerWithHeartbeat = {
+    conn,
+    lastPong: Date.now(),
+  };
+  peersWithHeartbeat.set(conn.peer, peerHeartbeat);
+  notifyPeerStatusListeners(connections.length);
+
+  conn.on('data', (data: unknown) => {
+    console.log('Received data:', data);
+
+    // Si es un ping, responder automáticamente con pong
+    if (typeof data === 'object' && data !== null && 'type' in data && data.type === 'ping') {
+      if (conn.open) {
+        conn.send({ type: 'pong' });
+      }
+      return; // no notificar pings a la UI
     }
 
-    connections.push(conn);
-    
-    // Inicializar keep-alive para este peer
-    const peerHeartbeat: PeerWithHeartbeat = {
-      conn,
-      lastPong: Date.now(),
-    };
-    peersWithHeartbeat.set(conn.peer, peerHeartbeat);
-    notifyPeerStatusListeners(connections.length);
-
-    conn.on('data', (data: unknown) => {
-      console.log('Received data:', data);
-      
-      // Si es un ping, responder automáticamente con pong
-      if (typeof data === 'object' && data !== null && 'type' in data && data.type === 'ping') {
-        if (conn.open) {
-          conn.send({ type: 'pong' });
-        }
-        return; // no notificar pings a la UI
-      }
-      
-      // Si es un pong, actualizar timestamp
-      if (typeof data === 'object' && data !== null && 'type' in data && data.type === 'pong') {
-        const peer = peersWithHeartbeat.get(conn.peer);
-        if (peer) {
-          peer.lastPong = Date.now();
-          console.log('Pong received from', conn.peer);
-        }
-        return; // no notificar pings/pongs a la UI
-      }
-      
-      notifyDataListeners(data);
-    });
-
-    conn.on('close', () => {
-      console.log('Peer disconnected:', conn.peer);
-      
-      // Limpiar heartbeat
+    // Si es un pong, actualizar timestamp
+    if (typeof data === 'object' && data !== null && 'type' in data && data.type === 'pong') {
       const peer = peersWithHeartbeat.get(conn.peer);
-      if (peer?.heartbeatTimeout) {
-        clearTimeout(peer.heartbeatTimeout);
+      if (peer) {
+        peer.lastPong = Date.now();
+        console.log('Pong received from', conn.peer);
       }
-      peersWithHeartbeat.delete(conn.peer);
-      
-      const index = connections.findIndex(c => c.peer === conn.peer);
-      if (index > -1) {
-        connections.splice(index, 1);
-        notifyPeerStatusListeners(connections.length);
-      }
-    });
-    
-    conn.on('error', (err) => {
-      console.error('Connection error with', conn.peer, ':', err);
-      // Los errores de conexión a menudo preceden a close(), pero los capturamos igual
-    });
-    
-    conn.on('open', () => {
-        console.log('Connection opened with:', conn.peer);
-        notifyStatusListeners('connected');
-    });
+      return; // no notificar pings/pongs a la UI
+    }
+
+    notifyDataListeners(data);
+  });
+
+  conn.on('close', () => {
+    console.log('Peer disconnected:', conn.peer);
+
+    // Limpiar heartbeat
+    const peer = peersWithHeartbeat.get(conn.peer);
+    if (peer?.heartbeatTimeout) {
+      clearTimeout(peer.heartbeatTimeout);
+    }
+    peersWithHeartbeat.delete(conn.peer);
+
+    const index = connections.findIndex(c => c.peer === conn.peer);
+    if (index > -1) {
+      connections.splice(index, 1);
+      notifyPeerStatusListeners(connections.length);
+    }
+  });
+
+  conn.on('error', (err) => {
+    console.error('Connection error with', conn.peer, ':', err);
+    // Los errores de conexión a menudo preceden a close(), pero los capturamos igual
+  });
+
+  conn.on('open', () => {
+    console.log('Connection opened with:', conn.peer);
+    notifyStatusListeners('connected');
+  });
 }
 
 /**
@@ -192,7 +194,7 @@ function startHeartbeat() {
   setInterval(() => {
     const now = Date.now();
     const peersToRemove: string[] = [];
-    
+
     peersWithHeartbeat.forEach((peer, peerId) => {
       // Si no hubo pong en los últimos 15 segundos, desconectar
       if (now - peer.lastPong > HEARTBEAT_TIMEOUT) {
@@ -201,13 +203,13 @@ function startHeartbeat() {
         peer.conn.close();
         return;
       }
-      
+
       // Enviar ping
       if (peer.conn.open) {
         peer.conn.send({ type: 'ping' });
       }
     });
-    
+
     // Limpiar peers sin respuesta
     peersToRemove.forEach(peerId => {
       peersWithHeartbeat.delete(peerId);
@@ -224,13 +226,13 @@ export function hostSession(): string {
   const nanoid = customAlphabet('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz', 5);
   const newId = nanoid().toLowerCase();
   initializePeer(newId);
-  
+
   // Iniciar heartbeat para detectar desconexiones de alumnos
   if (!heartbeatStarted) {
     heartbeatStarted = true;
     startHeartbeat();
   }
-  
+
   return newId;
 }
 
@@ -244,21 +246,21 @@ export function joinSession(teacherId: string) {
 
   // Inicializamos nuestro propio peer sin ID específico
   const p = initializePeer();
-  
+
   notifyStatusListeners('connecting');
-  
+
   if (connections.some(c => c.peer === teacherId)) {
-      console.log('Already connected to this peer', teacherId);
-      notifyStatusListeners('connected');
-      return;
+    console.log('Already connected to this peer', teacherId);
+    notifyStatusListeners('connected');
+    return;
   }
-  
+
   // Esperamos a que nuestro peer esté listo antes de conectar
   if (!p.id) {
     p.on('open', () => {
-        console.log('Our peer is open, connecting to', teacherId);
-        const conn = p.connect(teacherId);
-        setupConnection(conn);
+      console.log('Our peer is open, connecting to', teacherId);
+      const conn = p.connect(teacherId);
+      setupConnection(conn);
     });
   } else {
     console.log('Connecting to', teacherId);
