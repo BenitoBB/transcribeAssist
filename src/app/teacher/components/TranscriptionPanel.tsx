@@ -154,25 +154,6 @@ export function TranscriptionPanel({ command, onPositionChange }: TranscriptionP
     return () => window.removeEventListener('resize', checkIsMobile);
   }, []);
 
-  // Centrar o anclar en móvil
-  useEffect(() => {
-    if (isMobile) {
-      handleSetPosition('bottom');
-    } else {
-      setPos({
-        x: window.innerWidth / 2 - 250,
-        y: window.innerHeight / 2 - 150,
-      });
-      setSize({ width: 500, height: 300 });
-      setCurrentPosition('free');
-    }
-  }, [isMobile]);
-
-  // Ejecutar comando de voz
-  useEffect(() => {
-    if (command) handleSetPosition(command);
-  }, [command]);
-
   const handleSetPosition = useCallback((newPosition: Position) => {
     setCurrentPosition(newPosition);
     onPositionChange(newPosition);
@@ -199,12 +180,32 @@ export function TranscriptionPanel({ command, onPositionChange }: TranscriptionP
         setPos({ x: parentW * 0.7, y: 0 });
         break;
       case 'free':
-        if (isMobile) return handleSetPosition('bottom');
-        setSize({ width: 500, height: 300 });
-        setPos({ x: parentW / 2 - 250, y: parentH / 2 - 150 });
+        if (isMobile) {
+          setCurrentPosition('bottom');
+          onPositionChange('bottom');
+          setSize({ width: parentW, height: parentH * 0.4 });
+          setPos({ x: 0, y: parentH * 0.6 });
+        } else {
+          setSize({ width: 500, height: 300 });
+          setPos({ x: parentW / 2 - 250, y: parentH / 2 - 150 });
+        }
         break;
     }
   }, [isMobile, onPositionChange]);
+
+  // Centrar o anclar en móvil al inicio
+  useEffect(() => {
+    // Pequeño delay para asegurar que el padre tenga dimensiones
+    const timer = setTimeout(() => {
+      handleSetPosition(isMobile ? 'bottom' : 'free');
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [isMobile, handleSetPosition]);
+
+  // Ejecutar comando de voz
+  useEffect(() => {
+    if (command) handleSetPosition(command);
+  }, [command, handleSetPosition]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (currentPosition !== 'free') return;
@@ -283,13 +284,17 @@ export function TranscriptionPanel({ command, onPositionChange }: TranscriptionP
   // Vista para Móvil
   if (isMobile) {
     return (
-      <Card className="fixed bottom-0 left-0 right-0 h-[40vh] w-full flex flex-col shadow-2xl rounded-b-none border-t z-20">
-        <CardHeader className="flex flex-row items-center justify-between p-3 border-b">
-          <CardTitle className="text-base font-semibold">Transcripción</CardTitle>
-          <SettingsButton />
-        </CardHeader>
-        <CardContent className="p-0 flex-grow overflow-hidden min-h-0">{renderContent()}</CardContent>
-      </Card>
+      <div className="fixed inset-0 z-20 flex items-center justify-center p-4 pt-20">
+        <Card className="h-full w-full flex flex-col shadow-2xl border-2">
+          <CardHeader className="flex flex-row items-center justify-between p-3 border-b shrink-0">
+            <CardTitle className="text-base font-semibold">Transcripción</CardTitle>
+            <SettingsButton />
+          </CardHeader>
+          <CardContent className="p-0 flex-grow overflow-hidden min-h-0 bg-background">
+            {renderContent()}
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 

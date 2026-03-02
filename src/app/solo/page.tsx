@@ -10,12 +10,24 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter,
+    DialogClose,
+} from '@/components/ui/dialog';
+import { useRouter } from 'next/navigation';
+import {
     ArrowLeft,
     Pencil,
     Mic,
     MicOff,
+    NotebookPen,
 } from 'lucide-react';
 import { DrawingToolbar } from '../teacher/components/DrawingToolbar';
+import { NotesPanel } from '../student/components/NotesPanel';
 import { useTranscription } from '@/hooks/use-transcription';
 import { Command, Position } from '../teacher/components/TranscriptionPanel';
 import {
@@ -41,11 +53,27 @@ export default function SoloPage() {
     const [isDrawingMode, setIsDrawingMode] = useState(false);
     const [brushColor, setBrushColor] = useState('#FF0000');
     const [clearCanvas, setClearCanvas] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
 
     const { transcription, setTranscription, isRecording, setIsRecording } = useTranscription();
+    const router = useRouter();
 
     const [panelCommand, setPanelCommand] = useState<Command>(null);
     const [panelPosition, setPanelPosition] = useState<Position>('free');
+
+    const [isExitDialogOpen, setIsExitDialogOpen] = useState(false);
+
+    // Panel de Notas
+    const [isNotesOpen, setIsNotesOpen] = useState(false);
+    const [notesSide, setNotesSide] = useState<'left' | 'right'>('right');
+    const [notesContent, setNotesContent] = useState('');
+
+    useEffect(() => {
+        const checkIsMobile = () => setIsMobile(window.innerWidth < 768);
+        checkIsMobile();
+        window.addEventListener('resize', checkIsMobile);
+        return () => window.removeEventListener('resize', checkIsMobile);
+    }, []);
 
     useEffect(() => {
         const handleStateChange = (newState: 'recording' | 'stopped' | 'idle') => {
@@ -120,31 +148,63 @@ export default function SoloPage() {
                     'bottom-4 left-4 sm:bottom-8 sm:left-8': panelPosition === 'top',
                 }
             )}>
-                <Link href="/">
+                <Dialog open={isExitDialogOpen} onOpenChange={setIsExitDialogOpen}>
                     <Tooltip>
                         <TooltipTrigger asChild>
-                            <Button variant="outline" size="icon">
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => {
+                                    if (transcription || notesContent) {
+                                        setIsExitDialogOpen(true);
+                                    } else {
+                                        router.push('/');
+                                    }
+                                }}
+                            >
                                 <ArrowLeft className="h-4 w-4" />
                                 <span className="sr-only">Volver</span>
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent><p>Volver a la página principal</p></TooltipContent>
                     </Tooltip>
-                </Link>
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => setIsDrawingMode(!isDrawingMode)}
-                            aria-pressed={isDrawingMode}
-                        >
-                            <Pencil className="h-4 w-4" />
-                            <span className="sr-only">Activar modo dibujo</span>
-                        </Button>
-                    </TooltipTrigger>
-                    <TooltipContent><p>Activar/Desactivar Pizarra</p></TooltipContent>
-                </Tooltip>
+
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>¿Estás seguro de que quieres salir?</DialogTitle>
+                            <DialogDescription>
+                                Si regresas a la página principal, se perderá el progreso de la transcripción y las notas tomadas en esta sesión.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter className="gap-2 sm:gap-0">
+                            <DialogClose asChild>
+                                <Button variant="outline">Cancelar</Button>
+                            </DialogClose>
+                            <Button
+                                variant="destructive"
+                                onClick={() => router.push('/')}
+                            >
+                                Sí, salir y perder progreso
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+                {!isMobile && (
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => setIsDrawingMode(!isDrawingMode)}
+                                aria-pressed={isDrawingMode}
+                            >
+                                <Pencil className="h-4 w-4" />
+                                <span className="sr-only">Activar modo dibujo</span>
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent><p>Activar/Desactivar Pizarra</p></TooltipContent>
+                    </Tooltip>
+                )}
                 <Tooltip>
                     <TooltipTrigger asChild>
                         <Button
@@ -158,9 +218,23 @@ export default function SoloPage() {
                     </TooltipTrigger>
                     <TooltipContent><p>{isRecording ? 'Detener' : 'Iniciar'} Transcripción</p></TooltipContent>
                 </Tooltip>
+
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button
+                            variant={isNotesOpen ? "default" : "outline"}
+                            size="icon"
+                            onClick={() => setIsNotesOpen(!isNotesOpen)}
+                            className={isNotesOpen ? "bg-primary text-primary-foreground" : ""}
+                        >
+                            <NotebookPen className="h-4 w-4" />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent><p>{isNotesOpen ? 'Cerrar Notas' : 'Mis Notas'}</p></TooltipContent>
+                </Tooltip>
             </div>
 
-            {isDrawingMode && (
+            {!isMobile && isDrawingMode && (
                 <>
                     <DrawingToolbar
                         onColorChange={setBrushColor}
@@ -172,8 +246,25 @@ export default function SoloPage() {
                 </>
             )}
 
-            <div className="relative w-full h-full pointer-events-none z-10">
-                <TranscriptionPanel command={panelCommand} onPositionChange={setPanelPosition} />
+            <div className="relative w-full h-full pointer-events-none z-10 flex items-center justify-center p-4">
+                <div className={`flex w-full max-w-7xl gap-4 items-stretch justify-center h-[70vh] pointer-events-auto transition-all duration-300 ${isNotesOpen && notesSide === 'left' ? 'flex-row-reverse' : 'flex-row'}`}>
+                    <div className="flex-1 min-w-0 relative h-full">
+                        <TranscriptionPanel command={panelCommand} onPositionChange={setPanelPosition} />
+                    </div>
+
+                    {isNotesOpen && (
+                        <NotesPanel
+                            studentClassName="Sesión Individual"
+                            sessionId="Solo"
+                            startTime={new Date()}
+                            onClose={() => setIsNotesOpen(false)}
+                            side={notesSide}
+                            onToggleSide={() => setNotesSide(prev => prev === 'left' ? 'right' : 'left')}
+                            initialContent={notesContent}
+                            onContentChange={setNotesContent}
+                        />
+                    )}
+                </div>
             </div>
 
         </div>

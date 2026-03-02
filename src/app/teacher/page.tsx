@@ -45,6 +45,7 @@ export default function TeacherPage() {
   const [isDrawingMode, setIsDrawingMode] = useState(false);
   const [brushColor, setBrushColor] = useState('#FF0000');
   const [clearCanvas, setClearCanvas] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   const { transcription, setTranscription, isRecording, setIsRecording } = useTranscription();
 
@@ -55,6 +56,13 @@ export default function TeacherPage() {
   const [peerCount, setPeerCount] = useState(0);
 
   const { toast } = useToast();
+
+  useEffect(() => {
+    const checkIsMobile = () => setIsMobile(window.innerWidth < 768);
+    checkIsMobile();
+    window.addEventListener('resize', checkIsMobile);
+    return () => window.removeEventListener('resize', checkIsMobile);
+  }, []);
 
   useEffect(() => {
     const peerId = hostSession();
@@ -168,20 +176,22 @@ export default function TeacherPage() {
             <TooltipContent><p>Volver a la página principal</p></TooltipContent>
           </Tooltip>
         </Link>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setIsDrawingMode(!isDrawingMode)}
-              aria-pressed={isDrawingMode}
-            >
-              <Pencil className="h-4 w-4" />
-              <span className="sr-only">Activar modo dibujo</span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent><p>Activar/Desactivar Pizarra</p></TooltipContent>
-        </Tooltip>
+        {!isMobile && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setIsDrawingMode(!isDrawingMode)}
+                aria-pressed={isDrawingMode}
+              >
+                <Pencil className="h-4 w-4" />
+                <span className="sr-only">Activar modo dibujo</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent><p>Activar/Desactivar Pizarra</p></TooltipContent>
+          </Tooltip>
+        )}
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
@@ -224,7 +234,7 @@ export default function TeacherPage() {
         </div>
       )}
 
-      {isDrawingMode && (
+      {!isMobile && isDrawingMode && (
         <>
           <DrawingToolbar
             onColorChange={setBrushColor}
