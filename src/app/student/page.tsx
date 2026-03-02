@@ -15,6 +15,7 @@ import {
   Pencil,
   Search,
   Highlighter,
+  NotebookPen,
 } from 'lucide-react';
 
 export type HighlightColor = 'amarillo' | 'verde' | 'rojo';
@@ -51,6 +52,7 @@ import { useStyle } from '@/context/StyleContext';
 import { useTranscription } from '@/hooks/use-transcription';
 import { joinSession, onDataReceived, onConnectionStatusChange, ConnectionStatus } from '@/lib/p2p';
 import { BionicReadingText } from '@/components/BionicReadingText';
+import { NotesPanel } from './components/NotesPanel';
 
 function formatTime(date: Date): string {
   return date.toLocaleTimeString('es-ES', {
@@ -88,14 +90,11 @@ export default function StudentPage() {
 
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected');
   const hasConnected = useRef(false);
-  const [isSummaryOpen, setIsSummaryOpen] = useState(false);
-  const [summary, setSummary] = useState('');
-  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+  const [startTime, setStartTime] = useState<Date | null>(null);
 
   // Metadata de la clase
   const [className, setClassName] = useState('');
   const [isEditingClassName, setIsEditingClassName] = useState(false);
-  const [startTime, setStartTime] = useState<Date | null>(null);
   const classNameInputRef = useRef<HTMLInputElement>(null);
 
   // Búsqueda
@@ -103,10 +102,14 @@ export default function StudentPage() {
   const [isSearching, setIsSearching] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  // Panel de Notas
+  const [isNotesOpen, setIsNotesOpen] = useState(false);
+  const [notesSide, setNotesSide] = useState<'left' | 'right'>('right');
+
   // Marcatextos / Highlights
   const [highlights, setHighlights] = useState<Highlight[]>([]);
 
-  // Función para resolver colores del marcatextos basados en el `theme` activo
+  // Function to resolve highlight colors based on theme
   const getThemeHighlightColor = (baseColor: HighlightColor): { bg: string; text: string; label: string; hex: string } => {
     if (theme === 'protanopia' || theme === 'deuteranopia') {
       if (baseColor === 'amarillo') return { bg: 'bg-blue-200', text: 'text-blue-900', label: 'Azul', hex: '#bfdbfe' };
@@ -118,7 +121,6 @@ export default function StudentPage() {
       if (baseColor === 'verde') return { bg: 'bg-green-500/40', text: 'text-green-100', label: 'Verde', hex: '#16a34a' };
       if (baseColor === 'rojo') return { bg: 'bg-red-500/40', text: 'text-red-100', label: 'Rojo', hex: '#dc2626' };
     }
-    // light, accessible, tritanopia (tritanopia usa colores estándar porque ven amarillo/rojo bien, el problema es azul)
     if (baseColor === 'amarillo') return { bg: 'bg-yellow-200', text: 'text-yellow-900', label: 'Amarillo', hex: '#fef08a' };
     if (baseColor === 'verde') return { bg: 'bg-green-200', text: 'text-green-900', label: 'Verde', hex: '#bbf7d0' };
     if (baseColor === 'rojo') return { bg: 'bg-red-200', text: 'text-red-900', label: 'Rojo', hex: '#fecaca' };
@@ -132,7 +134,6 @@ export default function StudentPage() {
     const text = selection.toString().trim();
     if (text.length > 0) {
       setHighlights(prev => {
-        // Evitar duplicados exactos superpuestos
         if (prev.some(h => h.text === text && h.color === color)) return prev;
         return [...prev, { text, color }];
       });
@@ -146,12 +147,10 @@ export default function StudentPage() {
 
   useEffect(() => {
     const unsubData = onDataReceived((data: any) => {
-      console.debug('p2p data received in student:', data);
       if (data.type === 'full_text') {
         setTranscription(data.text);
       }
       if (data.type === 'recording_started' && data.timestamp) {
-        // Solo establecer la hora de inicio la primera vez
         setStartTime(prev => prev ?? new Date(data.timestamp));
       }
     });
@@ -161,15 +160,11 @@ export default function StudentPage() {
       if (status === 'connected') {
         hasConnected.current = true;
         setTranscription('');
-        toast({
-          title: 'Conectado a la sala',
-          description: 'Recibiendo transcripción...',
-        });
       } else if (status === 'error') {
         toast({
           variant: 'destructive',
           title: 'Sala no encontrada',
-          description: 'No pudimos encontrar una sala con ese ID, o el maestro ya se desconectó.',
+          description: 'No pudimos encontrar una sala con ese ID.',
         });
       }
     });
@@ -178,9 +173,8 @@ export default function StudentPage() {
       unsubData();
       unsubStatus();
     };
-  }, [setTranscription]);
+  }, [setTranscription, toast]);
 
-  // Generar el encabezado de metadata para exportaciones de texto
   const buildTextHeader = (endTime: Date): string => {
     const lines: string[] = [];
     lines.push('═══════════════════════════════════════════');
@@ -196,14 +190,11 @@ export default function StudentPage() {
     return lines.join('\n');
   };
 
-  // Prepara el texto a exportar, incluyendo los marcadores de colores para TXT y Copiado
   const getExportTextWithHighlights = () => {
     let exportText = transcription;
-    // Ordenar de mayor a menor longitud para no reemplazar partes subyacentes
     const sortedHighlights = [...highlights].sort((a, b) => b.text.length - a.text.length);
     sortedHighlights.forEach(h => {
       const label = getThemeHighlightColor(h.color).label;
-      // reemplazar globalmente sin afectar los que ya modificamos a menos que se crucen
       exportText = exportText.split(h.text).join(`[📌 ${label}: ${h.text}]`);
     });
     return exportText;
@@ -215,7 +206,7 @@ export default function StudentPage() {
     navigator.clipboard.writeText(header + getExportTextWithHighlights());
     toast({
       title: 'Copiado',
-      description: 'La transcripción ha sido copiada al portapapeles.',
+      description: 'Copiado al portapapeles.',
     });
   };
 
@@ -226,65 +217,29 @@ export default function StudentPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    const fileName = className
-      ? `transcripcion-${className.replace(/\s+/g, '_')}.txt`
-      : 'transcripcion.txt';
-    a.download = fileName;
-    document.body.appendChild(a);
+    a.download = className ? `transcripcion-${className.replace(/\s+/g, '_')}.txt` : 'transcripcion.txt';
     a.click();
-    document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    toast({
-      title: 'Guardado',
-      description: `La transcripción se está descargando como ${fileName}.`,
-    });
   };
 
   const handleExportToPdf = async () => {
     const element = transcriptionDisplayRef.current;
-    if (!element) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'No se pudo encontrar el contenido de la transcripción.',
-      });
-      return;
-    }
+    if (!element) return;
 
     const endTime = new Date();
+    toast({ title: 'Generando PDF...', description: 'Espera un momento.' });
 
-    toast({
-      title: 'Generando PDF...',
-      description: 'Por favor, espera un momento.',
-    });
-
-    const canvas = await html2canvas(element, {
-      scale: 2,
-      useCORS: true,
-      backgroundColor: null,
-    });
-
+    const canvas = await html2canvas(element, { scale: 2, useCORS: true, backgroundColor: null });
     const imgData = canvas.toDataURL('image/png');
-
-    const pdf = new jsPDF({
-      orientation: 'p',
-      unit: 'mm',
-      format: 'a4',
-    });
-
+    const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
     const margin = 15;
 
-    // Título
     pdf.setFontSize(18);
     pdf.setFont('helvetica', 'bold');
-    const title = className
-      ? `Transcripcion: ${className}`
-      : 'Transcripcion de la Clase';
-    pdf.text(title, margin, margin);
+    pdf.text(className ? `Transcripcion: ${className}` : 'Transcripcion de la Clase', margin, margin);
 
-    // Metadata
     pdf.setFontSize(10);
     pdf.setFont('helvetica', 'normal');
     let metaY = margin + 8;
@@ -304,89 +259,51 @@ export default function StudentPage() {
 
     const imgWidth = pageWidth - margin * 2;
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
-    let heightLeft = imgHeight;
-    let position = metaY + 7;
+    pdf.addImage(imgData, 'PNG', margin, metaY + 7, imgWidth, imgHeight);
 
-    pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
-    heightLeft -= (pageHeight - position - margin);
-
-    while (heightLeft > 0) {
-      position = -heightLeft - margin;
-      pdf.addPage();
-      pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
-      heightLeft -= (pageHeight - margin * 2);
-    }
-
-    const fileName = className
-      ? `transcripcion-${className.replace(/\s+/g, '_')}.pdf`
-      : `transcripcion-${sessionId}.pdf`;
+    const fileName = className ? `transcripcion-${className.replace(/\s+/g, '_')}.pdf` : `transcripcion-${sessionId}.pdf`;
     pdf.save(fileName);
-
-    toast({
-      title: 'PDF Generado',
-      description: 'La descarga de tu transcripción ha comenzado.',
-    });
   };
 
   const handleConnect = () => {
     const id = sessionId.trim().toLowerCase();
-    if (id) {
-      joinSession(id);
-    } else {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Por favor, introduce un ID de sala válido.',
-      });
-    }
+    if (id) joinSession(id);
+    else toast({ variant: 'destructive', title: 'Error', description: 'ID de sala inválido.' });
   };
 
-  const handleClassNameSubmit = () => {
-    setIsEditingClassName(false);
+  const handleClassNameSubmit = () => setIsEditingClassName(false);
+
+  const applyBionic = (str: string, keyPrefix: string) => {
+    if (!isBionic) return str;
+    return str.split(/(\s+)/).map((word, k) => {
+      if (/\s+/.test(word)) return <React.Fragment key={`${keyPrefix}-${k}`}>{word}</React.Fragment>;
+      const mid = Math.ceil(word.length / 2);
+      return (
+        <React.Fragment key={`${keyPrefix}-${k}`}>
+          <span className="font-bold">{word.slice(0, mid)}</span>{word.slice(mid)}
+        </React.Fragment>
+      );
+    });
   };
 
-  // Función para renderizar el texto con resaltado de búsqueda y marcatextos manuales
   const renderHighlightedText = (textToRender: string) => {
-    if (!textToRender) return "Esperando transcripción del maestro...";
+    if (!textToRender) return "Esperando transcripción...";
 
-    // Preparar término de búsqueda y marcadores manuales
     const searchMatch = searchQuery.trim().toLowerCase();
     const matchers: { text: string; type: 'search' | HighlightColor }[] = [];
 
-    if (searchMatch) {
-      matchers.push({ text: searchMatch, type: 'search' });
-    }
+    if (searchMatch) matchers.push({ text: searchMatch, type: 'search' });
 
-    // Evitar procesar sub-strings vacías o muy pequeñas y ordenar los matchers largos primero
     [...highlights]
       .sort((a, b) => b.text.length - a.text.length)
       .forEach(h => {
         if (h.text.trim()) matchers.push({ text: h.text.toLowerCase(), type: h.color });
       });
 
-    // Función auxiliar para aplicar bionic a un texto simple
-    const applyBionic = (str: string, keyPrefix: string) => {
-      if (!isBionic) return str;
-      return str.split(/(\s+)/).map((word, k) => {
-        if (/\s+/.test(word)) return <React.Fragment key={`${keyPrefix}-${k}`}>{word}</React.Fragment>;
-        const mid = Math.ceil(word.length / 2);
-        return (
-          <React.Fragment key={`${keyPrefix}-${k}`}>
-            <span className="font-bold">{word.slice(0, mid)}</span>{word.slice(mid)}
-          </React.Fragment>
-        );
-      });
-    };
+    if (matchers.length === 0) return applyBionic(textToRender, 'base');
 
-    if (matchers.length === 0) {
-      return applyBionic(textToRender, 'base');
-    }
-
-    // Escapar para regex seguro
     const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const regexPattern = matchers.map(m => escapeRegExp(m.text)).join('|');
-
-    // Split capturando el grupo, lo que nos deja: [no_match, match, no_match, match, ...]
     const parts = textToRender.split(new RegExp(`(${regexPattern})`, 'gi'));
     let searchHitCount = 0;
 
@@ -397,22 +314,20 @@ export default function StudentPage() {
           const matchedTheme = matchers.find(m => m.text === lowerPart);
 
           if (matchedTheme) {
-            let className = '';
+            let cls = '';
             let id = undefined;
 
             if (matchedTheme.type === 'search') {
-              className = 'bg-yellow-300 text-black px-1 rounded shadow-sm';
-              if (searchHitCount === 0) {
-                id = 'first-search-match';
-              }
+              cls = 'bg-yellow-300 text-black px-1 rounded shadow-sm';
+              if (searchHitCount === 0) id = 'first-search-match';
               searchHitCount++;
             } else {
               const styles = getThemeHighlightColor(matchedTheme.type as HighlightColor);
-              className = `${styles.bg} ${styles.text} px-1 rounded transition-colors`;
+              cls = `${styles.bg} ${styles.text} px-1 rounded transition-colors`;
             }
 
             return (
-              <mark key={index} className={className} id={id}>
+              <mark key={index} className={cls} id={id}>
                 {applyBionic(part, `mark-${index}`)}
               </mark>
             );
@@ -424,16 +339,12 @@ export default function StudentPage() {
     );
   };
 
-  // Auto-scroll al primer resultado cuando se busca
   useEffect(() => {
     if (searchQuery.trim()) {
       const match = document.getElementById('first-search-match');
-      if (match) {
-        match.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
+      if (match) match.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   }, [searchQuery, transcription]);
-
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-4 relative overflow-hidden">
@@ -446,11 +357,22 @@ export default function StudentPage() {
                 <span className="sr-only">Volver</span>
               </Button>
             </TooltipTrigger>
-            <TooltipContent>
-              <p>Volver a la página principal</p>
-            </TooltipContent>
+            <TooltipContent><p>Volver</p></TooltipContent>
           </Tooltip>
         </Link>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant={isNotesOpen ? "default" : "outline"}
+              size="icon"
+              onClick={() => setIsNotesOpen(!isNotesOpen)}
+              className={isNotesOpen ? "bg-primary text-primary-foreground" : ""}
+            >
+              <NotebookPen className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent><p>{isNotesOpen ? 'Cerrar Notas' : 'Ver mis Notas'}</p></TooltipContent>
+        </Tooltip>
       </div>
 
       <div className="absolute top-4 right-4 sm:top-8 sm:right-8 flex items-center gap-2">
@@ -461,9 +383,7 @@ export default function StudentPage() {
               <span>{connectionStatus === 'connected' ? 'Conectado' : 'Desconectado'}</span>
             </div>
           </TooltipTrigger>
-          <TooltipContent>
-            <p>Estado de la conexión</p>
-          </TooltipContent>
+          <TooltipContent><p>Estado de la conexión</p></TooltipContent>
         </Tooltip>
         <SettingsButton />
       </div>
@@ -484,20 +404,16 @@ export default function StudentPage() {
               {connectionStatus === 'connecting' ? 'Conectando...' : 'Conectar'}
             </Button>
           </div>
-          {connectionStatus === 'error' && (
-            <p className="text-sm text-destructive">No se pudo conectar a la sala. Verifica el ID y la conexión.</p>
-          )}
         </div>
       ) : (
         <>
           <div className="text-center mb-4 sm:mb-6">
             <h1 className="text-2xl sm:text-3xl font-bold">Vista del Alumno</h1>
             <p className="mt-2 text-sm sm:text-base text-muted-foreground">
-              Viendo la transcripción de la sala: <span className="font-mono text-primary">{sessionId}</span>
+              Sala: <span className="font-mono text-primary">{sessionId}</span>
             </p>
           </div>
 
-          {/* Nombre de la clase y metadata */}
           <div className="w-full max-w-4xl mb-3 flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               {isEditingClassName ? (
@@ -524,151 +440,78 @@ export default function StudentPage() {
                 </button>
               )}
             </div>
-            {startTime && (
-              <span className="text-xs text-muted-foreground">
-                Inicio: {formatTime(startTime)}
-              </span>
-            )}
+            {startTime && <span className="text-xs text-muted-foreground">Inicio: {formatTime(startTime)}</span>}
           </div>
 
-          <Card className="w-full max-w-4xl h-[60vh] flex flex-col shadow-lg">
-            <CardHeader className="flex flex-row items-center justify-between p-3 border-b gap-4">
-              <CardTitle className="text-base font-semibold whitespace-nowrap">
-                Transcripción
-              </CardTitle>
-
-              {/* Barra de Búsqueda y Marcatextos */}
-              <div className="flex-1 flex justify-end items-center gap-1">
-
-                {/* Botones de Marcatextos */}
-                <div className="flex items-center gap-1 border-r pr-2 mr-1">
-                  {/* Amarillo */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 hover:bg-muted"
-                        onClick={() => handleApplyHighlight('amarillo')}
-                      >
-                        <div className={`h-4 w-4 rounded-full border border-black/10 transition-colors ${getThemeHighlightColor('amarillo').bg}`}></div>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent><p>Destacar ({getThemeHighlightColor('amarillo').label})</p></TooltipContent>
-                  </Tooltip>
-
-                  {/* Verde */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 hover:bg-muted"
-                        onClick={() => handleApplyHighlight('verde')}
-                      >
-                        <div className={`h-4 w-4 rounded-full border border-black/10 transition-colors ${getThemeHighlightColor('verde').bg}`}></div>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent><p>Destacar ({getThemeHighlightColor('verde').label})</p></TooltipContent>
-                  </Tooltip>
-
-                  {/* Rojo */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 hover:bg-muted"
-                        onClick={() => handleApplyHighlight('rojo')}
-                      >
-                        <div className={`h-4 w-4 rounded-full border border-black/10 transition-colors ${getThemeHighlightColor('rojo').bg}`}></div>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent><p>Destacar ({getThemeHighlightColor('rojo').label})</p></TooltipContent>
-                  </Tooltip>
-                </div>
-
-                {isSearching ? (
-                  <div className="flex items-center gap-2 max-w-[150px] animate-in fade-in slide-in-from-right-4 duration-200">
+          <div className={`flex w-full max-w-7xl gap-4 items-stretch justify-center h-[60vh] transition-all duration-300 ${isNotesOpen && notesSide === 'left' ? 'flex-row-reverse' : 'flex-row'}`}>
+            <Card className="flex-1 min-w-0 max-w-4xl flex flex-col shadow-lg border-2">
+              <CardHeader className="flex flex-row items-center justify-between p-3 border-b gap-4 shrink-0">
+                <CardTitle className="text-base font-semibold">Transcripción</CardTitle>
+                <div className="flex-1 flex justify-end items-center gap-1">
+                  <div className="flex items-center gap-1 border-r pr-2 mr-1">
+                    <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted" onClick={() => handleApplyHighlight('amarillo')}>
+                      <div className={`h-4 w-4 rounded-full border border-black/10 ${getThemeHighlightColor('amarillo').bg}`}></div>
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted" onClick={() => handleApplyHighlight('verde')}>
+                      <div className={`h-4 w-4 rounded-full border border-black/10 ${getThemeHighlightColor('verde').bg}`}></div>
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted" onClick={() => handleApplyHighlight('rojo')}>
+                      <div className={`h-4 w-4 rounded-full border border-black/10 ${getThemeHighlightColor('rojo').bg}`}></div>
+                    </Button>
+                  </div>
+                  {isSearching ? (
                     <Input
                       ref={searchInputRef}
                       type="search"
                       placeholder="Buscar..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="h-8 text-sm w-full"
+                      className="h-8 text-sm w-32"
                       autoFocus
                       onBlur={() => !searchQuery && setIsSearching(false)}
                     />
-                  </div>
-                ) : (
-                  <Button variant="ghost" size="icon" onClick={() => setIsSearching(true)} className="h-8 w-8 text-muted-foreground hover:text-foreground">
-                    <Search className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-
-              <DropdownMenu>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreVertical className="h-4 w-4" />
-                        <span className="sr-only">Más opciones</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Más opciones</p>
-                  </TooltipContent>
-                </Tooltip>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onSelect={handleCopy}>
-                    <Copy className="mr-2 h-4 w-4" />
-                    <span>Copiar al portapapeles</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onSelect={handleSave}>
-                    <FileDown className="mr-2 h-4 w-4" />
-                    <span>Guardar como .txt</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onSelect={handleExportToPdf}>
-                    <FileText className="mr-2 h-4 w-4" />
-                    <span>Exportar como PDF</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </CardHeader>
-            <CardContent className="p-0 flex-grow overflow-hidden min-h-0">
-              <ScrollArea className="h-full w-full">
-                <div
-                  ref={transcriptionDisplayRef}
-                  className="p-6 break-words bg-background relative"
-                  onMouseMove={showRuler ? handleContentMouseMove : undefined}
-                  style={{
-                    ...style,
-                    minHeight: '100%',
-                    color: 'var(--foreground)',
-                  }}
-                >
-                  {renderHighlightedText(transcription)}
-                  {showRuler && (
-                    <div
-                      className="absolute left-0 right-0 bg-yellow-200/40 pointer-events-none"
-                      style={{
-                        top: rulerY - style.fontSize * style.lineHeight / 2,
-                        height: style.fontSize * style.lineHeight,
-                      }}
-                    />
+                  ) : (
+                    <Button variant="ghost" size="icon" onClick={() => setIsSearching(true)} className="h-8 w-8"><Search className="h-4 w-4" /></Button>
                   )}
                 </div>
-              </ScrollArea>
-            </CardContent>
-          </Card>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onSelect={handleCopy}><Copy className="mr-2 h-4 w-4" /><span>Copiar</span></DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onSelect={handleSave}><FileDown className="mr-2 h-4 w-4" /><span>Guardar .txt</span></DropdownMenuItem>
+                    <DropdownMenuItem onSelect={handleExportToPdf}><FileText className="mr-2 h-4 w-4" /><span>Exportar PDF</span></DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </CardHeader>
+              <CardContent className="p-0 flex-grow overflow-hidden bg-background">
+                <ScrollArea className="h-full w-full">
+                  <div
+                    ref={transcriptionDisplayRef}
+                    className="p-6 break-words relative"
+                    onMouseMove={showRuler ? handleContentMouseMove : undefined}
+                    style={{ ...style, minHeight: '100%', color: 'var(--foreground)' }}
+                  >
+                    {renderHighlightedText(transcription)}
+                    {showRuler && <div className="absolute left-0 right-0 bg-yellow-200/40 pointer-events-none" style={{ top: rulerY - style.fontSize * style.lineHeight / 2, height: style.fontSize * style.lineHeight }} />}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+
+            {isNotesOpen && (
+              <NotesPanel
+                studentClassName={className}
+                sessionId={sessionId}
+                startTime={startTime}
+                onClose={() => setIsNotesOpen(false)}
+                side={notesSide}
+                onToggleSide={() => setNotesSide(prev => prev === 'left' ? 'right' : 'left')}
+              />
+            )}
+          </div>
         </>
       )}
-
     </div>
   );
 }
