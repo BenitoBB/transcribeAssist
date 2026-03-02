@@ -41,6 +41,16 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from '@/components/ui/dialog';
+import { useRouter } from 'next/navigation';
 import { SettingsButton } from '@/components/settings/SettingsButton';
 import {
   Tooltip,
@@ -74,6 +84,9 @@ export default function StudentPage() {
   const { transcription, setTranscription } = useTranscription();
   const { style, isBionic, showRuler, theme } = useStyle();
   const { toast } = useToast();
+  const router = useRouter();
+
+  const [isExitDialogOpen, setIsExitDialogOpen] = useState(false);
 
   const [rulerY, setRulerY] = useState<number>(0);
 
@@ -349,17 +362,48 @@ export default function StudentPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-4 relative overflow-hidden">
       <div className="absolute top-4 left-4 sm:top-8 sm:left-8 flex items-center gap-4">
-        <Link href="/">
+        <Dialog open={isExitDialogOpen} onOpenChange={setIsExitDialogOpen}>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="outline" size="icon">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => {
+                  if (hasConnected.current && (transcription || localStorage.getItem('student_notes'))) {
+                    setIsExitDialogOpen(true);
+                  } else {
+                    router.push('/');
+                  }
+                }}
+              >
                 <ArrowLeft className="h-4 w-4" />
                 <span className="sr-only">Volver</span>
               </Button>
             </TooltipTrigger>
             <TooltipContent><p>Volver</p></TooltipContent>
           </Tooltip>
-        </Link>
+
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>¿Estás seguro de que quieres salir?</DialogTitle>
+              <DialogDescription>
+                Si regresas a la página principal, se perderá el progreso de la transcripción y las notas tomadas en esta clase.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2 sm:gap-0">
+              <DialogClose asChild>
+                <Button variant="outline">Cancelar</Button>
+              </DialogClose>
+              <Button
+                variant="destructive"
+                onClick={() => router.push('/')}
+              >
+                Sí, salir y perder progreso
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
