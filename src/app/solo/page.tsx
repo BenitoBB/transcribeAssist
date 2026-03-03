@@ -9,25 +9,11 @@ import {
     TooltipContent,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogDescription,
-    DialogFooter,
-    DialogClose,
-} from '@/components/ui/dialog';
 import { useRouter } from 'next/navigation';
-import {
-    ArrowLeft,
-    Pencil,
-    Mic,
-    MicOff,
-    NotebookPen,
-} from 'lucide-react';
+import { Pencil, Mic, MicOff, NotebookPen } from 'lucide-react';
 import { DrawingToolbar } from '../teacher/components/DrawingToolbar';
 import { NotesPanel } from '../student/components/NotesPanel';
+import { ExitConfirmation } from '@/components/ExitConfirmation';
 import { useTranscription } from '@/hooks/use-transcription';
 import { Command, Position } from '../teacher/components/TranscriptionPanel';
 import {
@@ -60,8 +46,6 @@ export default function SoloPage() {
 
     const [panelCommand, setPanelCommand] = useState<Command>(null);
     const [panelPosition, setPanelPosition] = useState<Position>('free');
-
-    const [isExitDialogOpen, setIsExitDialogOpen] = useState(false);
 
     // Panel de Notas
     const [isNotesOpen, setIsNotesOpen] = useState(false);
@@ -148,47 +132,11 @@ export default function SoloPage() {
                     'bottom-4 left-4 sm:bottom-8 sm:left-8': panelPosition === 'top',
                 }
             )}>
-                <Dialog open={isExitDialogOpen} onOpenChange={setIsExitDialogOpen}>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button
-                                variant="outline"
-                                size="icon"
-                                onClick={() => {
-                                    if (transcription || notesContent) {
-                                        setIsExitDialogOpen(true);
-                                    } else {
-                                        router.push('/');
-                                    }
-                                }}
-                            >
-                                <ArrowLeft className="h-4 w-4" />
-                                <span className="sr-only">Volver</span>
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent><p>Volver a la página principal</p></TooltipContent>
-                    </Tooltip>
-
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>¿Estás seguro de que quieres salir?</DialogTitle>
-                            <DialogDescription>
-                                Si regresas a la página principal, se perderá el progreso de la transcripción y las notas tomadas en esta sesión.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <DialogFooter className="gap-2 sm:gap-0">
-                            <DialogClose asChild>
-                                <Button variant="outline">Cancelar</Button>
-                            </DialogClose>
-                            <Button
-                                variant="destructive"
-                                onClick={() => router.push('/')}
-                            >
-                                Sí, salir y perder progreso
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
+                <ExitConfirmation
+                    transcriptionText={transcription}
+                    notesContent={notesContent}
+                    tooltipText="Volver a la página principal"
+                />
                 {!isMobile && (
                     <Tooltip>
                         <TooltipTrigger asChild>

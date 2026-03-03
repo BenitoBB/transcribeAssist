@@ -13,6 +13,9 @@ export interface TranscriptionContextType {
   setIsRecording: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
+export const DEFAULT_TRANSCRIPTION_TEXT =
+  'Inicia una grabación o conéctate a una sala para ver la transcripción.';
+
 export const TranscriptionContext = createContext<
   TranscriptionContextType | undefined
 >(undefined);
@@ -25,9 +28,7 @@ export const TranscriptionProvider: React.FC<TranscriptionProviderProps> = ({
   children,
 }) => {
   const [isRecording, setIsRecording] = useState(false);
-  const [transcription, setTranscription] = useState(
-    'Inicia una grabación o conéctate a una sala para ver la transcripción.'
-  );
+  const [transcription, setTranscription] = useState(DEFAULT_TRANSCRIPTION_TEXT);
 
   const value = {
     isRecording,

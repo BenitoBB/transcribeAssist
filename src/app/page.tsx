@@ -68,7 +68,7 @@ export default function Home() {
             </Button>
           </Link>
           <p className="text-xs text-muted-foreground max-w-xs">
-            Todas las herramientas del maestro sin compartir la sala.
+            Todas las herramientas del maestro y alumno sin compartir la sala.
           </p>
         </div>
       </div>
