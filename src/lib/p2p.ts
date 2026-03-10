@@ -121,9 +121,10 @@ function initializePeer(peerId?: string): Peer {
     config: {
       iceServers: ICE_SERVERS,
       sdpSemantics: 'unified-plan', // Mejor compatibilidad con navegadores modernos
+      iceTransportPolicy: 'all' as RTCIceTransportPolicy, // Permitimos todo para que intente STUN primero
     },
-    pingInterval: 5000, // Envía pings al servidor de señalización cada 5s para evitar que firewalls (ej. RIUV) cierren el websocket
-    debug: 3, // Nivel máximo para ver exactamente qué bloquea la red
+    pingInterval: 5000, 
+    debug: 3, 
   };
 
   const newPeer = peerId 
