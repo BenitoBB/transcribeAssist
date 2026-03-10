@@ -27,7 +27,7 @@ import {
   onStateChange,
   onTranscriptionUpdate,
 } from '@/lib/transcription';
-import { hostSession, sendToPeers, onPeerStatusChange } from '@/lib/p2p';
+import { hostSession, sendToPeers, onPeerStatusChange, onConnectionStatusChange, ConnectionStatus } from '@/lib/p2p';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
@@ -52,9 +52,9 @@ export default function TeacherPage() {
   const [panelCommand, setPanelCommand] = useState<Command>(null);
   const [panelPosition, setPanelPosition] = useState<Position>('free');
 
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string>('');
   const [peerCount, setPeerCount] = useState(0);
-
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connecting');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -65,6 +65,7 @@ export default function TeacherPage() {
   }, []);
 
   useEffect(() => {
+    // Generar el ID sincronamente, pero no mostrarlo como "listo" hasta conectar
     const peerId = hostSession();
     setSessionId(peerId);
 
@@ -72,10 +73,22 @@ export default function TeacherPage() {
       setPeerCount(count);
     });
 
+    const unsubStatus = onConnectionStatusChange((status) => {
+      setConnectionStatus(status);
+      if (status === 'error') {
+        toast({
+          variant: 'destructive',
+          title: 'Error de servidor',
+          description: 'No se pudo conectar al servidor de señalización. Revisa tu internet.',
+        });
+      }
+    });
+
     return () => {
       unsubPeers();
+      unsubStatus();
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     const handleStateChange = (newState: 'recording' | 'stopped' | 'idle') => {
@@ -216,23 +229,41 @@ export default function TeacherPage() {
             'bottom-4 right-4 sm:bottom-8 sm:right-8 items-end': panelPosition === 'top',
           }
         )}>
-          <div className="flex items-center gap-2 bg-card p-2 rounded-lg shadow-lg border">
-            <span className="text-sm font-medium text-muted-foreground">ID de la Sala:</span>
-            <span className="font-mono text-sm text-primary">{sessionId}</span>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleCopySessionId}>
-                  <Copy className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Copiar ID de la sala</TooltipContent>
-            </Tooltip>
-          </div>
-          <p className="text-xs text-muted-foreground text-right mt-1">
-            Alumnos conectados: {peerCount}
-          </p>
+          {connectionStatus === 'connecting' ? (
+            <div className="flex items-center gap-2 bg-yellow-100 text-yellow-800 p-2 rounded-lg shadow-lg border border-yellow-300">
+              <span className="text-sm font-medium">Conectando al servidor...</span>
+            </div>
+          ) : connectionStatus === 'error' ? (
+            <div className="flex items-center gap-2 bg-red-100 text-red-800 p-2 rounded-lg shadow-lg border border-red-300">
+              <span className="text-sm font-medium">Error de conexión al servidor</span>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center gap-2 bg-card p-2 rounded-lg shadow-lg border">
+                <span className="text-sm font-medium text-muted-foreground">ID de la Sala:</span>
+                <span className="font-mono text-sm text-primary font-bold select-all bg-muted px-2 py-0.5 rounded">{sessionId}</span>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleCopySessionId}>
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Copiar ID de la sala</TooltipContent>
+                </Tooltip>
+              </div>
+              <p className="text-xs text-muted-foreground text-right mt-1">
+                Alumnos conectados: <strong>{peerCount}</strong>
+              </p>
+            </>
+          )}
         </div>
       )}
+
+      <div className="absolute top-8 left-1/2 -translate-x-1/2 z-20 pointer-events-none hidden sm:block">
+        <h1 className="text-3xl font-bold bg-background/80 px-4 py-2 rounded-full backdrop-blur-sm shadow-sm">
+          Vista del Maestro
+        </h1>
+      </div>
 
       {!isMobile && isDrawingMode && (
         <>
