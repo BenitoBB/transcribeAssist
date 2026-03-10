@@ -84,28 +84,26 @@ function notifyPeerStatusListeners(count: number) {
  */
 const ICE_SERVERS: RTCIceServer[] = [
   { urls: 'stun:stun.l.google.com:19302' },
-  { urls: 'stun:stun1.l.google.com:19302' },
-  { urls: 'stun:stun2.l.google.com:19302' },
-  { urls: 'stun:stun.relay.metered.ca:80' },
+  { urls: 'stun:global.stun.twilio.com:3478' },
   {
-    urls: 'turn:a.relay.metered.ca:80',
-    username: 'e8dd65b92f6d15a2e12d9b26',
-    credential: '5VWNx+NQOZ7iSJfx',
+    urls: 'turn:openrelay.metered.ca:80',
+    username: 'openrelayproject',
+    credential: 'openrelayproject',
   },
   {
-    urls: 'turn:a.relay.metered.ca:80?transport=tcp',
-    username: 'e8dd65b92f6d15a2e12d9b26',
-    credential: '5VWNx+NQOZ7iSJfx',
+    urls: 'turn:openrelay.metered.ca:80?transport=tcp',
+    username: 'openrelayproject',
+    credential: 'openrelayproject',
   },
   {
-    urls: 'turn:a.relay.metered.ca:443',
-    username: 'e8dd65b92f6d15a2e12d9b26',
-    credential: '5VWNx+NQOZ7iSJfx',
+    urls: 'turn:openrelay.metered.ca:443',
+    username: 'openrelayproject',
+    credential: 'openrelayproject',
   },
   {
-    urls: 'turn:a.relay.metered.ca:443?transport=tcp',
-    username: 'e8dd65b92f6d15a2e12d9b26',
-    credential: '5VWNx+NQOZ7iSJfx',
+    urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+    username: 'openrelayproject',
+    credential: 'openrelayproject',
   },
 ];
 
@@ -304,7 +302,7 @@ export function joinSession(teacherId: string) {
   }
 
   let connectionAttempts = 0;
-  const ATTEMPT_TIMEOUT = 10000; // 10s
+  const ATTEMPT_TIMEOUT = 20000; // 20s en lugar de 10s
   const MAX_RETRIES = 3;
 
   const attemptConnection = () => {
