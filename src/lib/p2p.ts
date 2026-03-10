@@ -13,8 +13,8 @@ import { customAlphabet } from 'nanoid';
 
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 
-// Cambia esto pronto a tu liga real de Render o Railway
-const SOCKET_URL = 'http://localhost:3001';
+// Liga del servidor de Socket.io en Render
+const SOCKET_URL = 'https://transcribeassist-server.onrender.com';
 
 let socket: Socket | null = null;
 let currentSessionId: string | null = null;
@@ -75,7 +75,7 @@ function initializeSocket(roomId: string, isHost: boolean = false) {
 
   // Socket.io maneja HTTP long-polling automáticamente si fallan los websockets (perfecto para la RIUV)
   socket = io(SOCKET_URL, {
-    transports: ['websocket', 'polling'], 
+    transports: ['websocket', 'polling'],
     reconnectionAttempts: 20,
     reconnectionDelay: 2000,
   });
@@ -84,7 +84,7 @@ function initializeSocket(roomId: string, isHost: boolean = false) {
 
   socket.on('connect', () => {
     console.log('[Socket] Conectado al servidor de sincronización:', socket?.id);
-    
+
     // Al conectar, unirse a la sala
     socket?.emit('join_room', roomId);
     currentSessionId = roomId;
@@ -109,7 +109,7 @@ function initializeSocket(roomId: string, isHost: boolean = false) {
     // Si soy Host, el total de alumnos son todos los de la sala menos yo (el Host)
     let peerTotal = count - 1;
     if (peerTotal < 0) peerTotal = 0;
-    
+
     notifyPeerStatusListeners(peerTotal);
 
     // Si soy Alumno y la sala tiene al menos 2 personas (Maestro + Yo), asumimos conexión correcta
@@ -131,7 +131,7 @@ function initializeSocket(roomId: string, isHost: boolean = false) {
 export function hostSession(): string {
   const nanoid = customAlphabet('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz', 5);
   const roomId = nanoid().toLowerCase();
-  
+
   initializeSocket(roomId, true);
   return roomId;
 }
