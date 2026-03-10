@@ -76,6 +76,39 @@ function notifyPeerStatusListeners(count: number) {
 }
 
 
+/**
+ * Configuración ICE con servidores STUN y TURN públicos.
+ * STUN funciona en la mayoría de redes domésticas simples.
+ * TURN es necesario cuando ambos dispositivos están detrás de NATs restrictivos
+ * (redes corporativas, universidades, ciertos routers).
+ */
+const ICE_SERVERS: RTCIceServer[] = [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun1.l.google.com:19302' },
+  { urls: 'stun:stun2.l.google.com:19302' },
+  { urls: 'stun:stun.relay.metered.ca:80' },
+  {
+    urls: 'turn:a.relay.metered.ca:80',
+    username: 'e8dd65b92f6d15a2e12d9b26',
+    credential: '5VWNx+NQOZ7iSJfx',
+  },
+  {
+    urls: 'turn:a.relay.metered.ca:80?transport=tcp',
+    username: 'e8dd65b92f6d15a2e12d9b26',
+    credential: '5VWNx+NQOZ7iSJfx',
+  },
+  {
+    urls: 'turn:a.relay.metered.ca:443',
+    username: 'e8dd65b92f6d15a2e12d9b26',
+    credential: '5VWNx+NQOZ7iSJfx',
+  },
+  {
+    urls: 'turn:a.relay.metered.ca:443?transport=tcp',
+    username: 'e8dd65b92f6d15a2e12d9b26',
+    credential: '5VWNx+NQOZ7iSJfx',
+  },
+];
+
 function initializePeer(peerId?: string): Peer {
   if (peer) {
     // Si ya existe un peer y el ID es el mismo, lo retornamos.
@@ -86,31 +119,42 @@ function initializePeer(peerId?: string): Peer {
     peer.destroy();
   }
 
-  // El servidor de PeerJS es gratuito y público. No requiere configuración.
-  const newPeer = peerId ? new Peer(peerId) : new Peer();
+  const peerOptions = {
+    config: {
+      iceServers: ICE_SERVERS,
+    },
+    debug: 2, // 0=none, 1=errors, 2=warnings, 3=all
+  };
+
+  const newPeer = peerId
+    ? new Peer(peerId, peerOptions)
+    : new Peer(peerOptions);
 
   newPeer.on('open', (id) => {
-    console.log('My peer ID is: ' + id);
+    console.log('[P2P] Mi peer ID:', id);
     if (!peerId) notifyStatusListeners('connected'); // Solo para alumnos
   });
 
   newPeer.on('connection', (conn) => {
-    console.log('New peer connected:', conn.peer);
+    console.log('[P2P] Nuevo peer conectado:', conn.peer);
     setupConnection(conn);
   });
 
   newPeer.on('disconnected', () => {
-    console.log('Peer disconnected. Reconnecting...');
+    console.log('[P2P] Peer desconectado del servidor de señalización. Reconectando...');
     notifyStatusListeners('connecting');
     peer?.reconnect();
   });
 
   newPeer.on('error', (err) => {
-    // Usamos warn en lugar de error para evitar la pantalla roja de Next.js en desarrollo,
-    // ya que no encontrar una sala es un comportamiento esperado del usuario, no un crash real.
-    console.warn('PeerJS connection info:', err.type);
+    console.warn('[P2P] Error de conexión:', err.type, err.message);
     if (err.type === 'peer-unavailable' || err.type === 'invalid-id' || err.type === 'network') {
       notifyStatusListeners('error');
+    }
+    // Si el peer fue destruido por el servidor, intentar reconectar
+    if (err.type === 'server-error' || err.type === 'socket-error') {
+      console.log('[P2P] Error de servidor/socket, intentando reconectar en 3s...');
+      setTimeout(() => peer?.reconnect(), 3000);
     }
   });
 
@@ -121,6 +165,7 @@ function initializePeer(peerId?: string): Peer {
 function setupConnection(conn: DataConnection) {
   // Evitar conexiones duplicadas
   if (connections.some(c => c.peer === conn.peer)) {
+    console.log('[P2P] Conexión duplicada ignorada para:', conn.peer);
     return;
   }
 
@@ -135,14 +180,12 @@ function setupConnection(conn: DataConnection) {
   notifyPeerStatusListeners(connections.length);
 
   conn.on('data', (data: unknown) => {
-    console.log('Received data:', data);
-
     // Si es un ping, responder automáticamente con pong
     if (typeof data === 'object' && data !== null && 'type' in data && data.type === 'ping') {
       if (conn.open) {
         conn.send({ type: 'pong' });
       }
-      return; // no notificar pings a la UI
+      return;
     }
 
     // Si es un pong, actualizar timestamp
@@ -150,16 +193,16 @@ function setupConnection(conn: DataConnection) {
       const peer = peersWithHeartbeat.get(conn.peer);
       if (peer) {
         peer.lastPong = Date.now();
-        console.log('Pong received from', conn.peer);
       }
-      return; // no notificar pings/pongs a la UI
+      return;
     }
 
+    console.log('[P2P] Datos recibidos de', conn.peer, ':', typeof data === 'object' && data !== null && 'type' in data ? (data as any).type : 'unknown');
     notifyDataListeners(data);
   });
 
   conn.on('close', () => {
-    console.log('Peer disconnected:', conn.peer);
+    console.log('[P2P] Peer desconectado:', conn.peer);
 
     // Limpiar heartbeat
     const peer = peersWithHeartbeat.get(conn.peer);
@@ -176,12 +219,11 @@ function setupConnection(conn: DataConnection) {
   });
 
   conn.on('error', (err) => {
-    console.error('Connection error with', conn.peer, ':', err);
-    // Los errores de conexión a menudo preceden a close(), pero los capturamos igual
+    console.error('[P2P] Error de conexión con', conn.peer, ':', err);
   });
 
   conn.on('open', () => {
-    console.log('Connection opened with:', conn.peer);
+    console.log('[P2P] Canal de datos abierto con:', conn.peer);
     notifyStatusListeners('connected');
   });
 }
@@ -198,7 +240,7 @@ function startHeartbeat() {
     peersWithHeartbeat.forEach((peer, peerId) => {
       // Si no hubo pong en los últimos 15 segundos, desconectar
       if (now - peer.lastPong > HEARTBEAT_TIMEOUT) {
-        console.warn('No heartbeat from peer', peerId, '- closing connection');
+        console.warn('[P2P] Sin heartbeat de', peerId, '- cerrando conexión');
         peersToRemove.push(peerId);
         peer.conn.close();
         return;
@@ -238,6 +280,7 @@ export function hostSession(): string {
 
 /**
  * Se une a la sesión de un maestro usando su ID.
+ * Incluye lógica de reintento automático si la conexión no se establece.
  * @param teacherId El ID del peer del maestro.
  */
 export function joinSession(teacherId: string) {
@@ -250,22 +293,43 @@ export function joinSession(teacherId: string) {
   notifyStatusListeners('connecting');
 
   if (connections.some(c => c.peer === teacherId)) {
-    console.log('Already connected to this peer', teacherId);
+    console.log('[P2P] Ya conectado a este peer:', teacherId);
     notifyStatusListeners('connected');
     return;
   }
 
+  const attemptConnection = () => {
+    console.log('[P2P] Intentando conectar a:', teacherId);
+    const conn = p.connect(teacherId, {
+      reliable: true,
+      serialization: 'json',
+    });
+
+    setupConnection(conn);
+
+    // Verificar que la conexión realmente se abrió después de 10 segundos
+    setTimeout(() => {
+      if (!conn.open) {
+        console.warn('[P2P] La conexión no se abrió en 10s, reintentando...');
+        // Remover la conexión fallida
+        const index = connections.findIndex(c => c.peer === teacherId);
+        if (index > -1) connections.splice(index, 1);
+        peersWithHeartbeat.delete(teacherId);
+
+        // Reintentar
+        attemptConnection();
+      }
+    }, 10000);
+  };
+
   // Esperamos a que nuestro peer esté listo antes de conectar
   if (!p.id) {
     p.on('open', () => {
-      console.log('Our peer is open, connecting to', teacherId);
-      const conn = p.connect(teacherId);
-      setupConnection(conn);
+      console.log('[P2P] Nuestro peer está listo, conectando a', teacherId);
+      attemptConnection();
     });
   } else {
-    console.log('Connecting to', teacherId);
-    const conn = p.connect(teacherId);
-    setupConnection(conn);
+    attemptConnection();
   }
 }
 

@@ -284,17 +284,15 @@ export function TranscriptionPanel({ command, onPositionChange }: TranscriptionP
   // Vista para Móvil
   if (isMobile) {
     return (
-      <div className="fixed inset-0 z-20 flex items-center justify-center p-4 pt-20">
-        <Card className="h-full w-full flex flex-col shadow-2xl border-2">
-          <CardHeader className="flex flex-row items-center justify-between p-3 border-b shrink-0">
-            <CardTitle className="text-base font-semibold">Transcripción</CardTitle>
-            <SettingsButton />
-          </CardHeader>
-          <CardContent className="p-0 flex-grow overflow-hidden min-h-0 bg-background">
-            {renderContent()}
-          </CardContent>
-        </Card>
-      </div>
+      <Card className="w-full h-[80vh] flex flex-col shadow-2xl border-2 mt-16 mx-4">
+        <CardHeader className="flex flex-row items-center justify-between p-3 border-b shrink-0">
+          <CardTitle className="text-base font-semibold">Transcripción</CardTitle>
+          <SettingsButton />
+        </CardHeader>
+        <CardContent className="p-0 flex-grow overflow-hidden min-h-0 bg-background">
+          {renderContent()}
+        </CardContent>
+      </Card>
     );
   }
 

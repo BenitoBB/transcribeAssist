@@ -384,15 +384,17 @@ export default function StudentPage() {
       </div>
 
       <div className="absolute top-4 right-4 sm:top-8 sm:right-8 flex items-center gap-2">
-        <Tooltip>
-          <TooltipTrigger>
-            <div className={`flex items-center gap-2 text-sm ${connectionStatus === 'connected' ? 'text-green-600' : 'text-red-600'}`}>
-              {connectionStatus === 'connected' ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />}
-              <span>{connectionStatus === 'connected' ? 'Conectado' : 'Desconectado'}</span>
-            </div>
-          </TooltipTrigger>
-          <TooltipContent><p>Estado de la conexión</p></TooltipContent>
-        </Tooltip>
+        {!isMobile && (
+          <Tooltip>
+            <TooltipTrigger>
+              <div className={`flex items-center gap-2 text-sm ${connectionStatus === 'connected' ? 'text-green-600' : 'text-red-600'}`}>
+                {connectionStatus === 'connected' ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />}
+                <span>{connectionStatus === 'connected' ? 'Conectado' : 'Desconectado'}</span>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent><p>Estado de la conexión</p></TooltipContent>
+          </Tooltip>
+        )}
         <SettingsButton />
       </div>
 
@@ -453,71 +455,66 @@ export default function StudentPage() {
 
           <div className={cn(
             "flex w-full gap-4 items-stretch justify-center transition-all duration-300 min-h-0",
-            isMobile ? "h-auto" : "max-w-7xl h-[60vh]",
-            isNotesOpen && notesSide === 'left' && !isMobile ? 'flex-row-reverse' : 'flex-row'
+            isMobile ? "max-w-full flex-col h-[75vh]" : "max-w-7xl h-[60vh]",
+            isNotesOpen && notesSide === 'left' && !isMobile ? 'flex-row-reverse' : !isMobile ? 'flex-row' : ''
           )}>
-            <div className={cn(
-              "flex-1 min-w-0 flex flex-col transition-all duration-300",
-              isMobile && "fixed inset-0 z-20 p-4 pt-20 items-center justify-center bg-background/80 backdrop-blur-sm"
+            <Card className={cn(
+              "min-w-0 flex flex-col shadow-lg border-2",
+              isMobile && isNotesOpen ? "h-[45%] shrink-0" : "flex-1 h-full"
             )}>
-              <Card className={cn(
-                "flex flex-col shadow-lg border-2",
-                isMobile ? "h-full w-full" : "h-full min-w-0"
-              )}>
-                <CardHeader className="flex flex-row items-center justify-between p-3 border-b gap-4 shrink-0">
-                  <CardTitle className="text-base font-semibold">Transcripción</CardTitle>
-                  <div className="flex-1 flex justify-end items-center gap-1">
-                    <div className="flex items-center gap-1 border-r pr-2 mr-1">
-                      <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted" onClick={() => handleApplyHighlight('amarillo')}>
-                        <div className={`h-4 w-4 rounded-full border border-black/10 ${getThemeHighlightColor('amarillo').bg}`}></div>
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted" onClick={() => handleApplyHighlight('verde')}>
-                        <div className={`h-4 w-4 rounded-full border border-black/10 ${getThemeHighlightColor('verde').bg}`}></div>
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted" onClick={() => handleApplyHighlight('rojo')}>
-                        <div className={`h-4 w-4 rounded-full border border-black/10 ${getThemeHighlightColor('rojo').bg}`}></div>
-                      </Button>
-                    </div>
-                    {isSearching ? (
-                      <Input
-                        ref={searchInputRef}
-                        type="search"
-                        placeholder="Buscar..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="h-8 text-sm w-32"
-                        autoFocus
-                        onBlur={() => !searchQuery && setIsSearching(false)}
-                      />
-                    ) : (
-                      <Button variant="ghost" size="icon" onClick={() => setIsSearching(true)} className="h-8 w-8"><Search className="h-4 w-4" /></Button>
-                    )}
+              <CardHeader className="flex flex-row items-center justify-between p-3 border-b gap-4 shrink-0">
+                <CardTitle className="text-base font-semibold">Transcripción</CardTitle>
+                <div className="flex-1 flex justify-end items-center gap-1">
+                  <div className="flex items-center gap-1 border-r pr-2 mr-1">
+                    <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted" onClick={() => handleApplyHighlight('amarillo')}>
+                      <div className={`h-4 w-4 rounded-full border border-black/10 ${getThemeHighlightColor('amarillo').bg}`}></div>
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted" onClick={() => handleApplyHighlight('verde')}>
+                      <div className={`h-4 w-4 rounded-full border border-black/10 ${getThemeHighlightColor('verde').bg}`}></div>
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted" onClick={() => handleApplyHighlight('rojo')}>
+                      <div className={`h-4 w-4 rounded-full border border-black/10 ${getThemeHighlightColor('rojo').bg}`}></div>
+                    </Button>
                   </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onSelect={handleCopy}><Copy className="mr-2 h-4 w-4" /><span>Copiar</span></DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onSelect={handleSave}><FileDown className="mr-2 h-4 w-4" /><span>Guardar .txt</span></DropdownMenuItem>
-                      <DropdownMenuItem onSelect={handleExportToPdf}><FileText className="mr-2 h-4 w-4" /><span>Exportar PDF</span></DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </CardHeader>
-                <CardContent className="p-0 flex-grow overflow-hidden bg-background">
-                  <ScrollArea className="h-full w-full">
-                    <div
-                      ref={transcriptionDisplayRef}
-                      className="p-6 break-words relative"
-                      onMouseMove={showRuler ? handleContentMouseMove : undefined}
-                      style={{ ...style, minHeight: '100%', color: 'var(--foreground)' }}
-                    >
-                      {renderHighlightedText(transcription)}
-                      {showRuler && <div className="absolute left-0 right-0 bg-yellow-200/40 pointer-events-none" style={{ top: rulerY - style.fontSize * style.lineHeight / 2, height: style.fontSize * style.lineHeight }} />}
-                    </div>
-                  </ScrollArea>
-                </CardContent>
-              </Card>
-            </div>
+                  {isSearching ? (
+                    <Input
+                      ref={searchInputRef}
+                      type="search"
+                      placeholder="Buscar..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="h-8 text-sm w-32"
+                      autoFocus
+                      onBlur={() => !searchQuery && setIsSearching(false)}
+                    />
+                  ) : (
+                    <Button variant="ghost" size="icon" onClick={() => setIsSearching(true)} className="h-8 w-8"><Search className="h-4 w-4" /></Button>
+                  )}
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onSelect={handleCopy}><Copy className="mr-2 h-4 w-4" /><span>Copiar</span></DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onSelect={handleSave}><FileDown className="mr-2 h-4 w-4" /><span>Guardar .txt</span></DropdownMenuItem>
+                    <DropdownMenuItem onSelect={handleExportToPdf}><FileText className="mr-2 h-4 w-4" /><span>Exportar PDF</span></DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </CardHeader>
+              <CardContent className="p-0 flex-grow overflow-hidden bg-background">
+                <ScrollArea className="h-full w-full">
+                  <div
+                    ref={transcriptionDisplayRef}
+                    className="p-6 break-words relative"
+                    onMouseMove={showRuler ? handleContentMouseMove : undefined}
+                    style={{ ...style, minHeight: '100%', color: 'var(--foreground)' }}
+                  >
+                    {renderHighlightedText(transcription)}
+                    {showRuler && <div className="absolute left-0 right-0 bg-yellow-200/40 pointer-events-none" style={{ top: rulerY - style.fontSize * style.lineHeight / 2, height: style.fontSize * style.lineHeight }} />}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
 
             {isNotesOpen && (
               <NotesPanel

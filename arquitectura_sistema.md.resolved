@@ -1,0 +1,282 @@
+# Arquitectura del Sistema — TranscribeAssist
+
+## 1. Visión General
+
+TranscribeAssist es una aplicación web de transcripción en tiempo real diseñada para entornos educativos. Permite que un maestro transcriba su voz a texto y la transmita instantáneamente a sus alumnos conectados, facilitando la accesibilidad en el aula.
+
+El sistema opera bajo un modelo **peer-to-peer (P2P)** sin servidor central de datos, lo que lo hace **privado por diseño**.
+
+---
+
+## 2. Stack Tecnológico
+
+| Capa | Tecnología | Versión | Propósito |
+|------|-----------|---------|-----------|
+| **Framework** | Next.js (React) | 16.x | Renderizado, routing y estructura SPA |
+| **Lenguaje** | TypeScript | 5.x | Tipado estático para robustez |
+| **Estilos** | TailwindCSS | 3.x | Sistema de diseño utilitario responsive |
+| **Componentes UI** | shadcn/ui (Radix UI) | — | Componentes accesibles y personalizables |
+| **Iconos** | Lucide React | 0.475 | Iconografía SVG consistente |
+| **Comunicación P2P** | PeerJS (WebRTC) | 1.5.4 | Transmisión de datos en tiempo real |
+| **IDs de sala** | nanoid | 5.x | Generación de códigos cortos de 5 caracteres |
+| **Reconocimiento de voz** | Web Speech API | Nativa | Captura y transcripción de audio a texto |
+| **Exportación PDF** | jsPDF + html2canvas | 2.5 / 1.4 | Generación de documentos descargables |
+| **Ventana flotante** | Document PiP API | Nativa | Ventana "siempre encima" para el maestro |
+
+---
+
+## 3. Diagrama de Arquitectura
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        TRANSCRIBEASSIST — ARQUITECTURA                     │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+    ┌─────────────────────┐                        ┌─────────────────────┐
+    │   MAESTRO (Host)    │                        │   ALUMNO (Peer)     │
+    │   ─────────────     │                        │   ────────────      │
+    │                     │                        │                     │
+    │  ┌───────────────┐  │    WebRTC DataChannel   │  ┌───────────────┐  │
+    │  │ Web Speech API│  │   (cifrado DTLS/SRTP)  │  │ Panel de      │  │
+    │  │ (Micrófono)   │──┼──────────────────────➤ │  │ Transcripción │  │
+    │  └───────────────┘  │    Tráfico directo     │  └───────────────┘  │
+    │         │           │    (sin servidor)       │                     │
+    │         ▼           │                        │  ┌───────────────┐  │
+    │  ┌───────────────┐  │                        │  │ Panel de      │  │
+    │  │ Transcripción │  │                        │  │ Notas (RAM)   │  │
+    │  │ Local         │  │                        │  └───────────────┘  │
+    │  └───────────────┘  │                        │                     │
+    │                     │                        │  ┌───────────────┐  │
+    │  ┌───────────────┐  │                        │  │ Marcatextos / │  │
+    │  │ Pizarra       │  │                        │  │ Exportar PDF  │  │
+    │  │ (Canvas local)│  │                        │  └───────────────┘  │
+    │  └───────────────┘  │                        │                     │
+    │                     │                        │                     │
+    │  ┌───────────────┐  │                        │                     │
+    │  │ PiP (Ventana  │  │                        │                     │
+    │  │ Flotante)     │  │                        │                     │
+    │  └───────────────┘  │                        │                     │
+    └──────────┬──────────┘                        └──────────┬──────────┘
+               │                                              │
+               │         ┌──────────────────────┐             │
+               │         │  Servidor de         │             │
+               └────────➤│  Señalización PeerJS │◄────────────┘
+                         │  (0.peerjs.com)      │
+                         │  ──────────────────  │
+                         │  Solo intercambia:   │
+                         │  • ICE Candidates    │
+                         │  • SDP Offer/Answer  │
+                         │  NO accede a datos   │
+                         └──────────┬───────────┘
+                                    │
+                         ┌──────────▼───────────┐
+                         │  Servidores ICE       │
+                         │  ────────────────     │
+                         │  STUN (Google):       │
+                         │   Resolución IP       │
+                         │                       │
+                         │  TURN (metered.ca):   │
+                         │   Relay para NATs     │
+                         │   restrictivos        │
+                         └───────────────────────┘
+
+
+    ┌─────────────────────┐
+    │   SOLO (Individual) │    ← Funciona de forma independiente
+    │   ─────────────     │       No usa P2P ni servidor de señalización
+    │                     │
+    │  ┌───────────────┐  │
+    │  │ Web Speech API│  │    Micrófono → Texto → Pantalla
+    │  │ (Micrófono)   │  │
+    │  └───────┬───────┘  │
+    │          ▼          │
+    │  ┌───────────────┐  │
+    │  │ Transcripción │  │    + Notas + Pizarra + PiP + Export
+    │  │ + Herramientas│  │
+    │  └───────────────┘  │
+    └─────────────────────┘
+```
+
+---
+
+## 4. Flujo de Conexión P2P
+
+```
+  MAESTRO                    SEÑALIZACIÓN                    ALUMNO
+     │                       (PeerJS Cloud)                    │
+     │                            │                            │
+     │ 1. hostSession()           │                            │
+     │ ──► Registra ID "abc12" ──►│                            │
+     │                            │                            │
+     │                            │          2. joinSession("abc12")
+     │                            │◄─── Solicita conectar ─────│
+     │                            │                            │
+     │ 3. Intercambio SDP/ICE     │    Intercambio SDP/ICE     │
+     │◄───────────────────────────┼───────────────────────────►│
+     │                            │                            │
+     │ 4. WebRTC DataChannel establecido (directo P2P)         │
+     │◄════════════════════════════════════════════════════════►│
+     │                            │                            │
+     │  (Señalización ya no       │                            │
+     │   participa en el flujo)   │                            │
+     │                            │                            │
+     │ 5. sendToPeers({           │                            │
+     │      type: 'full_text',    │                            │
+     │      text: '...'           │                            │
+     │    })                      │                            │
+     │════════════════════════════════════════════════════════►│
+     │                            │                            │
+     │ 6. Heartbeat (ping/pong cada 5s)                        │
+     │◄══════════════════════════════════════════════════════►│
+     │                            │                            │
+```
+
+---
+
+## 5. Topología de Red
+
+```
+                    ┌─────────────────────────────┐
+                    │     INTERNET                │
+                    │                             │
+                    │   ┌───────────────────┐     │
+                    │   │ PeerJS Cloud      │     │
+                    │   │ (Señalización)    │     │   Solo handshake
+                    │   └────────┬──────────┘     │   inicial
+                    │            │                │
+                    │   ┌────────┼──────────┐     │
+                    │   │  STUN  │   TURN   │     │   Resolución de
+                    │   │(Google)│(metered) │     │   NAT / Relay
+                    │   └────────┴──────────┘     │
+                    │                             │
+                    └──────────┬──────────────────┘
+                               │
+          ┌────────────────────┼────────────────────┐
+          │                    │                    │
+    ┌─────▼─────┐        ┌────▼────┐         ┌─────▼─────┐
+    │  Red del  │        │  Red    │         │  Red del  │
+    │  Maestro  │        │  WiFi   │         │  Alumno   │
+    │ (Router A)│        │  Univ.  │         │ (Router B)│
+    └─────┬─────┘        └────┬────┘         └─────┬─────┘
+          │                   │                    │
+    ┌─────▼─────┐       ┌────▼────┐          ┌────▼─────┐
+    │  Laptop   │       │ Laptop  │          │  Celular │
+    │  Maestro  │═══════│ Alumno 1│          │ Alumno 2 │
+    │  Chrome   │ WebRTC│ Chrome  │          │  Chrome  │
+    └───────────┘(datos)└─────────┘          └──────────┘
+                   ▲                              │
+                   │          WebRTC (datos)       │
+                   └──────────────────────────────┘
+
+    ═══════  Conexión directa P2P (cifrada DTLS/SRTP)
+    ───────  Tráfico de señalización (solo al inicio)
+```
+
+---
+
+## 6. Modelo de Seguridad y Privacidad
+
+### Privado por Diseño ✅
+
+| Aspecto | Detalle |
+|---------|---------|
+| **Almacenamiento de datos** | Cero. No hay base de datos, no hay servidor, no hay persistencia en la nube. |
+| **Transcripción** | Se genera en el navegador del maestro y se transmite directamente al alumno vía WebRTC. |
+| **Cifrado en tránsito** | WebRTC usa DTLS (para control) y SRTP (para datos), ambos cifrados de extremo a extremo. |
+| **Notas del alumno** | Volátiles: se almacenan en RAM del navegador y se borran al salir. |
+| **Servidor de señalización** | Solo intercambia metadatos de red (IPs, puertos). Nunca accede al contenido de la transcripción. |
+| **Cuentas de usuario** | No existen. No hay registro, login ni identificación personal. |
+| **Servidor TURN** | Cuando se usa como relay, ve paquetes cifrados. No puede descifrar el contenido. |
+
+### Consideración sobre la Web Speech API
+
+> El navegador Chrome envía el audio capturado del micrófono a los servidores de Google para el procesamiento de reconocimiento de voz. Esta es una dependencia del navegador, **no del sistema TranscribeAssist**. Si se reemplazara por un motor offline (como OpenAI Whisper o Mozilla DeepSpeech), el sistema sería 100% privado sin ninguna dependencia externa.
+
+---
+
+## 7. Las Tres Vistas del Sistema
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│                    PANTALLA PRINCIPAL                          │
+│                                                                │
+│     ┌──────────┐      ┌──────────┐      ┌──────────────┐     │
+│     │          │      │          │      │              │     │
+│     │ MAESTRO  │      │ ALUMNO   │      │  INDIVIDUAL  │     │
+│     │          │      │          │      │   (Solo)     │     │
+│     └────┬─────┘      └────┬─────┘      └──────┬───────┘     │
+│          │                 │                    │             │
+└──────────┼─────────────────┼────────────────────┼─────────────┘
+           │                 │                    │
+           ▼                 ▼                    ▼
+    ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐
+    │ • Graba voz  │  │ • Se conecta │  │ • Graba voz      │
+    │ • Transcribe │  │   a sala     │  │ • Transcribe     │
+    │ • Transmite  │  │ • Recibe     │  │ • NO usa P2P     │
+    │   a alumnos  │  │   texto P2P  │  │ • Tomar notas    │
+    │ • Pizarra    │  │ • Marcatextos│  │ • Pizarra        │
+    │ • PiP        │  │ • Notas      │  │ • PiP            │
+    │ • Export PDF │  │ • Export PDF │  │ • Export PDF     │
+    │              │  │              │  │                  │
+    │ Requiere:    │  │ Requiere:    │  │ Requiere:        │
+    │ • Internet   │  │ • Internet   │  │ • Solo micrófono │
+    │ • Micrófono  │  │ • ID de sala │  │   (+ Speech API) │
+    └──────────────┘  └──────────────┘  └──────────────────┘
+```
+
+---
+
+## 8. Estructura de Archivos Clave
+
+```
+src/
+├── app/
+│   ├── page.tsx                      # Pantalla principal (selector de vista)
+│   ├── teacher/
+│   │   ├── page.tsx                  # Vista del Maestro
+│   │   └── components/
+│   │       ├── TranscriptionPanel.tsx # Panel principal + PiP + Drag
+│   │       ├── DrawingCanvas.tsx     # Pizarra (canvas HTML5)
+│   │       └── DrawingToolbar.tsx    # Herramientas de la pizarra
+│   ├── student/
+│   │   ├── page.tsx                  # Vista del Alumno
+│   │   └── components/
+│   │       └── NotesPanel.tsx        # Panel de notas (volátil)
+│   └── solo/
+│       └── page.tsx                  # Vista Individual
+│
+├── lib/
+│   ├── p2p.ts                        # ← Capa de comunicación WebRTC/PeerJS
+│   ├── transcription/
+│   │   └── index.ts                  # ← Motor de voz (Web Speech API)
+│   └── utils.ts                      # Utilidades generales
+│
+├── components/
+│   ├── ExitConfirmation.tsx          # Modal de confirmación de salida
+│   ├── BionicReadingText.tsx         # Lectura biónica
+│   ├── settings/                     # Panel de configuración (accesibilidad)
+│   └── ui/                           # Componentes shadcn/ui (Radix)
+│
+├── context/
+│   └── TranscriptionContext.tsx      # Estado global de la transcripción
+│
+└── hooks/
+    └── use-transcription.ts          # Hook para acceder al contexto
+```
+
+---
+
+## 9. Protocolos y Puertos Utilizados
+
+| Servicio | Protocolo | Puerto | Propósito |
+|----------|-----------|--------|-----------|
+| PeerJS Cloud | WSS (WebSocket Secure) | 443 | Señalización inicial |
+| STUN (Google) | UDP | 19302 | Resolución de IP pública |
+| TURN (metered.ca) | UDP / TCP | 80, 443 | Relay para NATs restrictivos |
+| WebRTC DataChannel | DTLS + SCTP | Dinámico | Transmisión de datos P2P |
+| Web Speech API | HTTPS | 443 | Audio → Texto (servidores Google) |
+| Next.js Dev Server | HTTP | 9002 | Servidor de desarrollo local |
+
+---
+
+*Documento generado el 9 de marzo de 2026. Basado en el análisis directo del código fuente de TranscribeAssist.*
