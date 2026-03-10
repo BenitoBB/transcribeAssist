@@ -132,7 +132,10 @@ function initializePeer(peerId?: string): Peer {
 
   newPeer.on('open', (id) => {
     console.log('[P2P] Mi peer ID:', id);
-    if (!peerId) notifyStatusListeners('connected'); // Solo para alumnos
+    if (peerId) {
+      // El maestro (host) está listo en el servidor y su sala está abierta
+      notifyStatusListeners('connected');
+    }
   });
 
   newPeer.on('connection', (conn) => {
