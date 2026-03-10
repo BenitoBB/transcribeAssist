@@ -122,12 +122,14 @@ function initializePeer(peerId?: string): Peer {
   const peerOptions = {
     config: {
       iceServers: ICE_SERVERS,
+      sdpSemantics: 'unified-plan', // Mejor compatibilidad con navegadores modernos
     },
-    debug: 2, // 0=none, 1=errors, 2=warnings, 3=all
+    pingInterval: 5000, // Envía pings al servidor de señalización cada 5s para evitar que firewalls (ej. RIUV) cierren el websocket
+    debug: 3, // Nivel máximo para ver exactamente qué bloquea la red
   };
 
-  const newPeer = peerId
-    ? new Peer(peerId, peerOptions)
+  const newPeer = peerId 
+    ? new Peer(peerId, peerOptions) 
     : new Peer(peerOptions);
 
   newPeer.on('open', (id) => {
@@ -301,8 +303,13 @@ export function joinSession(teacherId: string) {
     return;
   }
 
+  let connectionAttempts = 0;
+  const ATTEMPT_TIMEOUT = 10000; // 10s
+  const MAX_RETRIES = 3;
+
   const attemptConnection = () => {
-    console.log('[P2P] Intentando conectar a:', teacherId);
+    connectionAttempts++;
+    console.log(`[P2P] Intentando conectar a: ${teacherId} (Intento ${connectionAttempts}/${MAX_RETRIES})`);
     const conn = p.connect(teacherId, {
       reliable: true,
       serialization: 'json',
@@ -313,16 +320,23 @@ export function joinSession(teacherId: string) {
     // Verificar que la conexión realmente se abrió después de 10 segundos
     setTimeout(() => {
       if (!conn.open) {
-        console.warn('[P2P] La conexión no se abrió en 10s, reintentando...');
+        console.warn(`[P2P] La conexión no se abrió en 10s (Intento ${connectionAttempts}).`);
         // Remover la conexión fallida
         const index = connections.findIndex(c => c.peer === teacherId);
         if (index > -1) connections.splice(index, 1);
         peersWithHeartbeat.delete(teacherId);
-
-        // Reintentar
-        attemptConnection();
+        
+        // Reintentar si no excedimos el límite
+        if (connectionAttempts < MAX_RETRIES) {
+          console.log('[P2P] Reintentando conexión...');
+          attemptConnection();
+        } else {
+          console.error('[P2P] Límite de reintentos alcanzado. Es probable que un Firewall esté bloqueando WebRTC o la sala expiró.');
+          notifyStatusListeners('error');
+          p.destroy();
+        }
       }
-    }, 10000);
+    }, ATTEMPT_TIMEOUT);
   };
 
   // Esperamos a que nuestro peer esté listo antes de conectar
