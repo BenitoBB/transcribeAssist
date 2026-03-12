@@ -259,7 +259,10 @@ export default function TeacherPage() {
         </div>
       )}
 
-      <div className="absolute top-8 left-1/2 -translate-x-1/2 z-20 pointer-events-none hidden sm:block">
+      <div className={cn(
+        "absolute left-1/2 -translate-x-1/2 z-20 pointer-events-none hidden sm:block transition-all duration-300",
+        panelPosition === 'top' ? 'bottom-8' : 'top-8'
+      )}>
         <h1 className="text-3xl font-bold bg-background/80 px-4 py-2 rounded-full backdrop-blur-sm shadow-sm">
           Vista del Maestro
         </h1>
