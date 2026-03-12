@@ -40,6 +40,7 @@ export default function SoloPage() {
     const [brushColor, setBrushColor] = useState('#FF0000');
     const [clearCanvas, setClearCanvas] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
+    const [isNarrow, setIsNarrow] = useState(false); // Para apilar paneles cuando no caben lado a lado
 
     const { transcription, setTranscription, isRecording, setIsRecording } = useTranscription();
     const router = useRouter();
@@ -53,10 +54,13 @@ export default function SoloPage() {
     const [notesContent, setNotesContent] = useState('');
 
     useEffect(() => {
-        const checkIsMobile = () => setIsMobile(window.innerWidth < 768);
-        checkIsMobile();
-        window.addEventListener('resize', checkIsMobile);
-        return () => window.removeEventListener('resize', checkIsMobile);
+        const checkBreakpoints = () => {
+            setIsMobile(window.innerWidth < 768);
+            setIsNarrow(window.innerWidth < 1024); // Apilamos paneles por debajo de 1024px
+        };
+        checkBreakpoints();
+        window.addEventListener('resize', checkBreakpoints);
+        return () => window.removeEventListener('resize', checkBreakpoints);
     }, []);
 
     useEffect(() => {
@@ -195,22 +199,35 @@ export default function SoloPage() {
             )}
 
             <div className="relative w-full h-full pointer-events-none z-10 flex items-center justify-center p-4">
-                <div className={`flex w-full max-w-7xl gap-4 items-stretch justify-center h-[70vh] pointer-events-auto transition-all duration-300 ${isNotesOpen && notesSide === 'left' ? 'flex-row-reverse' : 'flex-row'}`}>
-                    <div className="flex-1 min-w-0 relative h-full">
+                {/* isNarrow (< 1024px): apilamos verticalmente para evitar solapamiento */}
+                <div className={cn(
+                    "flex w-full max-w-7xl gap-4 items-stretch justify-center pointer-events-auto transition-all duration-300",
+                    isNarrow && isNotesOpen ? "flex-col h-full pt-16 pb-2" : "flex-row h-[70vh]",
+                    isNotesOpen && notesSide === 'left' && !(isNarrow && isNotesOpen) ? 'flex-row-reverse' : ''
+                )}>
+                    <div className={cn(
+                        "min-w-0 relative",
+                        isNarrow && isNotesOpen ? "h-[55%] shrink-0" : "flex-1 h-full"
+                    )}>
                         <TranscriptionPanel command={panelCommand} onPositionChange={setPanelPosition} />
                     </div>
 
                     {isNotesOpen && (
-                        <NotesPanel
-                            studentClassName="Sesión Individual"
-                            sessionId="Solo"
-                            startTime={new Date()}
-                            onClose={() => setIsNotesOpen(false)}
-                            side={notesSide}
-                            onToggleSide={() => setNotesSide(prev => prev === 'left' ? 'right' : 'left')}
-                            initialContent={notesContent}
-                            onContentChange={setNotesContent}
-                        />
+                        <div className={cn(
+                            isNarrow ? "flex-1 min-h-0 flex justify-center" : ""
+                        )}>
+                            <NotesPanel
+                                studentClassName="Sesión Individual"
+                                sessionId="Solo"
+                                startTime={new Date()}
+                                onClose={() => setIsNotesOpen(false)}
+                                side={notesSide}
+                                onToggleSide={() => setNotesSide(prev => prev === 'left' ? 'right' : 'left')}
+                                initialContent={notesContent}
+                                onContentChange={setNotesContent}
+                                isMobile={isNarrow}
+                            />
+                        </div>
                     )}
                 </div>
             </div>
