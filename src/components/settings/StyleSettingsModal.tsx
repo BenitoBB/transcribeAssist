@@ -1,6 +1,12 @@
 'use client';
 
 import { useStyle } from '@/context/StyleContext';
+import {
+  defaultStyle,
+  DEFAULT_THEME,
+  DEFAULT_BIONIC,
+  DEFAULT_RULER,
+} from '@/context/StyleContext';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import {
@@ -12,9 +18,17 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
+import { RotateCcw } from 'lucide-react';
 
 export function StyleSettingsModal() {
   const { style, setStyle, theme, setTheme, isBionic, setIsBionic, showRuler, setShowRuler } = useStyle();
+
+  const handleResetAll = () => {
+    setStyle({ ...defaultStyle });
+    setTheme(DEFAULT_THEME);
+    setIsBionic(DEFAULT_BIONIC);
+    setShowRuler(DEFAULT_RULER);
+  };
 
   return (
     <div className="grid gap-6 py-4">
@@ -94,6 +108,18 @@ export function StyleSettingsModal() {
           <Button variant={theme === 'tritanopia' ? 'default' : 'outline'} onClick={() => setTheme('tritanopia')}>Tritanopia</Button>
           <Button variant={theme === 'accessible' ? 'default' : 'outline'} onClick={() => setTheme('accessible')}>Alto Contraste</Button>
         </div>
+      </div>
+
+      {/* Botón de Restablecer */}
+      <div className="pt-2 border-t">
+        <Button
+          variant="outline"
+          className="w-full gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+          onClick={handleResetAll}
+        >
+          <RotateCcw className="h-4 w-4" />
+          Restablecer todo
+        </Button>
       </div>
     </div>
   );

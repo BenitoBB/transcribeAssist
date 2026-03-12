@@ -23,12 +23,55 @@ interface StyleContextType {
   setIsBionic: React.Dispatch<React.SetStateAction<boolean>>;  showRuler: boolean;
   setShowRuler: React.Dispatch<React.SetStateAction<boolean>>;}
 
-// Estilos por defecto
-const defaultStyle: CustomStyle = {
-  fontSize: 16,
-  lineHeight: 1.8,
-  letterSpacing: 0.5,
-  fontFamily: 'Inter, sans-serif',
+/**
+ * ============================================================================================
+ * VALORES ÓPTIMOS DE TIPOGRAFÍA PARA LECTURA
+ * ============================================================================================
+ * Basados en investigaciones de legibilidad digital.
+ * Puedes cambiar estos valores a tu gusto — se usan como "Restablecer todo" en Configuración.
+ *
+ * 📖 Fuentes y referencias:
+ *
+ *   TAMAÑO DE FUENTE (fontSize):
+ *   - Rango recomendado: 16–18px para pantallas digitales.
+ *   - Texto menor a 14px incrementa significativamente la fatiga visual.
+ *   - En móviles, mínimo 16px para cuerpo de texto.
+ *     Ref: greadme.com, uxpin.com
+ *
+ *   INTERLINEADO (lineHeight):
+ *   - Rango ideal: 1.4–1.6 veces el tamaño de fuente.
+ *   - Textos largos se benefician de valores más altos (~1.6–1.8).
+ *   - Para lectores con dislexia, mayor espaciado vertical mejora la lectura.
+ *     Ref: theeditorsuite.com, researchgate.net, kickpoint.ca
+ *
+ *   ESPACIADO DE LETRAS (letterSpacing):
+ *   - Para cuerpo de texto, el espaciado nativo suele bastar.
+ *   - Un ajuste sutil de 0.5px mejora legibilidad en fuentes pequeñas.
+ *   - Para lectores con dislexia, un espaciado ligeramente mayor es beneficioso.
+ *     Ref: legible-typography.com, readabilitymatters.org
+ *
+ *   TIPOGRAFÍA (fontFamily):
+ *   - Sans-serif (Inter, Arial, Verdana) se leen mejor en pantalla.
+ *   - Fuentes con x-height grande mejoran legibilidad en tamaños pequeños.
+ *     Ref: arvojournals.org, swiftkickweb.com
+ * ============================================================================================
+ */
+
+// ──── CONSTANTES DE VALORES POR DEFECTO (modifícalas a tu gusto) ────
+export const DEFAULT_FONT_SIZE    = 18;                    // px — Tamaño de fuente
+export const DEFAULT_LINE_HEIGHT  = 1.6;                   // factor — Interlineado
+export const DEFAULT_LETTER_SPACING = 0.5;                 // px — Espaciado entre letras
+export const DEFAULT_FONT_FAMILY  = 'Inter, sans-serif';   // Tipografía
+export const DEFAULT_THEME: Theme = 'light';               // Tema de color
+export const DEFAULT_BIONIC       = false;                 // Lectura biónica
+export const DEFAULT_RULER        = false;                 // Regla de lectura
+
+// Estilos por defecto (construidos desde las constantes)
+export const defaultStyle: CustomStyle = {
+  fontSize: DEFAULT_FONT_SIZE,
+  lineHeight: DEFAULT_LINE_HEIGHT,
+  letterSpacing: DEFAULT_LETTER_SPACING,
+  fontFamily: DEFAULT_FONT_FAMILY,
 };
 
 // Crea el contexto con un valor undefined por defecto

@@ -32,7 +32,7 @@ export function SettingsButton() {
           <p>Ajustes de visualización</p>
         </TooltipContent>
       </Tooltip>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px] max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Ajustes de Visualización</DialogTitle>
         </DialogHeader>
