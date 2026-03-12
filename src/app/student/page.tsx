@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
@@ -526,6 +526,7 @@ export default function StudentPage() {
                 onToggleSide={() => setNotesSide(prev => prev === 'left' ? 'right' : 'left')}
                 initialContent={notesContent}
                 onContentChange={setNotesContent}
+                isMobile={isMobile}
               />
             )}
           </div>

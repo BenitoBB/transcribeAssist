@@ -35,6 +35,7 @@ interface NotesPanelProps {
     onToggleSide: () => void;
     initialContent: string;
     onContentChange: (content: string) => void;
+    isMobile?: boolean;
 }
 
 export function NotesPanel({
@@ -45,7 +46,8 @@ export function NotesPanel({
     side,
     onToggleSide,
     initialContent,
-    onContentChange
+    onContentChange,
+    isMobile = false
 }: NotesPanelProps) {
     const { style, theme } = useStyle();
     const { toast } = useToast();
@@ -197,7 +199,7 @@ export function NotesPanel({
     const panelTitle = studentClassName ? `Notas de ${studentClassName}` : 'Notas';
 
     return (
-        <Card className="w-80 sm:w-96 flex flex-col shadow-lg border-2 border-primary/10 h-full overflow-hidden">
+        <Card className="w-full sm:w-96 flex flex-col shadow-lg border-2 border-primary/10 h-full overflow-hidden">
             <CardHeader className="p-3 border-b flex flex-row items-center justify-between gap-1 overflow-hidden shrink-0">
                 <div className="flex items-center gap-1.5 min-w-0">
                     <CardTitle className="text-sm font-bold truncate">
@@ -205,19 +207,21 @@ export function NotesPanel({
                     </CardTitle>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7"
-                                onMouseDown={(e) => { e.preventDefault(); onToggleSide(); }}
-                            >
-                                <ArrowLeftRight className="h-3.5 w-3.5" />
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Mover panel</TooltipContent>
-                    </Tooltip>
+                    {!isMobile && (
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7"
+                                    onMouseDown={(e) => { e.preventDefault(); onToggleSide(); }}
+                                >
+                                    <ArrowLeftRight className="h-3.5 w-3.5" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Mover panel</TooltipContent>
+                        </Tooltip>
+                    )}
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}>
                         <X className="h-4 w-4" />
                     </Button>

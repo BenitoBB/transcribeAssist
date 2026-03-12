@@ -74,4 +74,14 @@ app.get('/', (req, res) => {
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
   console.log(`Servidor de Señalización (Socket.io) corriendo en el puerto ${PORT}`);
+
+  // Self-ping cada 10 minutos para evitar que Render duerma el servidor (tier gratuito)
+  const RENDER_URL = process.env.RENDER_EXTERNAL_URL;
+  if (RENDER_URL) {
+    setInterval(() => {
+      fetch(RENDER_URL)
+        .then(() => console.log('[Keep-Alive] Ping exitoso a', RENDER_URL))
+        .catch((err) => console.warn('[Keep-Alive] Error en ping:', err.message));
+    }, 10 * 60 * 1000); // cada 10 minutos
+  }
 });

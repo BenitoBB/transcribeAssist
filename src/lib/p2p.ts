@@ -74,10 +74,13 @@ function initializeSocket(roomId: string, isHost: boolean = false) {
   }
 
   // Socket.io maneja HTTP long-polling automáticamente si fallan los websockets (perfecto para la RIUV)
+  // Socket.io maneja HTTP long-polling automáticamente si fallan los websockets (perfecto para la RIUV)
   socket = io(SOCKET_URL, {
     transports: ['websocket', 'polling'],
-    reconnectionAttempts: 20,
+    reconnectionAttempts: Infinity, // Nunca dejar de reintentar
     reconnectionDelay: 2000,
+    reconnectionDelayMax: 10000,
+    timeout: 20000,
   });
 
   notifyStatusListeners('connecting');
@@ -94,15 +97,38 @@ function initializeSocket(roomId: string, isHost: boolean = false) {
     }
   });
 
+  // Los errores transitorios (timeouts de Render despertando) NO deben mostrar error al usuario.
+  // Socket.io reintentará automáticamente. Solo logeamos un warning.
   socket.on('connect_error', (err) => {
-    console.error('[Socket] Error de conexión:', err.message);
+    console.warn('[Socket] Error de conexión transitorio:', err.message, '— Reintentando...');
+    // NO notificamos 'error' aquí; dejamos que Socket.io maneje la reconexión.
+    // Solo cambiamos a 'connecting' para que la UI refleje el reintento.
+    notifyStatusListeners('connecting');
+  });
+
+  // Este evento se dispara cuando Socket.io agota TODOS los reintentos (con Infinity, nunca pasa)
+  socket.on('reconnect_failed', () => {
+    console.error('[Socket] Todos los reintentos agotados. Conexión fallida definitivamente.');
     notifyStatusListeners('error');
+  });
+
+  // Cuando Socket.io reconecta exitosamente, re-unirse a la sala
+  socket.on('reconnect', () => {
+    console.log('[Socket] Reconectado exitosamente. Re-uniéndose a sala:', roomId);
+    socket?.emit('join_room', roomId);
+    if (isHost) {
+      notifyStatusListeners('connected');
+    }
   });
 
   socket.on('disconnect', (reason) => {
     console.log('[Socket] Desconectado por:', reason);
-    notifyStatusListeners('disconnected');
-    notifyPeerStatusListeners(0);
+    // Si el servidor cerró la conexión, Socket.io reconectará automáticamente
+    if (reason === 'io server disconnect') {
+      // El servidor forzó la desconexión, intentamos reconectar manualmente
+      socket?.connect();
+    }
+    notifyStatusListeners('connecting'); // Mostramos "reconectando" en vez de "desconectado"
   });
 
   socket.on('peer_count', (count: number) => {
