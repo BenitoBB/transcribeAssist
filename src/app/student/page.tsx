@@ -16,6 +16,7 @@ import {
   Search,
   Highlighter,
   NotebookPen,
+  Eraser,
 } from 'lucide-react';
 
 export type HighlightColor = 'amarillo' | 'verde' | 'rojo';
@@ -147,6 +148,20 @@ export default function StudentPage() {
       toast({
         title: 'Texto resaltado',
         description: `Se ha marcado con color ${getThemeHighlightColor(color).label}.`,
+      });
+    }
+    selection.removeAllRanges();
+  };
+
+  const handleRemoveHighlight = () => {
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed) return;
+    const text = selection.toString().trim();
+    if (text.length > 0) {
+      setHighlights(prev => prev.filter(h => h.text.toLowerCase() !== text.toLowerCase()));
+      toast({
+        title: 'Marcador eliminado',
+        description: 'Se ha quitado el resaltado del texto seleccionado.',
       });
     }
     selection.removeAllRanges();
@@ -462,20 +477,55 @@ export default function StudentPage() {
               "min-w-0 flex flex-col shadow-lg border-2",
               isMobile && isNotesOpen ? "h-[45%] shrink-0" : "flex-1 h-full"
             )}>
-              <CardHeader className="flex flex-row items-center justify-between p-3 border-b gap-4 shrink-0">
-                <CardTitle className="text-base font-semibold">Transcripción</CardTitle>
-                <div className="flex-1 flex justify-end items-center gap-1">
-                  <div className="flex items-center gap-1 border-r pr-2 mr-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted" onClick={() => handleApplyHighlight('amarillo')}>
-                      <div className={`h-4 w-4 rounded-full border border-black/10 ${getThemeHighlightColor('amarillo').bg}`}></div>
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted" onClick={() => handleApplyHighlight('verde')}>
-                      <div className={`h-4 w-4 rounded-full border border-black/10 ${getThemeHighlightColor('verde').bg}`}></div>
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted" onClick={() => handleApplyHighlight('rojo')}>
-                      <div className={`h-4 w-4 rounded-full border border-black/10 ${getThemeHighlightColor('rojo').bg}`}></div>
-                    </Button>
-                  </div>
+              <CardHeader className="p-3 border-b flex flex-row items-center justify-between gap-1 overflow-hidden shrink-0 h-14">
+                <CardTitle className="text-sm font-bold truncate">Transcripción</CardTitle>
+              </CardHeader>
+              
+              <div className="p-2 border-b bg-muted/30 flex flex-wrap items-center justify-between gap-1 shrink-0">
+                <div className="flex items-center gap-0.5">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        onClick={handleRemoveHighlight}
+                      >
+                        <Eraser className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Quitar marcador</TooltipContent>
+                  </Tooltip>
+
+                  <div className="w-px h-6 bg-border mx-1" />
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted" onClick={() => handleApplyHighlight('amarillo')}>
+                        <div className={`h-4 w-4 rounded-full border border-black/10 ${getThemeHighlightColor('amarillo').bg}`}></div>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Amarillo</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted" onClick={() => handleApplyHighlight('verde')}>
+                        <div className={`h-4 w-4 rounded-full border border-black/10 ${getThemeHighlightColor('verde').bg}`}></div>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Verde</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted" onClick={() => handleApplyHighlight('rojo')}>
+                        <div className={`h-4 w-4 rounded-full border border-black/10 ${getThemeHighlightColor('rojo').bg}`}></div>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Rojo</TooltipContent>
+                  </Tooltip>
+                </div>
+
+                <div className="flex items-center gap-0.5 ml-auto">
                   {isSearching ? (
                     <Input
                       ref={searchInputRef}
@@ -488,19 +538,46 @@ export default function StudentPage() {
                       onBlur={() => !searchQuery && setIsSearching(false)}
                     />
                   ) : (
-                    <Button variant="ghost" size="icon" onClick={() => setIsSearching(true)} className="h-8 w-8"><Search className="h-4 w-4" /></Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsSearching(true)}>
+                          <Search className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Buscar</TooltipContent>
+                    </Tooltip>
                   )}
+
+                  <div className="w-px h-6 bg-border mx-1" />
+                  
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCopy}>
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Copiar</TooltipContent>
+                  </Tooltip>
+                  
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleSave}>
+                        <FileDown className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>.txt</TooltipContent>
+                  </Tooltip>
+                  
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleExportToPdf}>
+                        <FileText className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Exportar PDF</TooltipContent>
+                  </Tooltip>
                 </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onSelect={handleCopy}><Copy className="mr-2 h-4 w-4" /><span>Copiar</span></DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onSelect={handleSave}><FileDown className="mr-2 h-4 w-4" /><span>Guardar .txt</span></DropdownMenuItem>
-                    <DropdownMenuItem onSelect={handleExportToPdf}><FileText className="mr-2 h-4 w-4" /><span>Exportar PDF</span></DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </CardHeader>
+              </div>
               <CardContent className="p-0 flex-grow overflow-hidden bg-background">
                 <ScrollArea className="h-full w-full">
                   <div

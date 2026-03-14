@@ -2,6 +2,7 @@
 
 import { useRef, useEffect } from 'react';
 import React from 'react';
+import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -199,8 +200,8 @@ export function NotesPanel({
     const panelTitle = studentClassName ? `Notas de ${studentClassName}` : 'Notas';
 
     return (
-        <Card className="w-full sm:w-96 flex flex-col shadow-lg border-2 border-primary/10 h-full overflow-hidden">
-            <CardHeader className="p-3 border-b flex flex-row items-center justify-between gap-1 overflow-hidden shrink-0">
+        <Card className={cn("flex flex-col shadow-lg border-2 border-primary/10 h-full overflow-hidden", isMobile ? "w-full" : "w-full sm:w-96")}>
+            <CardHeader className="p-3 border-b flex flex-row items-center justify-between gap-1 overflow-hidden shrink-0 h-14">
                 <div className="flex items-center gap-1.5 min-w-0">
                     <CardTitle className="text-sm font-bold truncate">
                         {panelTitle}
