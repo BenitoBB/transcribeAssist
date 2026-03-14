@@ -21,6 +21,8 @@ import {
   FileDown,
   FileText,
   Download,
+  Layout,
+  Maximize2,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -86,8 +88,8 @@ export function TranscriptionPanel({ command, onPositionChange, sessionId }: Tra
     const dx = e.clientX - resizeStartRef.current.x;
     const dy = e.clientY - resizeStartRef.current.y;
     setSize({
-      width: Math.max(200, resizeStartRef.current.width + dx),
-      height: Math.max(100, resizeStartRef.current.height + dy),
+      width: Math.max(380, resizeStartRef.current.width + dx),
+      height: Math.max(150, resizeStartRef.current.height + dy),
     });
   };
 
@@ -451,20 +453,6 @@ export function TranscriptionPanel({ command, onPositionChange, sessionId }: Tra
           </div>
           <SettingsButton />
         </div>
-        <div className="p-1 border-b bg-muted/30 flex items-center justify-center gap-2 shrink-0">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 px-2">
-                <Download className="h-3.5 w-3.5 mr-1" /> Opciones de guardado
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="center">
-              <DropdownMenuItem onClick={handleCopy}><Copy className="h-4 w-4 mr-2" /> Copiar</DropdownMenuItem>
-              <DropdownMenuItem onClick={handleSaveTxt}><FileDown className="h-4 w-4 mr-2" /> .txt</DropdownMenuItem>
-              <DropdownMenuItem onClick={handleExportToPdf}><FileText className="h-4 w-4 mr-2" /> PDF</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
         <div className="flex-grow p-0 min-h-0 bg-background overflow-hidden relative">
           {renderContent()}
         </div>
@@ -505,60 +493,61 @@ export function TranscriptionPanel({ command, onPositionChange, sessionId }: Tra
         >
           <div className="flex items-center gap-2">
             <GripVertical className="text-muted-foreground" />
-            <CardTitle className="text-base font-semibold">Transcripción</CardTitle>
+            <CardTitle className="text-base font-semibold truncate">Transcripción</CardTitle>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 shrink-0">
             <SettingsButton />
-            {/* Botones de anclaje... */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleSetPosition('top')}>
-                  <ArrowBigUp className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger><TooltipContent><p>Anclar arriba</p></TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleSetPosition('bottom')}>
-                  <ArrowBigDown className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger><TooltipContent><p>Anclar abajo</p></TooltipContent>
-            </Tooltip>
+
+            {/* Menú de Posición y Anclaje */}
+            <DropdownMenu>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-7 w-7">
+                      <Layout className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                </TooltipTrigger>
+                <TooltipContent>Ajustar panel</TooltipContent>
+              </Tooltip>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleSetPosition('top')}>
+                  <ArrowBigUp className="h-4 w-4 mr-2" /> Anclar arriba
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleSetPosition('bottom')}>
+                  <ArrowBigDown className="h-4 w-4 mr-2" /> Anclar abajo
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleSetPosition('left')}>
+                  <ArrowBigLeft className="h-4 w-4 mr-2" /> Anclar izquierda
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleSetPosition('right')}>
+                  <ArrowBigRight className="h-4 w-4 mr-2" /> Anclar derecha
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleSetPosition('free')}>
+                  <Maximize2 className="h-4 w-4 mr-2" /> Modo flotante / Libre
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-7 w-7 text-primary" onClick={togglePiP}>
                   <PictureInPicture2 className="h-4 w-4" />
                 </Button>
-              </TooltipTrigger><TooltipContent><p>Pantalla Flotante (Siempre Encima)</p></TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleSetPosition('left')}>
-                  <ArrowBigLeft className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger><TooltipContent><p>Anclar izquierda</p></TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleSetPosition('right')}>
-                  <ArrowBigRight className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger><TooltipContent><p>Anclar derecha</p></TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleSetPosition('free')}>
-                  <Maximize className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger><TooltipContent><p>Modo flotante</p></TooltipContent>
+              </TooltipTrigger><TooltipContent><p>Pantalla Flotante (PiP)</p></TooltipContent>
             </Tooltip>
 
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7">
-                  <Download className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-7 w-7">
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                </TooltipTrigger>
+                <TooltipContent>Exportar transcripción</TooltipContent>
+              </Tooltip>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={handleCopy}>
                   <Copy className="h-4 w-4 mr-2" /> Copiar al portapapeles
