@@ -16,6 +16,7 @@ import {
   MicOff,
   Copy,
   FileText,
+  Play,
 } from 'lucide-react';
 import { DrawingToolbar } from './components/DrawingToolbar';
 import { useTranscription } from '@/hooks/use-transcription';
@@ -154,8 +155,12 @@ export default function TeacherPage() {
     if (isRecording) {
       stopTranscription();
     } else {
-      startTranscription().catch(console.error);
+      startTranscription(false).catch(console.error);
     }
+  };
+
+  const handleContinueRecording = () => {
+    startTranscription(true).catch(console.error);
   };
 
   const handleCopySessionId = () => {
@@ -218,6 +223,23 @@ export default function TeacherPage() {
           </TooltipTrigger>
           <TooltipContent><p>{isRecording ? 'Detener' : 'Iniciar'} Transcripción</p></TooltipContent>
         </Tooltip>
+
+        {!isRecording && transcription !== '' && transcription !== 'Inicia una grabación o conéctate a una sala para ver la transcripción.' && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleContinueRecording}
+                className="border-primary text-primary hover:bg-primary/10"
+              >
+                <Play className="h-4 w-4" />
+                <span className="sr-only">Continuar grabación</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent><p>Continuar Grabación</p></TooltipContent>
+          </Tooltip>
+        )}
       </div>
 
       {sessionId && (
@@ -281,7 +303,11 @@ export default function TeacherPage() {
       )}
 
       <div className="relative w-full h-full pointer-events-none z-10">
-        <TranscriptionPanel command={panelCommand} onPositionChange={setPanelPosition} />
+        <TranscriptionPanel 
+          command={panelCommand} 
+          onPositionChange={setPanelPosition} 
+          sessionId={sessionId}
+        />
       </div>
 
     </div>

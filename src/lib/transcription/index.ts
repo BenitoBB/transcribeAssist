@@ -8,10 +8,18 @@
 
 export type TranscriptionState = 'idle' | 'recording' | 'stopped';
 
-let recognition: SpeechRecognition | null = null;
+let recognition: any | null = null;
 let finalTranscription = '';
 let commandCallback: ((command: string) => void) | null = null;
 let intentionalStop = false;
+
+// Tipos para SpeechRecognition
+declare global {
+  interface Window {
+    SpeechRecognition: any;
+    webkitSpeechRecognition: any;
+  }
+}
 
 // --- Sistema de Eventos para la UI ---
 type TranscriptionCallback = (text: string, isFinal: boolean) => void;
@@ -60,8 +68,9 @@ export function registerCommands(callback: (command: string) => void): () => voi
 
 /**
  * Inicia la captura y el reconocimiento de audio.
+ * @param resume Si es true, mantiene la transcripción anterior. Si es false (por defecto), la limpia.
  */
-export function startTranscription(): Promise<void> {
+export function startTranscription(resume: boolean = false): Promise<void> {
   return new Promise((resolve, reject) => {
     if (recognition) {
       console.warn('La grabación ya está en curso.');
@@ -86,9 +95,15 @@ export function startTranscription(): Promise<void> {
     recognition.continuous = true;
 
     recognition.onstart = () => {
-      finalTranscription = '';
+      if (!resume) {
+        finalTranscription = '';
+      }
       intentionalStop = false;
-      notifyTextListeners('🎙️ Grabación iniciada...', true);
+      if (!resume) {
+        notifyTextListeners('🎙️ Grabación iniciada...', true);
+      } else {
+        notifyTextListeners(finalTranscription + ' [Continuando...] ', true);
+      }
       notifyStateListeners('recording');
       resolve();
     };
@@ -173,3 +188,12 @@ export function stopTranscription(): void {
   intentionalStop = true;
   recognition.stop();
 }
+
+/**
+ * Limpia manualmente la transcripción acumulada.
+ */
+export function resetFinalTranscription(): void {
+  finalTranscription = '';
+  notifyTextListeners('', true);
+}
+

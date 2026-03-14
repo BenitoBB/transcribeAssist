@@ -17,13 +17,27 @@ import {
   GripVertical,
   Maximize,
   PictureInPicture2,
+  Copy,
+  FileDown,
+  FileText,
+  Download,
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { createPortal } from 'react-dom';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useTranscription } from '@/hooks/use-transcription';
 import { useStyle } from '@/context/StyleContext';
 import { SettingsButton } from '@/components/settings/SettingsButton';
 import { BionicReadingText } from '@/components/BionicReadingText';
+import { resetFinalTranscription } from '@/lib/transcription';
+import { useToast } from '@/hooks/use-toast';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 export type Position = 'top' | 'bottom' | 'left' | 'right' | 'free';
 export type Command = Position | 'free' | null;
@@ -31,13 +45,17 @@ export type Command = Position | 'free' | null;
 interface TranscriptionPanelProps {
   command: Command;
   onPositionChange: (position: Position) => void;
+  sessionId: string;
 }
 
-export function TranscriptionPanel({ command, onPositionChange }: TranscriptionPanelProps) {
-  const { transcription } = useTranscription();
+export function TranscriptionPanel({ command, onPositionChange, sessionId }: TranscriptionPanelProps) {
+  const { transcription, setTranscription } = useTranscription();
   const { style, isBionic, showRuler } = useStyle();
+  const { toast } = useToast();
   const [rulerY, setRulerY] = useState<number>(0);
   const contentRef = useRef<HTMLDivElement>(null);
+  const transcriptionDisplayRef = useRef<HTMLDivElement>(null);
+  const startTimeRef = useRef<Date>(new Date());
 
   // Estados para arrastrar y redimensionar
   const [isResizing, setIsResizing] = useState(false);
@@ -248,15 +266,95 @@ export function TranscriptionPanel({ command, onPositionChange }: TranscriptionP
 
   const isDocked = currentPosition !== 'free';
 
+  // --- Funciones de Exportación ---
+  const buildTextHeader = (endTime: Date): string => {
+    const lines: string[] = [];
+    lines.push('═══════════════════════════════════════════');
+    lines.push('  TRANSCRIPCIÓN DE LA CLASE (MAESTRO)');
+    lines.push('═══════════════════════════════════════════');
+    lines.push(`  Sala: ${sessionId}`);
+    lines.push(`  Fecha: ${new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })}`);
+    lines.push(`  Hora de inicio: ${startTimeRef.current.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`);
+    lines.push(`  Hora de finalización: ${endTime.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`);
+    lines.push('═══════════════════════════════════════════');
+    lines.push('');
+    return lines.join('\n');
+  };
+
+  const handleCopy = () => {
+    const endTime = new Date();
+    const content = buildTextHeader(endTime) + transcription;
+    navigator.clipboard.writeText(content);
+    toast({ title: 'Copiado', description: 'Transcripción copiada al portapapeles.' });
+  };
+
+  const handleSaveTxt = () => {
+    const endTime = new Date();
+    const content = buildTextHeader(endTime) + transcription;
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `transcripcion-maestro-${sessionId}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportToPdf = async () => {
+    if (!transcriptionDisplayRef.current) return;
+    const endTime = new Date();
+    toast({ title: 'Generando PDF...', description: 'Espera un momento.' });
+
+    const canvas = await html2canvas(transcriptionDisplayRef.current, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+    const imgData = canvas.toDataURL('image/png');
+
+    const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const margin = 15;
+
+    pdf.setFontSize(18);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Transcripción de la Clase', margin, margin);
+
+    pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'normal');
+    let metaY = margin + 8;
+    pdf.text(`Fecha: ${new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })}`, margin, metaY);
+    metaY += 4;
+    pdf.text(`Sala: ${sessionId}`, margin, metaY);
+    metaY += 4;
+    pdf.text(`Hora de inicio: ${startTimeRef.current.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`, margin, metaY);
+    metaY += 4;
+    pdf.text(`Hora de finalización: ${endTime.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`, margin, metaY);
+    metaY += 4;
+
+    pdf.setLineWidth(0.5);
+    pdf.line(margin, metaY + 1, pageWidth - margin, metaY + 1);
+
+    const imgWidth = pageWidth - margin * 2;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    pdf.addImage(imgData, 'PNG', margin, metaY + 5, imgWidth, imgHeight);
+
+    pdf.save(`transcripcion-maestro-${sessionId}.pdf`);
+  };
+
+  const handleReset = () => {
+    if (confirm('¿Estás seguro de que deseas borrar toda la transcripción actual?')) {
+      resetFinalTranscription();
+      setTranscription('');
+      startTimeRef.current = new Date();
+    }
+  };
+
   // Referencia para autoscroll
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const renderContent = () => (
     <ScrollArea className="h-full">
       <div
-        ref={contentRef}
-        className="p-4 break-words bg-transparent relative"
-        style={{ ...style, minHeight: '100%', color: 'inherit' }}
+        ref={transcriptionDisplayRef}
+        className="p-6 break-words bg-background relative"
+        style={{ ...style, minHeight: '100%', color: 'var(--foreground)' }}
         onMouseMove={showRuler ? handleContentMouseMove : undefined}
       >
         {isBionic ? <BionicReadingText text={transcription} /> : transcription}
@@ -286,9 +384,29 @@ export function TranscriptionPanel({ command, onPositionChange }: TranscriptionP
     return (
       <div className="w-full h-full px-4 pt-24 pb-4 flex flex-col pointer-events-auto">
         <Card className="w-full flex-1 flex flex-col shadow-2xl border-2 min-h-0">
-          <CardHeader className="flex flex-row items-center justify-between p-3 border-b shrink-0">
+          <CardHeader className="flex flex-row items-center justify-between p-3 border-b shrink-0 h-14">
             <CardTitle className="text-base font-semibold">Transcripción</CardTitle>
-            <SettingsButton />
+            <div className="flex items-center gap-1">
+              <SettingsButton />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <Download className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleCopy}>
+                    <Copy className="h-4 w-4 mr-2" /> Copiar al portapapeles
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleSaveTxt}>
+                    <FileDown className="h-4 w-4 mr-2" /> Guardar como .txt
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleExportToPdf}>
+                    <FileText className="h-4 w-4 mr-2" /> Exportar a PDF
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </CardHeader>
           <CardContent className="p-0 flex-grow overflow-hidden min-h-0 bg-background">
             {renderContent()}
@@ -332,6 +450,20 @@ export function TranscriptionPanel({ command, onPositionChange }: TranscriptionP
             <span className="font-semibold text-sm">TranscribeAssist (Siempre encima)</span>
           </div>
           <SettingsButton />
+        </div>
+        <div className="p-1 border-b bg-muted/30 flex items-center justify-center gap-2 shrink-0">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 px-2">
+                <Download className="h-3.5 w-3.5 mr-1" /> Opciones de guardado
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="center">
+              <DropdownMenuItem onClick={handleCopy}><Copy className="h-4 w-4 mr-2" /> Copiar</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleSaveTxt}><FileDown className="h-4 w-4 mr-2" /> .txt</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportToPdf}><FileText className="h-4 w-4 mr-2" /> PDF</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
         <div className="flex-grow p-0 min-h-0 bg-background overflow-hidden relative">
           {renderContent()}
@@ -420,8 +552,28 @@ export function TranscriptionPanel({ command, onPositionChange }: TranscriptionP
                 </Button>
               </TooltipTrigger><TooltipContent><p>Modo flotante</p></TooltipContent>
             </Tooltip>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-7 w-7">
+                  <Download className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleCopy}>
+                  <Copy className="h-4 w-4 mr-2" /> Copiar al portapapeles
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleSaveTxt}>
+                  <FileDown className="h-4 w-4 mr-2" /> Guardar como .txt
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportToPdf}>
+                  <FileText className="h-4 w-4 mr-2" /> Exportar a PDF
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </CardHeader>
+
         <CardContent className="p-0 flex-grow overflow-hidden min-h-0">
           {renderContent()}
         </CardContent>
