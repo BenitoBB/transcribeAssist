@@ -17,6 +17,7 @@ import {
   Copy,
   FileText,
   Play,
+  X,
 } from 'lucide-react';
 import { DrawingToolbar } from './components/DrawingToolbar';
 import { useTranscription } from '@/hooks/use-transcription';
@@ -44,7 +45,9 @@ const TranscriptionPanel = dynamic(
 
 export default function TeacherPage() {
   const [isDrawingMode, setIsDrawingMode] = useState(false);
+  const [isScreenshotMode, setIsScreenshotMode] = useState(false);
   const [brushColor, setBrushColor] = useState('#FF0000');
+  const [currentTool, setCurrentTool] = useState<'pencil' | 'text' | 'eraser' | 'none'>('pencil');
   const [clearCanvas, setClearCanvas] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -175,14 +178,27 @@ export default function TeacherPage() {
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-background">
-      <div className={cn(
-        "absolute z-30 flex items-center gap-2 transition-all duration-300",
-        {
-          'top-4 left-4 sm:top-8 sm:left-8': panelPosition === 'free' || panelPosition === 'right' || panelPosition === 'bottom',
-          'top-4 right-4 sm:top-8 sm:right-8': panelPosition === 'left',
-          'bottom-4 left-4 sm:bottom-8 sm:left-8': panelPosition === 'top',
-        }
-      )}>
+      {isScreenshotMode ? (
+        <div className="absolute top-4 right-4 z-50">
+          <Button 
+            variant="outline" 
+            size="icon" 
+            className="rounded-full h-10 w-10 shadow-lg border-2" 
+            onClick={() => setIsScreenshotMode(false)}
+          >
+            <X className="h-5 w-5" />
+            <span className="sr-only">Salir del modo captura</span>
+          </Button>
+        </div>
+      ) : (
+        <div className={cn(
+          "absolute z-30 flex items-center gap-2 transition-all duration-300",
+          {
+            'top-4 left-4 sm:top-8 sm:left-8': panelPosition === 'free' || panelPosition === 'right' || panelPosition === 'bottom',
+            'top-4 right-4 sm:top-8 sm:right-8': panelPosition === 'left',
+            'bottom-4 left-4 sm:bottom-8 sm:left-8': panelPosition === 'top',
+          }
+        )}>
         <Link href="/">
           <Tooltip>
             <TooltipTrigger asChild>
@@ -241,8 +257,9 @@ export default function TeacherPage() {
           </Tooltip>
         )}
       </div>
+      )}
 
-      {sessionId && (
+      {sessionId && !isScreenshotMode && (
         <div className={cn(
           "absolute z-30 flex flex-col transition-all duration-300",
           {
@@ -281,34 +298,55 @@ export default function TeacherPage() {
         </div>
       )}
 
-      <div className={cn(
-        "absolute left-1/2 -translate-x-1/2 z-20 pointer-events-none hidden sm:block transition-all duration-300",
-        panelPosition === 'top' ? 'bottom-8' : 'top-8'
-      )}>
-        <h1 className="text-3xl font-bold bg-background/80 px-4 py-2 rounded-full backdrop-blur-sm shadow-sm">
-          Vista del Maestro
-        </h1>
-      </div>
-
-      {!isMobile && isDrawingMode && (
-        <>
-          <DrawingToolbar
-            onColorChange={setBrushColor}
-            onClear={handleClearCanvas}
-            onClose={() => setIsDrawingMode(false)}
-            currentColor={brushColor}
-          />
-          <DrawingCanvas brushColor={brushColor} clear={clearCanvas} />
-        </>
+      {!isScreenshotMode && (
+        <div className={cn(
+          "absolute left-1/2 -translate-x-1/2 z-20 pointer-events-none hidden sm:block transition-all duration-300",
+          panelPosition === 'top' ? 'bottom-8' : 'top-8'
+        )}>
+          <h1 className="text-3xl font-bold bg-background/80 px-4 py-2 rounded-full backdrop-blur-sm shadow-sm">
+            Vista del Maestro
+          </h1>
+        </div>
       )}
 
-      <div className="relative w-full h-full pointer-events-none z-10">
-        <TranscriptionPanel 
-          command={panelCommand} 
-          onPositionChange={setPanelPosition} 
-          sessionId={sessionId}
+      {!isMobile && (
+        <div className="absolute top-0 left-0 w-full h-full pointer-events-none z-5">
+          <DrawingCanvas 
+            brushColor={brushColor} 
+            tool={currentTool}
+            clear={clearCanvas} 
+            isActive={isDrawingMode}
+          />
+        </div>
+      )}
+
+      {!isMobile && isDrawingMode && !isScreenshotMode && (
+        <DrawingToolbar
+          onColorChange={setBrushColor}
+          onToolChange={(tool) => {
+            if (currentTool === tool) {
+              setCurrentTool('none');
+            } else {
+              setCurrentTool(tool);
+            }
+          }}
+          onClear={handleClearCanvas}
+          onSnapshotMode={() => setIsScreenshotMode(true)}
+          onClose={() => setIsDrawingMode(false)}
+          currentColor={brushColor}
+          currentTool={currentTool}
         />
-      </div>
+      )}
+
+      {!isScreenshotMode && (
+        <div className="relative w-full h-full pointer-events-none z-10">
+          <TranscriptionPanel 
+            command={panelCommand} 
+            onPositionChange={setPanelPosition} 
+            sessionId={sessionId}
+          />
+        </div>
+      )}
 
     </div>
   );
