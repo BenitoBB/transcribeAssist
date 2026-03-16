@@ -18,7 +18,7 @@ export default function Home() {
   const [termsOpen, setTermsOpen] = useState(false);
 
   return (
-    <div className="relative flex flex-col min-h-screen items-center justify-center p-4">
+    <div className="relative flex flex-col min-h-screen items-center justify-start sm:justify-center p-4 pt-20 sm:pt-4 pb-10 sm:pb-4 overflow-x-hidden">
       <div className="absolute top-4 right-4">
         <SettingsButton />
       </div>
@@ -35,7 +35,7 @@ export default function Home() {
             Transcribe<span className="text-primary">Assist</span>
           </h1>
           <p className="mt-6 text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            Una plataforma inteligente diseñada para cerrar la brecha de comunicación en el aula, 
+            Una plataforma inteligente diseñada para cerrar la brecha de comunicación en el aula,
             convirtiendo voz a texto al instante con herramientas integradas de aprendizaje.
           </p>
         </div>
@@ -50,7 +50,7 @@ export default function Home() {
                 </div>
                 <h2 className="text-2xl font-bold mb-3">Maestro</h2>
                 <p className="text-muted-foreground text-sm leading-relaxed mb-8 flex-grow">
-                  Inicia una sala y comparte la transcripción de tu clase en tiempo real. 
+                  Inicia una sala y comparte la transcripción de tu clase en tiempo real.
                   Permite que tus alumnos sigan cada palabra y tomen notas.
                 </p>
                 <div className="flex items-center text-primary font-semibold text-sm">
@@ -69,7 +69,7 @@ export default function Home() {
                 </div>
                 <h2 className="text-2xl font-bold mb-3">Alumno</h2>
                 <p className="text-muted-foreground text-sm leading-relaxed mb-8 flex-grow">
-                  Conéctate a la sala de tu maestro. Visualiza la transcripción, 
+                  Conéctate a la sala de tu maestro. Visualiza la transcripción,
                   toma notas personalizadas y utiliza el marcador para estudiar mejor.
                 </p>
                 <div className="flex items-center text-primary font-semibold text-sm">
@@ -88,7 +88,7 @@ export default function Home() {
                 </div>
                 <h2 className="text-2xl font-bold mb-3">Uso Personal</h2>
                 <p className="text-muted-foreground text-sm leading-relaxed mb-8 flex-grow">
-                  Ideal para conferencias o estudio individual. Acceso a todas las herramientas 
+                  Ideal para conferencias o estudio individual. Acceso a todas las herramientas
                   sin necesidad de compartir sala o estar conectado.
                 </p>
                 <div className="flex items-center text-primary font-semibold text-sm">
@@ -98,6 +98,9 @@ export default function Home() {
             </Card>
           </Link>
         </div>
+
+        {/* Bloque de espacio vacío exclusivo para móvil para evitar solapamiento */}
+        <div className="h-10 sm:hidden" aria-hidden="true" />
       </div>
 
       {/* Aviso legal en el pie de página */}
