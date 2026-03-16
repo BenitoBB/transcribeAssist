@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Monitor, ShieldCheck } from 'lucide-react';
+import { Monitor, ShieldCheck, GraduationCap, Users, User, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { SettingsButton } from '@/components/settings/SettingsButton';
 import {
   Dialog,
@@ -21,55 +22,81 @@ export default function Home() {
       <div className="absolute top-4 right-4">
         <SettingsButton />
       </div>
-      <div className="text-center">
-        <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
-          Selecciona tu Rol
-        </h1>
-        <p className="mt-4 text-base leading-8 text-muted-foreground sm:text-lg">
-          Elige si quieres acceder como maestro o como alumno.
-        </p>
-        <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-x-6">
-          <Link href="/teacher" passHref>
-            <Button
-              size="lg"
-              aria-label="Acceder a la vista de maestro"
-              className="w-full sm:w-auto text-lg h-12 px-10"
-            >
-              Entrar como Maestro
-            </Button>
-          </Link>
-          <Link href="/student" passHref>
-            <Button
-              size="lg"
-              variant="outline"
-              aria-label="Acceder a la vista de alumno"
-              className="w-full sm:w-auto text-lg h-12 px-10"
-            >
-              Entrar como Alumno
-            </Button>
-          </Link>
+      <div className="max-w-5xl w-full mx-auto">
+        <div className="text-center mb-16">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold mb-6">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+            </span>
+            Accesibilidad Educativa en Tiempo Real
+          </div>
+          <h1 className="text-4xl font-extrabold tracking-tight sm:text-6xl text-foreground">
+            Transcribe<span className="text-primary">Assist</span>
+          </h1>
+          <p className="mt-6 text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+            Una plataforma inteligente diseñada para cerrar la brecha de comunicación en el aula, 
+            convirtiendo voz a texto al instante con herramientas integradas de aprendizaje.
+          </p>
         </div>
 
-        <div className="mt-6 flex flex-col items-center gap-2">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <div className="h-px w-12 bg-border" />
-            <span>o</span>
-            <div className="h-px w-12 bg-border" />
-          </div>
-          <Link href="/solo" passHref>
-            <Button
-              size="lg"
-              variant="secondary"
-              aria-label="Acceder al modo de uso personal"
-              className="w-full sm:w-auto text-base h-11 px-8 gap-2"
-            >
-              <Monitor className="h-4 w-4" />
-              Uso Personal
-            </Button>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+          {/* Card Maestro */}
+          <Link href="/teacher" className="group">
+            <Card className="h-full border-2 border-transparent transition-all duration-300 hover:border-primary/50 hover:shadow-xl hover:-translate-y-1 overflow-hidden group-hover:bg-primary/[0.02]">
+              <CardContent className="p-8 flex flex-col h-full">
+                <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-6 text-primary group-hover:scale-110 transition-transform">
+                  <GraduationCap className="h-7 w-7" />
+                </div>
+                <h2 className="text-2xl font-bold mb-3">Maestro</h2>
+                <p className="text-muted-foreground text-sm leading-relaxed mb-8 flex-grow">
+                  Inicia una sala y comparte la transcripción de tu clase en tiempo real. 
+                  Permite que tus alumnos sigan cada palabra y tomen notas.
+                </p>
+                <div className="flex items-center text-primary font-semibold text-sm">
+                  Empezar clase <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </div>
+              </CardContent>
+            </Card>
           </Link>
-          <p className="text-xs text-muted-foreground max-w-xs">
-            Todas las herramientas del maestro y alumno sin compartir la sala.
-          </p>
+
+          {/* Card Alumno */}
+          <Link href="/student" className="group">
+            <Card className="h-full border-2 border-transparent transition-all duration-300 hover:border-primary/50 hover:shadow-xl hover:-translate-y-1 overflow-hidden group-hover:bg-primary/[0.02]">
+              <CardContent className="p-8 flex flex-col h-full">
+                <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-6 text-primary group-hover:scale-110 transition-transform">
+                  <Users className="h-7 w-7" />
+                </div>
+                <h2 className="text-2xl font-bold mb-3">Alumno</h2>
+                <p className="text-muted-foreground text-sm leading-relaxed mb-8 flex-grow">
+                  Conéctate a la sala de tu maestro. Visualiza la transcripción, 
+                  toma notas personalizadas y utiliza el marcador para estudiar mejor.
+                </p>
+                <div className="flex items-center text-primary font-semibold text-sm">
+                  Unirse a sala <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          {/* Card Personal */}
+          <Link href="/solo" className="group md:col-span-2 lg:col-span-1">
+            <Card className="h-full border-2 border-transparent transition-all duration-300 hover:border-primary/50 hover:shadow-xl hover:-translate-y-1 overflow-hidden group-hover:bg-primary/[0.02]">
+              <CardContent className="p-8 flex flex-col h-full">
+                <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-6 text-primary group-hover:scale-110 transition-transform">
+                  <User className="h-7 w-7" />
+                </div>
+                <h2 className="text-2xl font-bold mb-3">Uso Personal</h2>
+                <p className="text-muted-foreground text-sm leading-relaxed mb-8 flex-grow">
+                  Ideal para conferencias o estudio individual. Acceso a todas las herramientas 
+                  sin necesidad de compartir sala o estar conectado.
+                </p>
+                <div className="flex items-center text-primary font-semibold text-sm">
+                  Modo individual <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
         </div>
       </div>
 

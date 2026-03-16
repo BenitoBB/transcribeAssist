@@ -55,7 +55,6 @@ export function TranscriptionPanel({ command, onPositionChange, sessionId }: Tra
   const { style, isBionic, showRuler } = useStyle();
   const { toast } = useToast();
   const [rulerY, setRulerY] = useState<number>(0);
-  const contentRef = useRef<HTMLDivElement>(null);
   const transcriptionDisplayRef = useRef<HTMLDivElement>(null);
   const startTimeRef = useRef<Date>(new Date());
 
@@ -64,10 +63,9 @@ export function TranscriptionPanel({ command, onPositionChange, sessionId }: Tra
   const resizeStartRef = useRef({ x: 0, y: 0, width: 0, height: 0 });
 
   const handleContentMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!contentRef.current) return;
-    const rect = contentRef.current.getBoundingClientRect();
-    const scrollTop = contentRef.current.scrollTop;
-    const y = e.clientY - rect.top + scrollTop;
+    if (!transcriptionDisplayRef.current) return;
+    const rect = transcriptionDisplayRef.current.getBoundingClientRect();
+    const y = e.clientY - rect.top;
     setRulerY(y);
   };
 
@@ -363,9 +361,9 @@ export function TranscriptionPanel({ command, onPositionChange, sessionId }: Tra
         <div ref={bottomRef} />
         {showRuler && (
           <div
-            className="absolute left-0 right-0 bg-yellow-200/40 pointer-events-none"
+            className="absolute left-0 right-0 bg-primary/20 pointer-events-none z-10 border-y border-primary/30"
             style={{
-              top: rulerY - style.fontSize * style.lineHeight / 2,
+              top: rulerY - (style.fontSize * style.lineHeight) / 2,
               height: style.fontSize * style.lineHeight,
             }}
           />

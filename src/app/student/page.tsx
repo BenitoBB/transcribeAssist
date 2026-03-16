@@ -85,8 +85,7 @@ export default function StudentPage() {
   const handleContentMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!transcriptionDisplayRef.current) return;
     const rect = transcriptionDisplayRef.current.getBoundingClientRect();
-    const scrollTop = transcriptionDisplayRef.current.scrollTop;
-    const y = e.clientY - rect.top + scrollTop;
+    const y = e.clientY - rect.top;
     setRulerY(y);
   };
 
@@ -587,7 +586,15 @@ export default function StudentPage() {
                     style={{ ...style, minHeight: '100%', color: 'var(--foreground)' }}
                   >
                     {renderHighlightedText(transcription)}
-                    {showRuler && <div className="absolute left-0 right-0 bg-yellow-200/40 pointer-events-none" style={{ top: rulerY - style.fontSize * style.lineHeight / 2, height: style.fontSize * style.lineHeight }} />}
+                    {showRuler && (
+                      <div 
+                        className="absolute left-0 right-0 bg-primary/20 pointer-events-none z-10 border-y border-primary/30" 
+                        style={{ 
+                          top: rulerY - (style.fontSize * style.lineHeight) / 2, 
+                          height: style.fontSize * style.lineHeight 
+                        }} 
+                      />
+                    )}
                   </div>
                 </ScrollArea>
               </CardContent>
