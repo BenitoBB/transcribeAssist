@@ -256,6 +256,8 @@ export default function TeacherPage() {
             <TooltipContent><p>Continuar Grabación</p></TooltipContent>
           </Tooltip>
         )}
+        
+
       </div>
       )}
 
@@ -266,33 +268,28 @@ export default function TeacherPage() {
             'top-4 right-4 sm:top-8 sm:right-8 items-end': panelPosition === 'free' || panelPosition === 'left' || panelPosition === 'bottom',
             'top-4 left-4 sm:top-8 sm:left-8 items-start': panelPosition === 'right',
             'bottom-4 right-4 sm:bottom-8 sm:right-8 items-end': panelPosition === 'top',
-          }
+          },
+          isDrawingMode && (panelPosition === 'free' || panelPosition === 'left' || panelPosition === 'bottom') && "translate-y-20 sm:translate-y-24"
         )}>
           {connectionStatus === 'connecting' ? (
             <div className="flex items-center gap-2 bg-yellow-100 text-yellow-800 p-2 rounded-lg shadow-lg border border-yellow-300">
-              <span className="text-sm font-medium">Conectando al servidor...</span>
-            </div>
-          ) : connectionStatus === 'error' ? (
-            <div className="flex items-center gap-2 bg-red-100 text-red-800 p-2 rounded-lg shadow-lg border border-red-300">
-              <span className="text-sm font-medium">Error de conexión al servidor</span>
+              <span className="text-sm font-medium">Conectando...</span>
             </div>
           ) : (
             <>
-              <div className="flex items-center gap-2 bg-card p-2 rounded-lg shadow-lg border">
-                <span className="text-sm font-medium text-muted-foreground">ID de la Sala:</span>
-                <span className="font-mono text-sm text-primary font-bold select-all bg-muted px-2 py-0.5 rounded">{sessionId}</span>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleCopySessionId}>
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Copiar ID de la sala</TooltipContent>
-                </Tooltip>
+              <div className="flex items-center gap-2 bg-card/90 p-2 rounded-lg shadow-lg border backdrop-blur-sm">
+                <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider text-[10px]">ID de Sala:</span>
+                <span className="font-mono text-sm text-primary font-bold bg-muted px-2 py-0.5 rounded select-all">{sessionId}</span>
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleCopySessionId}>
+                  <Copy className="h-4 w-4" />
+                </Button>
               </div>
-              <p className="text-xs text-muted-foreground text-right mt-1">
-                Alumnos conectados: <strong>{peerCount}</strong>
-              </p>
+              <div className="flex items-center gap-1.5 bg-background/60 px-3 py-1 rounded-full mt-1.5 border backdrop-blur-sm">
+                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                <span className="text-[10px] font-bold text-muted-foreground uppercase">
+                  Alumnos: <span className="text-primary">{peerCount}</span>
+                </span>
+              </div>
             </>
           )}
         </div>
@@ -300,10 +297,13 @@ export default function TeacherPage() {
 
       {!isScreenshotMode && (
         <div className={cn(
-          "absolute left-1/2 -translate-x-1/2 z-20 pointer-events-none hidden sm:block transition-all duration-300",
-          panelPosition === 'top' ? 'bottom-8' : 'top-8'
+          "absolute left-1/2 -translate-x-1/2 z-20 pointer-events-none hidden sm:flex items-center gap-4 transition-all duration-300",
+          panelPosition === 'top' ? 'bottom-8' : 'top-8',
+          // Ocultar el título en el rango de 771px a 1168px (aprox) para evitar solapamientos
+          // Solo mostrarlo desplazado en pantallas ultra-grandes (+1200px)
+          isDrawingMode && "opacity-0 invisible min-[1200px]:opacity-100 min-[1200px]:visible min-[1200px]:-translate-x-[350px]"
         )}>
-          <h1 className="text-3xl font-bold bg-background/80 px-4 py-2 rounded-full backdrop-blur-sm shadow-sm">
+          <h1 className="text-3xl font-bold bg-background/80 px-4 py-2 rounded-full backdrop-blur-sm shadow-sm whitespace-nowrap">
             Vista del Maestro
           </h1>
         </div>
