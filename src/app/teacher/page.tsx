@@ -16,11 +16,11 @@ import {
   MicOff,
   Copy,
   FileText,
-  Play,
-  X,
   Loader2,
+  X,
+  Play,
 } from 'lucide-react';
-import { DrawingToolbar } from './components/DrawingToolbar';
+import { DrawingToolbar } from '@/components/whiteboard/DrawingToolbar';
 import { useTranscription } from '@/hooks/use-transcription';
 import { Command, Position } from './components/TranscriptionPanel';
 import {
@@ -36,7 +36,7 @@ import { cn } from '@/lib/utils';
 import { DEFAULT_TRANSCRIPTION_TEXT } from '@/context/TranscriptionContext';
 
 const DrawingCanvas = dynamic(
-  () => import('./components/DrawingCanvas').then(mod => mod.DrawingCanvas),
+  () => import('@/components/whiteboard/DrawingCanvas').then(mod => mod.DrawingCanvas),
   { ssr: false }
 );
 
@@ -182,10 +182,10 @@ export default function TeacherPage() {
     <div className="relative h-screen w-screen overflow-hidden bg-background">
       {isScreenshotMode ? (
         <div className="absolute top-4 right-4 z-50">
-          <Button 
-            variant="outline" 
-            size="icon" 
-            className="rounded-full h-10 w-10 shadow-lg border-2" 
+          <Button
+            variant="outline"
+            size="icon"
+            className="rounded-full h-10 w-10 shadow-lg border-2"
             onClick={() => setIsScreenshotMode(false)}
           >
             <X className="h-5 w-5" />
@@ -201,66 +201,66 @@ export default function TeacherPage() {
             'bottom-4 left-4 sm:bottom-8 sm:left-8': panelPosition === 'top',
           }
         )}>
-        <Link href="/">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="outline" size="icon">
-                <ArrowLeft className="h-4 w-4" />
-                <span className="sr-only">Volver</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent><p>Volver a la página principal</p></TooltipContent>
-          </Tooltip>
-        </Link>
-        {!isMobile && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setIsDrawingMode(!isDrawingMode)}
-                aria-pressed={isDrawingMode}
-              >
-                <Pencil className="h-4 w-4" />
-                <span className="sr-only">Activar modo dibujo</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent><p>Activar/Desactivar Pizarra</p></TooltipContent>
-          </Tooltip>
-        )}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant={isRecording ? 'destructive' : 'outline'}
-              size="icon"
-              onClick={handleToggleRecording}
-            >
-              {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-              <span className="sr-only">{isRecording ? 'Detener' : 'Iniciar'} transcripción</span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent><p>{isRecording ? 'Detener' : 'Iniciar'} Transcripción</p></TooltipContent>
-        </Tooltip>
-
-        {!isRecording && transcription !== '' && transcription !== DEFAULT_TRANSCRIPTION_TEXT && (
+          <Link href="/">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" size="icon">
+                  <ArrowLeft className="h-4 w-4" />
+                  <span className="sr-only">Volver</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent><p>Volver a la página principal</p></TooltipContent>
+            </Tooltip>
+          </Link>
+          {!isMobile && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setIsDrawingMode(!isDrawingMode)}
+                  aria-pressed={isDrawingMode}
+                >
+                  <Pencil className="h-4 w-4" />
+                  <span className="sr-only">Activar modo dibujo</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent><p>Activar/Desactivar Pizarra</p></TooltipContent>
+            </Tooltip>
+          )}
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
-                variant="outline"
+                variant={isRecording ? 'destructive' : 'outline'}
                 size="icon"
-                onClick={handleContinueRecording}
-                className="border-primary text-primary hover:bg-primary/10"
+                onClick={handleToggleRecording}
               >
-                <Play className="h-4 w-4" />
-                <span className="sr-only">Continuar grabación</span>
+                {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                <span className="sr-only">{isRecording ? 'Detener' : 'Iniciar'} transcripción</span>
               </Button>
             </TooltipTrigger>
-            <TooltipContent><p>Continuar Grabación</p></TooltipContent>
+            <TooltipContent><p>{isRecording ? 'Detener' : 'Iniciar'} Transcripción</p></TooltipContent>
           </Tooltip>
-        )}
-        
 
-      </div>
+          {!isRecording && transcription !== '' && transcription !== DEFAULT_TRANSCRIPTION_TEXT && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handleContinueRecording}
+                  className="border-primary text-primary hover:bg-primary/10"
+                >
+                  <Play className="h-4 w-4" />
+                  <span className="sr-only">Continuar grabación</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent><p>Continuar Grabación</p></TooltipContent>
+            </Tooltip>
+          )}
+
+
+        </div>
       )}
 
       {sessionId && !isScreenshotMode && (
@@ -314,10 +314,10 @@ export default function TeacherPage() {
 
       {!isMobile && (
         <div className="absolute top-0 left-0 w-full h-full pointer-events-none z-5">
-          <DrawingCanvas 
-            brushColor={brushColor} 
+          <DrawingCanvas
+            brushColor={brushColor}
             tool={currentTool}
-            clear={clearCanvas} 
+            clear={clearCanvas}
             isActive={isDrawingMode}
           />
         </div>
@@ -343,9 +343,9 @@ export default function TeacherPage() {
 
       {!isScreenshotMode && (
         <div className="relative w-full h-full pointer-events-none z-10">
-          <TranscriptionPanel 
-            command={panelCommand} 
-            onPositionChange={setPanelPosition} 
+          <TranscriptionPanel
+            command={panelCommand}
+            onPositionChange={setPanelPosition}
             sessionId={sessionId}
           />
         </div>

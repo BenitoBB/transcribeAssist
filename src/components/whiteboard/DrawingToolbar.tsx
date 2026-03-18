@@ -2,7 +2,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Eraser, Palette, X, Type, MousePointer2, Camera, Trash2 } from 'lucide-react';
+import { Eraser, Palette, X, Type, Camera, Trash2 } from 'lucide-react';
 
 interface DrawingToolbarProps {
   onColorChange: (color: string) => void;

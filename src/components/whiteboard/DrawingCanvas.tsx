@@ -29,15 +29,12 @@ export function DrawingCanvas({ brushColor, tool, clear, isActive }: DrawingCanv
   const [textBlocks, setTextBlocks] = useState<TextBlock[]>([]);
   const [draggingBlock, setDraggingBlock] = useState<{ id: string, startX: number, startY: number } | null>(null);
 
-  // Efecto para enfocar automáticamente el nuevo bloque
   useEffect(() => {
     if (activeBlockRef.current) {
-        // Usar setTimeout para asegurar que el DOM se haya renderizado
         const timer = setTimeout(() => {
             const element = document.getElementById(`text-block-${activeBlockRef.current}`);
             if (element) {
                 element.focus();
-                // Mover el cursor al final
                 const range = document.createRange();
                 const sel = window.getSelection();
                 if (sel) {
@@ -52,14 +49,12 @@ export function DrawingCanvas({ brushColor, tool, clear, isActive }: DrawingCanv
     }
   }, [textBlocks.length]);
 
-  // Limpiar bloques vacíos cuando se desactiva la herramienta de texto o la pizarra
   useEffect(() => {
     if (tool !== 'text' || !isActive) {
       setTextBlocks(prev => prev.filter(block => block.text.trim() !== ''));
     }
   }, [tool, isActive]);
 
-  // Manejar el arrastre global de bloques de texto
   useEffect(() => {
     const handleGlobalMouseMove = (e: MouseEvent) => {
       if (draggingBlock) {
@@ -89,8 +84,7 @@ export function DrawingCanvas({ brushColor, tool, clear, isActive }: DrawingCanv
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    // Ajustar el tamaño del canvas al de la ventana
-    canvas.width = window.innerWidth * 2; // Multiplicar por 2 para mayor resolución (Retina)
+    canvas.width = window.innerWidth * 2;
     canvas.height = window.innerHeight * 2;
     canvas.style.width = `${window.innerWidth}px`;
     canvas.style.height = `${window.innerHeight}px`;
@@ -98,7 +92,7 @@ export function DrawingCanvas({ brushColor, tool, clear, isActive }: DrawingCanv
     const context = canvas.getContext('2d');
     if (!context) return;
     
-    context.scale(2, 2); // Escalar el contexto para que coincida con el tamaño del canvas
+    context.scale(2, 2);
     context.lineCap = 'round';
     context.strokeStyle = brushColor;
     context.lineWidth = 5;
@@ -106,9 +100,7 @@ export function DrawingCanvas({ brushColor, tool, clear, isActive }: DrawingCanv
 
     const handleResize = () => {
         if (!contextRef.current || !canvasRef.current) return;
-        // Guarda el estado actual del canvas
         const imageData = contextRef.current.getImageData(0, 0, canvasRef.current.width, canvasRef.current.height);
-        // Redimensiona
         canvasRef.current.width = window.innerWidth * 2;
         canvasRef.current.height = window.innerHeight * 2;
         canvasRef.current.style.width = `${window.innerWidth}px`;
@@ -116,33 +108,24 @@ export function DrawingCanvas({ brushColor, tool, clear, isActive }: DrawingCanv
         contextRef.current.scale(2, 2);
         contextRef.current.lineCap = 'round';
         contextRef.current.lineWidth = 5;
-        // Restaura la imagen
         contextRef.current.putImageData(imageData, 0, 0);
-        // Reaplica el color, ya que se puede perder
         contextRef.current.strokeStyle = contextRef.current?.strokeStyle || '#000';
     };
 
     window.addEventListener('resize', handleResize);
-
-    return () => {
-        window.removeEventListener('resize', handleResize);
-    }
-
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Cambiar el color del pincel cuando cambie la prop
   useEffect(() => {
     if (contextRef.current) {
       contextRef.current.strokeStyle = brushColor;
       contextRef.current.fillStyle = brushColor;
     }
-    // Sincronizar el color del bloque de texto actual si está vacío
     setTextBlocks(prev => prev.map(block => 
         (block.text.trim() === '') ? { ...block, color: brushColor } : block
     ));
   }, [brushColor]);
 
-  // Limpiar el canvas y los textos cuando se active la prop `clear`
   useEffect(() => {
     if (clear && contextRef.current && canvasRef.current) {
       contextRef.current.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
@@ -161,8 +144,6 @@ export function DrawingCanvas({ brushColor, tool, clear, isActive }: DrawingCanv
 
     if (tool === 'text') {
         const id = Math.random().toString(36).substr(2, 9);
-        
-        // Limpiar cualquier bloque vacío anterior antes de crear uno nuevo
         setTextBlocks(prev => {
             const filtered = prev.filter(b => b.text.trim() !== '');
             const newBlock: TextBlock = {
@@ -180,7 +161,7 @@ export function DrawingCanvas({ brushColor, tool, clear, isActive }: DrawingCanv
 
     if (tool === 'eraser') {
         contextRef.current.globalCompositeOperation = 'destination-out';
-        contextRef.current.lineWidth = 30; // Borrador más ancho
+        contextRef.current.lineWidth = 30;
     } else {
         contextRef.current.globalCompositeOperation = 'source-over';
         contextRef.current.lineWidth = 3;
@@ -193,11 +174,9 @@ export function DrawingCanvas({ brushColor, tool, clear, isActive }: DrawingCanv
 
   const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isDrawing || !contextRef.current || !canvasRef.current) return;
-    
     const rect = canvasRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    
     contextRef.current.lineTo(x, y);
     contextRef.current.stroke();
   };
@@ -264,13 +243,9 @@ export function DrawingCanvas({ brushColor, tool, clear, isActive }: DrawingCanv
             onInput={(e) => updateTextBlock(block.id, e.currentTarget.textContent || '')}
             onBlur={(e) => {
               const text = e.currentTarget.textContent || '';
-              if (text.trim() === '') {
-                  removeTextBlock(block.id);
-              }
+              if (text.trim() === '') removeTextBlock(block.id);
             }}
-            onFocus={() => {
-              activeBlockRef.current = block.id;
-            }}
+            onFocus={() => { activeBlockRef.current = block.id; }}
             className={cn(
               "min-w-[120px] min-h-[1.5em] outline-none p-1 transition-all duration-200 rounded select-text relative flex items-center",
               (isActive && tool === 'text') ? 'pointer-events-auto focus:bg-primary/5 focus:ring-2 focus:ring-primary/40 border border-dashed border-primary/20 bg-background/40 backdrop-blur-[2px]' : 'pointer-events-none'
@@ -294,10 +269,11 @@ export function DrawingCanvas({ brushColor, tool, clear, isActive }: DrawingCanv
           
           {isActive && tool === 'text' && (
             <>
+              {/* MANEJADOR DE ARRASTRE - Manteniendo pointer-events-auto para arreglar el movimiento */}
               <div 
                 onMouseDown={(e) => startDragging(block.id, e)}
                 className={cn(
-                  "absolute left-1 top-1/2 -translate-y-1/2 cursor-move p-2 transition-all z-30",
+                  "absolute left-1 top-1/2 -translate-y-1/2 cursor-move p-2 transition-all z-30 pointer-events-auto",
                   (draggingBlock?.id === block.id || draggingBlock === null) ? "opacity-30 group-hover:opacity-100" : "opacity-0",
                   draggingBlock?.id === block.id && "opacity-100 scale-125"
                 )}
@@ -311,11 +287,6 @@ export function DrawingCanvas({ brushColor, tool, clear, isActive }: DrawingCanv
 
               <button
                 onMouseDown={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  removeTextBlock(block.id);
-                }}
-                onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
                   removeTextBlock(block.id);

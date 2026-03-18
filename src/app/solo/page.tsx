@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/tooltip';
 import { useRouter } from 'next/navigation';
 import { Pencil, Mic, MicOff, NotebookPen, X, Play } from 'lucide-react';
-import { DrawingToolbar } from '../teacher/components/DrawingToolbar';
+import { DrawingToolbar } from '@/components/whiteboard/DrawingToolbar';
 import { NotesPanel } from '../student/components/NotesPanel';
 import { ExitConfirmation } from '@/components/ExitConfirmation';
 import { useTranscription } from '@/hooks/use-transcription';
@@ -27,7 +27,7 @@ import { cn } from '@/lib/utils';
 import { DEFAULT_TRANSCRIPTION_TEXT } from '@/context/TranscriptionContext';
 
 const DrawingCanvas = dynamic(
-    () => import('../teacher/components/DrawingCanvas').then(mod => mod.DrawingCanvas),
+    () => import('@/components/whiteboard/DrawingCanvas').then(mod => mod.DrawingCanvas),
     { ssr: false }
 );
 
