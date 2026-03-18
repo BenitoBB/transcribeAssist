@@ -62,7 +62,6 @@ function formatTime(date: Date): string {
   return date.toLocaleTimeString('es-ES', {
     hour: '2-digit',
     minute: '2-digit',
-    second: '2-digit',
   });
 }
 
@@ -144,10 +143,6 @@ export default function StudentPage() {
         if (prev.some(h => h.text === text && h.color === color)) return prev;
         return [...prev, { text, color }];
       });
-      toast({
-        title: 'Texto resaltado',
-        description: `Se ha marcado con color ${getThemeHighlightColor(color).label}.`,
-      });
     }
     selection.removeAllRanges();
   };
@@ -155,13 +150,15 @@ export default function StudentPage() {
   const handleRemoveHighlight = () => {
     const selection = window.getSelection();
     if (!selection || selection.isCollapsed) return;
-    const text = selection.toString().trim();
+    const text = selection.toString().trim().toLowerCase();
+    
     if (text.length > 0) {
-      setHighlights(prev => prev.filter(h => h.text.toLowerCase() !== text.toLowerCase()));
-      toast({
-        title: 'Marcador eliminado',
-        description: 'Se ha quitado el resaltado del texto seleccionado.',
-      });
+      // Filtramos cualquier marcador que esté contenido en la selección o que contenga la selección
+      setHighlights(prev => prev.filter(h => {
+        const hText = h.text.toLowerCase();
+        // Si el texto del marcador está en la selección, lo quitamos
+        return !text.includes(hText) && !hText.includes(text);
+      }));
     }
     selection.removeAllRanges();
   };
@@ -341,6 +338,7 @@ export default function StudentPage() {
 
           if (matchedTheme) {
             let cls = '';
+            let styleObj: React.CSSProperties = {};
             let id = undefined;
 
             if (matchedTheme.type === 'search') {
@@ -348,12 +346,18 @@ export default function StudentPage() {
               if (searchHitCount === 0) id = 'first-search-match';
               searchHitCount++;
             } else {
-              const styles = getThemeHighlightColor(matchedTheme.type as HighlightColor);
-              cls = `${styles.bg} ${styles.text} px-1 rounded transition-colors`;
+              // Usamos variables CSS para que sea reactivo al tema
+              cls = 'px-1 rounded transition-colors';
+              const colorName = matchedTheme.type === 'amarillo' ? 'yellow' : 
+                               matchedTheme.type === 'verde' ? 'green' : 'red';
+              styleObj = { 
+                backgroundColor: `var(--highlight-${colorName})`,
+                color: 'var(--foreground)'
+              };
             }
 
             return (
-              <mark key={index} className={cls} id={id}>
+              <mark key={index} className={cls} id={id} style={styleObj}>
                 {applyBionic(part, `mark-${index}`)}
               </mark>
             );
@@ -419,9 +423,15 @@ export default function StudentPage() {
           <div className="flex w-full items-center space-x-2">
             <Input
               type="text"
-              placeholder="ID de la Sala (5 caracteres, minúsculas)"
+              placeholder="ID de la Sala (5 caracteres)"
               value={sessionId}
-              onChange={(e) => setSessionId(e.target.value.toLowerCase())}
+              onChange={(e) => setSessionId(e.target.value.toLowerCase().slice(0, 5))}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleConnect();
+                }
+              }}
+              maxLength={5}
               className="text-center"
             />
             <Button onClick={handleConnect} disabled={connectionStatus === 'connecting'}>
@@ -438,7 +448,7 @@ export default function StudentPage() {
             </p>
           </div>
 
-          <div className="w-full max-w-4xl mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div className="w-full max-w-7xl mb-3 flex flex-wrap items-center justify-between gap-2 px-2">
             <div className="flex items-center gap-2">
               {isEditingClassName ? (
                 <Input
@@ -479,7 +489,7 @@ export default function StudentPage() {
               <CardHeader className="p-3 border-b flex flex-row items-center justify-between gap-1 overflow-hidden shrink-0 h-14">
                 <CardTitle className="text-sm font-bold truncate">Transcripción</CardTitle>
               </CardHeader>
-              
+
               <div className="p-2 border-b bg-muted/30 flex flex-wrap items-center justify-between gap-1 shrink-0">
                 <div className="flex items-center gap-0.5">
                   <Tooltip>
@@ -548,7 +558,7 @@ export default function StudentPage() {
                   )}
 
                   <div className="w-px h-6 bg-border mx-1" />
-                  
+
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCopy}>
@@ -557,7 +567,7 @@ export default function StudentPage() {
                     </TooltipTrigger>
                     <TooltipContent>Copiar</TooltipContent>
                   </Tooltip>
-                  
+
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleSave}>
@@ -566,7 +576,7 @@ export default function StudentPage() {
                     </TooltipTrigger>
                     <TooltipContent>.txt</TooltipContent>
                   </Tooltip>
-                  
+
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleExportToPdf}>
@@ -577,7 +587,7 @@ export default function StudentPage() {
                   </Tooltip>
                 </div>
               </div>
-              <CardContent className="p-0 flex-grow overflow-hidden bg-background">
+              <CardContent className="p-0 flex-grow overflow-hidden bg-background rounded-b-xl">
                 <ScrollArea className="h-full w-full">
                   <div
                     ref={transcriptionDisplayRef}
@@ -587,12 +597,12 @@ export default function StudentPage() {
                   >
                     {renderHighlightedText(transcription)}
                     {showRuler && (
-                      <div 
-                        className="absolute left-0 right-0 bg-primary/20 pointer-events-none z-10 border-y border-primary/30" 
-                        style={{ 
-                          top: rulerY - (style.fontSize * style.lineHeight) / 2, 
-                          height: style.fontSize * style.lineHeight 
-                        }} 
+                      <div
+                        className="absolute left-0 right-0 bg-primary/20 pointer-events-none z-10 border-y border-primary/30"
+                        style={{
+                          top: rulerY - (style.fontSize * style.lineHeight) / 2,
+                          height: style.fontSize * style.lineHeight
+                        }}
                       />
                     )}
                   </div>

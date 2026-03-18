@@ -274,8 +274,8 @@ export function TranscriptionPanel({ command, onPositionChange, sessionId }: Tra
     lines.push('═══════════════════════════════════════════');
     lines.push(`  Sala: ${sessionId}`);
     lines.push(`  Fecha: ${new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })}`);
-    lines.push(`  Hora de inicio: ${startTimeRef.current.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`);
-    lines.push(`  Hora de finalización: ${endTime.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`);
+    lines.push(`  Hora de inicio: ${startTimeRef.current.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`);
+    lines.push(`  Hora de finalización: ${endTime.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`);
     lines.push('═══════════════════════════════════════════');
     lines.push('');
     return lines.join('\n');
@@ -323,9 +323,9 @@ export function TranscriptionPanel({ command, onPositionChange, sessionId }: Tra
     metaY += 4;
     pdf.text(`Sala: ${sessionId}`, margin, metaY);
     metaY += 4;
-    pdf.text(`Hora de inicio: ${startTimeRef.current.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`, margin, metaY);
+    pdf.text(`Hora de inicio: ${startTimeRef.current.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`, margin, metaY);
     metaY += 4;
-    pdf.text(`Hora de finalización: ${endTime.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`, margin, metaY);
+    pdf.text(`Hora de finalización: ${endTime.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`, margin, metaY);
     metaY += 4;
 
     pdf.setLineWidth(0.5);

@@ -91,27 +91,22 @@ export function NotesPanel({
         if (!editableRef.current) return;
         editableRef.current.focus();
 
-        const targetRGB = getHighlightColor(colorName);
+        const colorVar = `var(--highlight-${colorName})`;
+        const appliedColor = getHighlightColor(colorName);
+        
         document.execCommand('styleWithCSS', false, 'true');
+        document.execCommand('backColor', false, appliedColor);
 
-        // Obtenemos el color actual. P2P: queryCommandValue devuelve RGB en la mayoría de navegadores modernos.
-        const currentColor = document.queryCommandValue('backColor').replace(/\s/g, '').toLowerCase();
-        const targetNormalized = targetRGB.replace(/\s/g, '').toLowerCase();
-
-        // Comprobamos si el color actual es el mismo que el objetivo para alternar (quitarlo)
-        if (currentColor === targetNormalized) {
-            // Para quitar el color de fondo usando styleWithCSS, a veces funciona 'transparent' o 'initial'
-            // pero la forma más segura es resetearlo a un valor nulo.
-            document.execCommand('backColor', false, 'transparent');
-            // Si no funciona transparent, intentamos con inherit o simplemente null
-            if (document.queryCommandValue('backColor') === currentColor) {
-                document.execCommand('backColor', false, 'rgba(0,0,0,0)');
-            }
-        } else {
-            document.execCommand('backColor', false, targetRGB);
-        }
-
-        onContentChange(editableRef.current.innerHTML);
+        // Limpiar el HTML: Reemplazamos el color fijo aplicado por el navegador con nuestra variable CSS reactiva
+        // El navegador a veces pone espacios o comas de forma distinta, así que usamos una regex flexible
+        const fixedColorRegex = appliedColor.replace(/\(/g, '\\(').replace(/\)/g, '\\)').replace(/,/g, ',\\s*');
+        const content = editableRef.current.innerHTML.replace(
+            new RegExp(`background-color:\\s*${fixedColorRegex}`, 'gi'),
+            `background-color: ${colorVar}`
+        );
+        
+        editableRef.current.innerHTML = content;
+        onContentChange(content);
     };
 
     const handleRemoveFormat = () => {
@@ -170,7 +165,7 @@ export function NotesPanel({
         const pageWidth = pdf.internal.pageSize.getWidth();
         const margin = 15;
         function formatDate(date: Date): string { return date.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' }); }
-        function formatTime(date: Date): string { return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' }); }
+        function formatTime(date: Date): string { return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }); }
 
         pdf.setFontSize(18);
         pdf.setFont('helvetica', 'bold');
@@ -355,7 +350,11 @@ export function NotesPanel({
                             color: 'var(--foreground)',
                             caretColor: 'var(--foreground)'
                         }}
-                        onInput={() => onContentChange(editableRef.current?.innerHTML || '')}
+                        onInput={() => {
+                            if (!editableRef.current) return;
+                            // Aseguramos que cualquier pegado o edición mantenga las variables si es posible
+                            onContentChange(editableRef.current.innerHTML);
+                        }}
                         suppressContentEditableWarning={true}
                     />
                 </ScrollArea>

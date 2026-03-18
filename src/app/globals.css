@@ -24,6 +24,9 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 222.2 84% 4.9%;
     --radius: 0.5rem;
+    --highlight-yellow: rgb(254, 240, 138);
+    --highlight-green: rgb(187, 247, 208);
+    --highlight-red: rgb(254, 202, 202);
   }
  
   .dark {
@@ -46,6 +49,9 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
+    --highlight-yellow: rgb(202, 138, 4);
+    --highlight-green: rgb(22, 163, 74);
+    --highlight-red: rgb(220, 38, 38);
   }
 
   .protanopia {
@@ -62,6 +68,9 @@
     --border: 240 10% 80%;
     --input: 240 10% 80%;
     --ring: 60 90% 50%;
+    --highlight-yellow: rgb(191, 219, 254); /* Azul */
+    --highlight-green: rgb(254, 215, 170); /* Naranja */
+    --highlight-red: rgb(233, 213, 255); /* Morado */
   }
 
   .deuteranopia {
@@ -78,6 +87,9 @@
     --border: 30 10% 80%;
     --input: 30 10% 80%;
     --ring: 210 100% 40%;
+    --highlight-yellow: rgb(191, 219, 254); /* Azul */
+    --highlight-green: rgb(254, 215, 170); /* Naranja */
+    --highlight-red: rgb(233, 213, 255); /* Morado */
   }
 
   .tritanopia {
@@ -94,6 +106,9 @@
     --border: 200 20% 85%;
     --input: 200 20% 85%;
     --ring: 0 80% 50%;
+    --highlight-yellow: rgb(254, 240, 138);
+    --highlight-green: rgb(187, 247, 208);
+    --highlight-red: rgb(254, 202, 202);
   }
 
   .accessible {
@@ -116,6 +131,9 @@
     --border: 0 0% 40%;
     --input: 0 0% 30%;
     --ring: 60 100% 50%;
+    --highlight-yellow: rgb(161, 98, 7);
+    --highlight-green: rgb(21, 128, 61);
+    --highlight-red: rgb(185, 28, 28);
   }
 }
  
