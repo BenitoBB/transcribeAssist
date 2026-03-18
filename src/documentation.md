@@ -107,6 +107,13 @@ Para el correcto funcionamiento del sistema, se requiere el siguiente conjunto d
 - **Servicios Externos**:
     - **Free Dictionary API (`dictionaryapi.dev`)**: API pública utilizada para obtener las definiciones de las palabras.
 
+### 5.5. Arquitectura de Código (Feature-Sliced Design)
+El sistema ha migrado hacia una arquitectura basada en características (FSD) para la organización de la lógica del lado del cliente. 
+- La carpeta `src/features/` aloja los dominios críticos (`transcription`, `room`, `whiteboard`, `notes`), encapsulando su propia UI, hooks y servicios.
+- La carpeta `src/app/` (Teacher, Student, Solo) actúa estrictamente como capa ensambladora de estas "features".
+- La carpeta `src/shared/` en la raíz (incluyendo `components/ui`, `hooks/use-toast` y otros elementos puramente visuales) almacena la base genérica sin acoplar lógicas de negocio.
+Para consultar el árbol detallado de la infraestructura local de directorios, refiérase a `src/architecture.md`.
+
 ---
 
 # Manual de Usuario: TranscribeAssist

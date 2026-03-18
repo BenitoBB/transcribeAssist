@@ -32,11 +32,11 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { createPortal } from 'react-dom';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useTranscription } from '@/hooks/use-transcription';
+import { useTranscription } from '@/features/transcription/hooks/use-transcription';
 import { useStyle } from '@/context/StyleContext';
 import { SettingsButton } from '@/components/settings/SettingsButton';
 import { BionicReadingText } from '@/components/BionicReadingText';
-import { resetFinalTranscription } from '@/lib/transcription';
+import { resetFinalTranscription } from '@/features/transcription/services/transcription.service';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';

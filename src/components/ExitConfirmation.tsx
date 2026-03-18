@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { DEFAULT_TRANSCRIPTION_TEXT } from '@/context/TranscriptionContext';
+import { DEFAULT_TRANSCRIPTION_TEXT } from '@/features/transcription/context/TranscriptionContext';
 
 interface ExitConfirmationProps {
     /** El texto actual de la transcripción */

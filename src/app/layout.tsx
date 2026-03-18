@@ -3,7 +3,7 @@
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
-import { TranscriptionProvider } from '@/context/TranscriptionContext';
+import { TranscriptionProvider } from '@/features/transcription/context/TranscriptionContext';
 import { StyleProvider, useStyle } from '@/context/StyleContext';
 import { TooltipProvider } from '@/components/ui/tooltip';
 

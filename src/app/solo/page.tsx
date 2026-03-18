@@ -11,28 +11,28 @@ import {
 } from '@/components/ui/tooltip';
 import { useRouter } from 'next/navigation';
 import { Pencil, Mic, MicOff, NotebookPen, X, Play } from 'lucide-react';
-import { DrawingToolbar } from '@/components/whiteboard/DrawingToolbar';
-import { NotesPanel } from '../student/components/NotesPanel';
+import { DrawingToolbar } from '@/features/whiteboard/components/DrawingToolbar';
+import { NotesPanel } from '@/features/notes/components/NotesPanel';
 import { ExitConfirmation } from '@/components/ExitConfirmation';
-import { useTranscription } from '@/hooks/use-transcription';
-import { Command, Position } from '../teacher/components/TranscriptionPanel';
+import { useTranscription } from '@/features/transcription/hooks/use-transcription';
+import { Command, Position } from '@/features/transcription/components/TranscriptionPanel';
 import {
     startTranscription,
     stopTranscription,
     registerCommands,
     onStateChange,
     onTranscriptionUpdate,
-} from '@/lib/transcription';
+} from '@/features/transcription/services/transcription.service';
 import { cn } from '@/lib/utils';
-import { DEFAULT_TRANSCRIPTION_TEXT } from '@/context/TranscriptionContext';
+import { DEFAULT_TRANSCRIPTION_TEXT } from '@/features/transcription/context/TranscriptionContext';
 
 const DrawingCanvas = dynamic(
-    () => import('@/components/whiteboard/DrawingCanvas').then(mod => mod.DrawingCanvas),
+    () => import('@/features/whiteboard/components/DrawingCanvas').then(mod => mod.DrawingCanvas),
     { ssr: false }
 );
 
 const TranscriptionPanel = dynamic(
-    () => import('../teacher/components/TranscriptionPanel').then(mod => mod.TranscriptionPanel),
+    () => import('@/features/transcription/components/TranscriptionPanel').then(mod => mod.TranscriptionPanel),
     { ssr: false }
 );
 

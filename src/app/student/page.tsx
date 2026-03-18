@@ -53,10 +53,10 @@ import {
 } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { useStyle } from '@/context/StyleContext';
-import { useTranscription } from '@/hooks/use-transcription';
-import { joinSession, onDataReceived, onConnectionStatusChange, ConnectionStatus } from '@/lib/p2p';
+import { useTranscription } from '@/features/transcription/hooks/use-transcription';
+import { joinSession, onDataReceived, onConnectionStatusChange, ConnectionStatus } from '@/features/room/services/p2p.service';
 import { BionicReadingText } from '@/components/BionicReadingText';
-import { NotesPanel } from './components/NotesPanel';
+import { NotesPanel } from '@/features/notes/components/NotesPanel';
 
 function formatTime(date: Date): string {
   return date.toLocaleTimeString('es-ES', {

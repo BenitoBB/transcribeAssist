@@ -20,28 +20,28 @@ import {
   X,
   Play,
 } from 'lucide-react';
-import { DrawingToolbar } from '@/components/whiteboard/DrawingToolbar';
-import { useTranscription } from '@/hooks/use-transcription';
-import { Command, Position } from './components/TranscriptionPanel';
+import { DrawingToolbar } from '@/features/whiteboard/components/DrawingToolbar';
+import { useTranscription } from '@/features/transcription/hooks/use-transcription';
+import { Command, Position } from '@/features/transcription/components/TranscriptionPanel';
 import {
   startTranscription,
   stopTranscription,
   registerCommands,
   onStateChange,
   onTranscriptionUpdate,
-} from '@/lib/transcription';
-import { hostSession, sendToPeers, onPeerStatusChange, onConnectionStatusChange, ConnectionStatus } from '@/lib/p2p';
+} from '@/features/transcription/services/transcription.service';
+import { hostSession, sendToPeers, onPeerStatusChange, onConnectionStatusChange, ConnectionStatus } from '@/features/room/services/p2p.service';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { DEFAULT_TRANSCRIPTION_TEXT } from '@/context/TranscriptionContext';
+import { DEFAULT_TRANSCRIPTION_TEXT } from '@/features/transcription/context/TranscriptionContext';
 
 const DrawingCanvas = dynamic(
-  () => import('@/components/whiteboard/DrawingCanvas').then(mod => mod.DrawingCanvas),
+  () => import('@/features/whiteboard/components/DrawingCanvas').then(mod => mod.DrawingCanvas),
   { ssr: false }
 );
 
 const TranscriptionPanel = dynamic(
-  () => import('./components/TranscriptionPanel').then(mod => mod.TranscriptionPanel),
+  () => import('@/features/transcription/components/TranscriptionPanel').then(mod => mod.TranscriptionPanel),
   { ssr: false }
 );
 

@@ -3,8 +3,9 @@
 import { useContext } from 'react';
 import {
   TranscriptionContext,
+  DEFAULT_TRANSCRIPTION_TEXT,
   TranscriptionContextType,
-} from '@/context/TranscriptionContext';
+} from '@/features/transcription/context/TranscriptionContext';
 
 /**
  * Hook personalizado para acceder al contexto de transcripción.
