@@ -10,7 +10,7 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useRouter } from 'next/navigation';
-import { Pencil, Mic, MicOff, NotebookPen, X } from 'lucide-react';
+import { Pencil, Mic, MicOff, NotebookPen, X, Play } from 'lucide-react';
 import { DrawingToolbar } from '../teacher/components/DrawingToolbar';
 import { NotesPanel } from '../student/components/NotesPanel';
 import { ExitConfirmation } from '@/components/ExitConfirmation';
@@ -24,6 +24,7 @@ import {
     onTranscriptionUpdate,
 } from '@/lib/transcription';
 import { cn } from '@/lib/utils';
+import { DEFAULT_TRANSCRIPTION_TEXT } from '@/context/TranscriptionContext';
 
 const DrawingCanvas = dynamic(
     () => import('../teacher/components/DrawingCanvas').then(mod => mod.DrawingCanvas),
@@ -133,8 +134,12 @@ export default function SoloPage() {
         if (isRecording) {
             stopTranscription();
         } else {
-            startTranscription().catch(console.error);
+            startTranscription(false).catch(console.error);
         }
+    };
+
+    const handleContinueRecording = () => {
+        startTranscription(true).catch(console.error);
     };
 
     return (
@@ -194,6 +199,23 @@ export default function SoloPage() {
                         </TooltipTrigger>
                         <TooltipContent><p>{isRecording ? 'Detener' : 'Iniciar'} Transcripción</p></TooltipContent>
                     </Tooltip>
+
+                    {!isRecording && transcription !== '' && transcription !== DEFAULT_TRANSCRIPTION_TEXT && (
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={handleContinueRecording}
+                                    className="border-primary text-primary hover:bg-primary/10"
+                                >
+                                    <Play className="h-4 w-4" />
+                                    <span className="sr-only">Continuar grabación</span>
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent><p>Continuar Grabación</p></TooltipContent>
+                        </Tooltip>
+                    )}
 
                     <Tooltip>
                         <TooltipTrigger asChild>

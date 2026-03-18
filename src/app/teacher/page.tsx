@@ -32,6 +32,7 @@ import {
 import { hostSession, sendToPeers, onPeerStatusChange, onConnectionStatusChange, ConnectionStatus } from '@/lib/p2p';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { DEFAULT_TRANSCRIPTION_TEXT } from '@/context/TranscriptionContext';
 
 const DrawingCanvas = dynamic(
   () => import('./components/DrawingCanvas').then(mod => mod.DrawingCanvas),
@@ -240,7 +241,7 @@ export default function TeacherPage() {
           <TooltipContent><p>{isRecording ? 'Detener' : 'Iniciar'} Transcripción</p></TooltipContent>
         </Tooltip>
 
-        {!isRecording && transcription !== '' && transcription !== 'Inicia una grabación o conéctate a una sala para ver la transcripción.' && (
+        {!isRecording && transcription !== '' && transcription !== DEFAULT_TRANSCRIPTION_TEXT && (
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
