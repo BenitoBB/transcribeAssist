@@ -18,6 +18,7 @@ import {
   FileText,
   Play,
   X,
+  Loader2,
 } from 'lucide-react';
 import { DrawingToolbar } from './components/DrawingToolbar';
 import { useTranscription } from '@/hooks/use-transcription';
@@ -273,8 +274,9 @@ export default function TeacherPage() {
           isDrawingMode && (panelPosition === 'free' || panelPosition === 'left' || panelPosition === 'bottom') && "translate-y-20 sm:translate-y-24"
         )}>
           {connectionStatus === 'connecting' ? (
-            <div className="flex items-center gap-2 bg-yellow-100 text-yellow-800 p-2 rounded-lg shadow-lg border border-yellow-300">
-              <span className="text-sm font-medium">Conectando...</span>
+            <div className="flex items-center gap-2 bg-[#0F172A] text-white p-2.5 rounded-lg shadow-xl border border-white/10 animate-in fade-in zoom-in duration-300">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span className="text-sm font-semibold tracking-wide">Conectando...</span>
             </div>
           ) : (
             <>
