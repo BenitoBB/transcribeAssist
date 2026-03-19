@@ -176,8 +176,10 @@ export default function StudentPage() {
     const unsubStatus = onConnectionStatusChange(status => {
       setConnectionStatus(status);
       if (status === 'connected') {
-        hasConnected.current = true;
-        setTranscription('');
+        if (!hasConnected.current) {
+          hasConnected.current = true;
+          setTranscription('');
+        }
       } else if (status === 'error') {
         toast({
           variant: 'destructive',

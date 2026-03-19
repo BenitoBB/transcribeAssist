@@ -92,9 +92,8 @@ function initializeSocket(roomId: string, isHost: boolean = false) {
     socket?.emit('join_room', roomId);
     currentSessionId = roomId;
 
-    if (isHost) {
-      notifyStatusListeners('connected'); // El maestro está listo de inmediato tras entrar
-    }
+    // Maestro y Alumnos notifican conexión exitosa de inmediato para poder entrar a la interfaz (UI)
+    notifyStatusListeners('connected');
   });
 
   // Los errores transitorios (timeouts de Render despertando) NO deben mostrar error al usuario.
@@ -138,10 +137,14 @@ function initializeSocket(roomId: string, isHost: boolean = false) {
 
     notifyPeerStatusListeners(peerTotal);
 
-    // Si soy Alumno y la sala tiene al menos 2 personas (Maestro + Yo), asumimos conexión correcta
-    if (!isHost && count >= 2) {
-      console.log('[Socket] Alumno ha entrado a sala activa.');
-      notifyStatusListeners('connected');
+    // Si soy Alumno evaluamos la presencia del Maestro
+    if (!isHost) {
+      if (count >= 2) {
+        notifyStatusListeners('connected');
+      } else {
+        // Si hay menos de 2 personas, significa que el Maestro abandonó la sala
+        notifyStatusListeners('disconnected');
+      }
     }
   });
 
