@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { X, GripVertical } from 'lucide-react';
 
@@ -28,24 +28,60 @@ export function DrawingCanvas({ brushColor, tool, clear, isActive }: DrawingCanv
   const [isDrawing, setIsDrawing] = useState(false);
   const [textBlocks, setTextBlocks] = useState<TextBlock[]>([]);
   const [draggingBlock, setDraggingBlock] = useState<{ id: string, startX: number, startY: number } | null>(null);
+  const [history, setHistory] = useState<ImageData[]>([]);
+
+  const saveHistoryState = useCallback(() => {
+    if (!canvasRef.current || !contextRef.current) return;
+    const data = contextRef.current.getImageData(0, 0, canvasRef.current.width, canvasRef.current.height);
+    setHistory(prev => {
+      const newHistory = [...prev, data];
+      // Limitamos el historial a 10 pasos para no saturar la memoria RAM
+      return newHistory.length > 10 ? newHistory.slice(newHistory.length - 10) : newHistory;
+    });
+  }, []);
+
+  const undo = useCallback(() => {
+    if (history.length === 0 || !contextRef.current || !canvasRef.current) return;
+    const previousState = history[history.length - 1];
+    contextRef.current.putImageData(previousState, 0, 0);
+    setHistory(prev => prev.slice(0, -1));
+  }, [history]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        const target = e.target as HTMLElement;
+        // Evitar que Ctrl+Z borre el dibujo si el usuario está tipeando en un cuadro de texto
+        if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target.isContentEditable) {
+          return;
+        }
+        e.preventDefault();
+        undo();
+      }
+    };
+    if (isActive) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isActive, undo]);
 
   useEffect(() => {
     if (activeBlockRef.current) {
-        const timer = setTimeout(() => {
-            const element = document.getElementById(`text-block-${activeBlockRef.current}`);
-            if (element) {
-                element.focus();
-                const range = document.createRange();
-                const sel = window.getSelection();
-                if (sel) {
-                    range.selectNodeContents(element);
-                    range.collapse(false);
-                    sel.removeAllRanges();
-                    sel.addRange(range);
-                }
-            }
-        }, 10);
-        return () => clearTimeout(timer);
+      const timer = setTimeout(() => {
+        const element = document.getElementById(`text-block-${activeBlockRef.current}`);
+        if (element) {
+          element.focus();
+          const range = document.createRange();
+          const sel = window.getSelection();
+          if (sel) {
+            range.selectNodeContents(element);
+            range.collapse(false);
+            sel.removeAllRanges();
+            sel.addRange(range);
+          }
+        }
+      }, 10);
+      return () => clearTimeout(timer);
     }
   }, [textBlocks.length]);
 
@@ -58,9 +94,9 @@ export function DrawingCanvas({ brushColor, tool, clear, isActive }: DrawingCanv
   useEffect(() => {
     const handleGlobalMouseMove = (e: MouseEvent) => {
       if (draggingBlock) {
-        setTextBlocks(prev => prev.map(b => 
-          b.id === draggingBlock.id 
-            ? { ...b, x: e.clientX - draggingBlock.startX, y: e.clientY - draggingBlock.startY } 
+        setTextBlocks(prev => prev.map(b =>
+          b.id === draggingBlock.id
+            ? { ...b, x: e.clientX - draggingBlock.startX, y: e.clientY - draggingBlock.startY }
             : b
         ));
       }
@@ -88,10 +124,10 @@ export function DrawingCanvas({ brushColor, tool, clear, isActive }: DrawingCanv
     canvas.height = window.innerHeight * 2;
     canvas.style.width = `${window.innerWidth}px`;
     canvas.style.height = `${window.innerHeight}px`;
-    
+
     const context = canvas.getContext('2d');
     if (!context) return;
-    
+
     context.scale(2, 2);
     context.lineCap = 'round';
     context.strokeStyle = brushColor;
@@ -99,17 +135,17 @@ export function DrawingCanvas({ brushColor, tool, clear, isActive }: DrawingCanv
     contextRef.current = context;
 
     const handleResize = () => {
-        if (!contextRef.current || !canvasRef.current) return;
-        const imageData = contextRef.current.getImageData(0, 0, canvasRef.current.width, canvasRef.current.height);
-        canvasRef.current.width = window.innerWidth * 2;
-        canvasRef.current.height = window.innerHeight * 2;
-        canvasRef.current.style.width = `${window.innerWidth}px`;
-        canvasRef.current.style.height = `${window.innerHeight}px`;
-        contextRef.current.scale(2, 2);
-        contextRef.current.lineCap = 'round';
-        contextRef.current.lineWidth = 5;
-        contextRef.current.putImageData(imageData, 0, 0);
-        contextRef.current.strokeStyle = contextRef.current?.strokeStyle || '#000';
+      if (!contextRef.current || !canvasRef.current) return;
+      const imageData = contextRef.current.getImageData(0, 0, canvasRef.current.width, canvasRef.current.height);
+      canvasRef.current.width = window.innerWidth * 2;
+      canvasRef.current.height = window.innerHeight * 2;
+      canvasRef.current.style.width = `${window.innerWidth}px`;
+      canvasRef.current.style.height = `${window.innerHeight}px`;
+      contextRef.current.scale(2, 2);
+      contextRef.current.lineCap = 'round';
+      contextRef.current.lineWidth = 5;
+      contextRef.current.putImageData(imageData, 0, 0);
+      contextRef.current.strokeStyle = contextRef.current?.strokeStyle || '#000';
     };
 
     window.addEventListener('resize', handleResize);
@@ -121,17 +157,18 @@ export function DrawingCanvas({ brushColor, tool, clear, isActive }: DrawingCanv
       contextRef.current.strokeStyle = brushColor;
       contextRef.current.fillStyle = brushColor;
     }
-    setTextBlocks(prev => prev.map(block => 
-        (block.text.trim() === '') ? { ...block, color: brushColor } : block
+    setTextBlocks(prev => prev.map(block =>
+      (block.text.trim() === '') ? { ...block, color: brushColor } : block
     ));
   }, [brushColor]);
 
   useEffect(() => {
     if (clear && contextRef.current && canvasRef.current) {
+      saveHistoryState();
       contextRef.current.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
       setTextBlocks([]);
     }
-  }, [clear]);
+  }, [clear, saveHistoryState]);
 
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isActive || tool === 'none') return;
@@ -143,28 +180,30 @@ export function DrawingCanvas({ brushColor, tool, clear, isActive }: DrawingCanv
     const y = e.clientY - rect.top;
 
     if (tool === 'text') {
-        const id = Math.random().toString(36).substr(2, 9);
-        setTextBlocks(prev => {
-            const filtered = prev.filter(b => b.text.trim() !== '');
-            const newBlock: TextBlock = {
-                id,
-                text: '',
-                x,
-                y,
-                color: brushColor,
-            };
-            activeBlockRef.current = id;
-            return [...filtered, newBlock];
-        });
-        return;
+      const id = Math.random().toString(36).substr(2, 9);
+      setTextBlocks(prev => {
+        const filtered = prev.filter(b => b.text.trim() !== '');
+        const newBlock: TextBlock = {
+          id,
+          text: '',
+          x,
+          y,
+          color: brushColor,
+        };
+        activeBlockRef.current = id;
+        return [...filtered, newBlock];
+      });
+      return;
     }
 
     if (tool === 'eraser') {
-        contextRef.current.globalCompositeOperation = 'destination-out';
-        contextRef.current.lineWidth = 30;
+      contextRef.current.globalCompositeOperation = 'destination-out';
+      contextRef.current.lineWidth = 30;
+      saveHistoryState();
     } else {
-        contextRef.current.globalCompositeOperation = 'source-over';
-        contextRef.current.lineWidth = 3;
+      contextRef.current.globalCompositeOperation = 'source-over';
+      contextRef.current.lineWidth = 3;
+      saveHistoryState();
     }
 
     contextRef.current.beginPath();
@@ -182,8 +221,8 @@ export function DrawingCanvas({ brushColor, tool, clear, isActive }: DrawingCanv
   };
 
   const updateTextBlock = (id: string, text: string) => {
-    setTextBlocks(prev => prev.map(block => 
-        block.id === id ? { ...block, text } : block
+    setTextBlocks(prev => prev.map(block =>
+      block.id === id ? { ...block, text } : block
     ));
   };
 
@@ -202,7 +241,7 @@ export function DrawingCanvas({ brushColor, tool, clear, isActive }: DrawingCanv
     if (!isActive || tool !== 'text') return;
     const block = textBlocks.find(b => b.id === blockId);
     if (!block) return;
-    
+
     setDraggingBlock({
       id: blockId,
       startX: e.clientX - block.x,
@@ -224,9 +263,9 @@ export function DrawingCanvas({ brushColor, tool, clear, isActive }: DrawingCanv
           "absolute top-0 left-0 w-full h-full",
           (isActive && tool !== 'none') ? "pointer-events-auto" : "pointer-events-none",
           isActive && (
-            tool === 'text' ? 'cursor-text' : 
-            tool === 'eraser' ? 'cursor-crosshair' : 
-            tool === 'pencil' ? 'cursor-crosshair' : 'cursor-default'
+            tool === 'text' ? 'cursor-text' :
+              tool === 'eraser' ? 'cursor-crosshair' :
+                tool === 'pencil' ? 'cursor-crosshair' : 'cursor-default'
           )
         )}
       />
@@ -260,17 +299,17 @@ export function DrawingCanvas({ brushColor, tool, clear, isActive }: DrawingCanv
               boxShadow: (isActive && tool === 'text') ? '0 4px 6px -1px rgb(0 0 0 / 0.1)' : 'none'
             }}
           >
-              {block.text === '' && (
-                  <span className="opacity-40 italic pointer-events-none text-sm absolute left-1 whitespace-nowrap">
-                      {TEXT_PLACEHOLDER}
-                  </span>
-              )}
+            {block.text === '' && (
+              <span className="opacity-40 italic pointer-events-none text-sm absolute left-1 whitespace-nowrap">
+                {TEXT_PLACEHOLDER}
+              </span>
+            )}
           </div>
-          
+
           {isActive && tool === 'text' && (
             <>
               {/* MANEJADOR DE ARRASTRE - Manteniendo pointer-events-auto para arreglar el movimiento */}
-              <div 
+              <div
                 onMouseDown={(e) => startDragging(block.id, e)}
                 className={cn(
                   "absolute left-1 top-1/2 -translate-y-1/2 cursor-move p-2 transition-all z-30 pointer-events-auto",
