@@ -17,7 +17,15 @@ import {
   Highlighter,
   NotebookPen,
   Eraser,
+  Image as ImageIcon,
 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 
 export type HighlightColor = 'amarillo' | 'verde' | 'rojo';
 
@@ -114,6 +122,7 @@ export default function StudentPage() {
 
   // Marcatextos / Highlights
   const [highlights, setHighlights] = useState<Highlight[]>([]);
+  const [captures, setCaptures] = useState<{ url: string; timestamp: string }[]>([]);
 
   // Function to resolve highlight colors based on theme
   const getThemeHighlightColor = (baseColor: HighlightColor): { bg: string; text: string; label: string; hex: string } => {
@@ -170,6 +179,10 @@ export default function StudentPage() {
       }
       if (data.type === 'recording_started' && data.timestamp) {
         setStartTime(prev => prev ?? new Date(data.timestamp));
+      }
+      if (data.type === 'whiteboard_capture' && data.dataUrl) {
+        setCaptures(prev => [{ url: data.dataUrl, timestamp: data.timestamp || new Date().toISOString() }, ...prev]);
+        toast({ title: 'Nueva captura', description: 'El maestro ha compartido una imagen de la pizarra.' });
       }
     });
 
@@ -401,6 +414,46 @@ export default function StudentPage() {
           </TooltipTrigger>
           <TooltipContent><p>{isNotesOpen ? 'Cerrar Notas' : 'Ver mis Notas'}</p></TooltipContent>
         </Tooltip>
+
+        <Dialog>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="icon" className="relative">
+                  <ImageIcon className="h-4 w-4" />
+                  {captures.length > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 bg-primary text-primary-foreground rounded-full w-4 h-4 text-[10px] flex items-center justify-center font-bold">
+                      {captures.length}
+                    </span>
+                  )}
+                </Button>
+              </DialogTrigger>
+            </TooltipTrigger>
+            <TooltipContent><p>Ver capturas de pizarra</p></TooltipContent>
+          </Tooltip>
+          <DialogContent className="max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>Capturas de Pizarra</DialogTitle>
+            </DialogHeader>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto p-2">
+              {captures.length === 0 ? (
+                <p className="text-muted-foreground">No hay capturas aún.</p>
+              ) : (
+                captures.map((c, i) => (
+                  <div key={i} className="flex flex-col gap-2 border rounded-lg p-2 bg-muted/20">
+                    <img src={c.url} alt="Captura" className="w-full rounded border bg-white object-contain" />
+                    <div className="flex justify-between items-center px-1">
+                      <span className="text-xs text-muted-foreground">{new Date(c.timestamp).toLocaleTimeString()}</span>
+                      <Button size="sm" variant="outline" asChild>
+                        <a href={c.url} download={`captura-${new Date(c.timestamp).getTime()}.png`}>Guardar</a>
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <div className="absolute top-4 right-4 sm:top-8 sm:right-8 flex items-center gap-2">
