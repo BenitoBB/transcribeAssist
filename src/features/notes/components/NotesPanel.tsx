@@ -224,26 +224,26 @@ export function NotesPanel({
                 </div>
             </CardHeader>
 
-            <div className="p-2 border-b bg-muted/30 flex flex-wrap items-center justify-between gap-1 shrink-0">
-                <div className="flex items-center gap-0.5">
+            <div className="p-1 sm:p-2 border-b bg-muted/30 flex items-center justify-between gap-0.5 sm:gap-1 shrink-0 overflow-x-auto no-scrollbar">
+                <div className="flex items-center gap-0 sm:gap-0.5">
                     <Tooltip>
                         <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onMouseDown={(e) => { e.preventDefault(); handleFormat('bold'); }}>
-                                <Bold className="h-4 w-4" />
+                            <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8" onMouseDown={(e) => { e.preventDefault(); handleFormat('bold'); }}>
+                                <Bold className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent>Negrita</TooltipContent>
                     </Tooltip>
                     <Tooltip>
                         <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onMouseDown={(e) => { e.preventDefault(); handleFormat('italic'); }}>
-                                <Italic className="h-4 w-4" />
+                            <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8" onMouseDown={(e) => { e.preventDefault(); handleFormat('italic'); }}>
+                                <Italic className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent>Cursiva</TooltipContent>
                     </Tooltip>
 
-                    <div className="w-px h-6 bg-border mx-1" />
+                    <div className="w-px h-5 sm:h-6 bg-border mx-0.5 sm:mx-1" />
 
                     {/* Botón de Borrador / Quitar marcado */}
                     <Tooltip>
@@ -251,10 +251,10 @@ export function NotesPanel({
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                                className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground"
                                 onMouseDown={(e) => { e.preventDefault(); handleRemoveFormat(); }}
                             >
-                                <Eraser className="h-4 w-4" />
+                                <Eraser className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent>Quitar marcador</TooltipContent>
@@ -266,72 +266,72 @@ export function NotesPanel({
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8"
+                                className="h-7 w-7 sm:h-8 sm:w-8"
                                 onMouseDown={(e) => { e.preventDefault(); handleToggleHighlight('yellow'); }}
                             >
-                                <div className="h-4 w-4 rounded-full" style={{ backgroundColor: getHighlightColor('yellow') }} />
+                                <div className="h-3.5 w-3.5 sm:h-4 sm:w-4 rounded-full" style={{ backgroundColor: getHighlightColor('yellow') }} />
                             </Button>
                         </TooltipTrigger>
-                        <TooltipContent>Amarillo (Pulsar de nuevo para quitar)</TooltipContent>
+                        <TooltipContent>Amarillo</TooltipContent>
                     </Tooltip>
                     <Tooltip>
                         <TooltipTrigger asChild>
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8"
+                                className="h-7 w-7 sm:h-8 sm:w-8"
                                 onMouseDown={(e) => { e.preventDefault(); handleToggleHighlight('green'); }}
                             >
-                                <div className="h-4 w-4 rounded-full" style={{ backgroundColor: getHighlightColor('green') }} />
+                                <div className="h-3.5 w-3.5 sm:h-4 sm:w-4 rounded-full" style={{ backgroundColor: getHighlightColor('green') }} />
                             </Button>
                         </TooltipTrigger>
-                        <TooltipContent>Verde (Pulsar de nuevo para quitar)</TooltipContent>
+                        <TooltipContent>Verde</TooltipContent>
                     </Tooltip>
                     <Tooltip>
                         <TooltipTrigger asChild>
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8"
+                                className="h-7 w-7 sm:h-8 sm:w-8"
                                 onMouseDown={(e) => { e.preventDefault(); handleToggleHighlight('red'); }}
                             >
-                                <div className="h-4 w-4 rounded-full" style={{ backgroundColor: getHighlightColor('red') }} />
+                                <div className="h-3.5 w-3.5 sm:h-4 sm:w-4 rounded-full" style={{ backgroundColor: getHighlightColor('red') }} />
                             </Button>
                         </TooltipTrigger>
-                        <TooltipContent>Rojo (Pulsar de nuevo para quitar)</TooltipContent>
+                        <TooltipContent>Rojo</TooltipContent>
                     </Tooltip>
                 </div>
 
-                <div className="flex items-center gap-0.5 ml-auto">
+                <div className="flex items-center gap-0 sm:gap-0.5 ml-auto">
                     <Tooltip>
                         <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 hover:text-destructive" onMouseDown={(e) => { e.preventDefault(); handleClearAll(); }}>
-                                <Trash2 className="h-4 w-4" />
+                            <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 hover:text-destructive" onMouseDown={(e) => { e.preventDefault(); handleClearAll(); }}>
+                                <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent>Borrar todo</TooltipContent>
                     </Tooltip>
-                    <div className="w-px h-6 bg-border mx-1" />
+                    <div className="w-px h-5 sm:h-6 bg-border mx-0.5 sm:mx-1" />
                     <Tooltip>
                         <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCopy}>
-                                <Copy className="h-4 w-4" />
+                            <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8" onClick={handleCopy}>
+                                <Copy className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent>Copiar</TooltipContent>
                     </Tooltip>
                     <Tooltip>
                         <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleExportTxt}>
-                                <FileDown className="h-4 w-4" />
+                            <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8" onClick={handleExportTxt}>
+                                <FileDown className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent>.txt</TooltipContent>
                     </Tooltip>
                     <Tooltip>
                         <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleExportPdf}>
-                                <FileText className="h-4 w-4" />
+                            <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8" onClick={handleExportPdf}>
+                                <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent>.pdf</TooltipContent>

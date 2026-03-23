@@ -273,12 +273,12 @@ export default function SoloPage() {
                     {/* isNarrow (< 1024px): apilamos verticalmente para evitar solapamiento */}
                     <div className={cn(
                         "flex w-full max-w-7xl gap-4 items-stretch justify-center pointer-events-none transition-all duration-300",
-                        isNarrow && isNotesOpen ? "flex-col h-full pt-16 pb-2" : "flex-row h-[70vh]",
+                        isNarrow && isNotesOpen ? "flex-col h-[82vh] mt-14" : "flex-row h-[70vh]",
                         isNotesOpen && notesSide === 'left' && !(isNarrow && isNotesOpen) ? 'flex-row-reverse' : ''
                     )}>
                         <div className={cn(
                             "min-w-0 relative flex-1 pointer-events-none",
-                            isNarrow && isNotesOpen ? "h-[55%] shrink-0" : "h-full"
+                            isNarrow && isNotesOpen ? "h-1/2 shrink-0" : "h-full"
                         )}>
                             <TranscriptionPanel
                                 command={panelCommand}

@@ -382,7 +382,7 @@ export function TranscriptionPanel({ command, onPositionChange, sessionId }: Tra
   // Vista para Móvil
   if (isMobile) {
     return (
-      <div className="w-full h-full px-4 pt-24 pb-4 flex flex-col pointer-events-auto">
+      <div className="w-full h-full px-4 pt-20 pb-4 flex flex-col pointer-events-auto">
         <Card className="w-full flex-1 flex flex-col shadow-2xl border-2 min-h-0">
           <CardHeader className="flex flex-row items-center justify-between p-3 border-b shrink-0 h-14">
             <CardTitle className="text-base font-semibold">Transcripción</CardTitle>

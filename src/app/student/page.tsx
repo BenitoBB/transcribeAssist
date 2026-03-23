@@ -160,7 +160,7 @@ export default function StudentPage() {
     const selection = window.getSelection();
     if (!selection || selection.isCollapsed) return;
     const text = selection.toString().trim().toLowerCase();
-    
+
     if (text.length > 0) {
       // Filtramos cualquier marcador que esté contenido en la selección o que contenga la selección
       setHighlights(prev => prev.filter(h => {
@@ -363,9 +363,9 @@ export default function StudentPage() {
             } else {
               // Usamos variables CSS para que sea reactivo al tema
               cls = 'px-1 rounded transition-colors';
-              const colorName = matchedTheme.type === 'amarillo' ? 'yellow' : 
-                               matchedTheme.type === 'verde' ? 'green' : 'red';
-              styleObj = { 
+              const colorName = matchedTheme.type === 'amarillo' ? 'yellow' :
+                matchedTheme.type === 'verde' ? 'green' : 'red';
+              styleObj = {
                 backgroundColor: `var(--highlight-${colorName})`,
                 color: 'var(--foreground)'
               };
@@ -496,7 +496,7 @@ export default function StudentPage() {
         </div>
       ) : (
         <>
-          <div className="text-center mb-4 sm:mb-6">
+          <div className="text-center mt-12 mb-4 sm:mt-0 sm:mb-6">
             <h1 className="text-2xl sm:text-3xl font-bold">Vista del Alumno</h1>
             <p className="mt-2 text-sm sm:text-base text-muted-foreground">
               Sala: <span className="font-mono text-primary">{sessionId}</span>
@@ -545,14 +545,14 @@ export default function StudentPage() {
                 <CardTitle className="text-sm font-bold truncate">Transcripción</CardTitle>
               </CardHeader>
 
-              <div className="p-2 border-b bg-muted/30 flex flex-wrap items-center justify-between gap-1 shrink-0">
-                <div className="flex items-center gap-0.5">
+              <div className="p-1 sm:p-2 border-b bg-muted/30 flex items-center justify-between gap-0.5 sm:gap-1 shrink-0 overflow-x-auto no-scrollbar">
+                <div className="flex items-center gap-0 sm:gap-0.5">
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground"
                         onClick={handleRemoveHighlight}
                       >
                         <Eraser className="h-4 w-4" />
@@ -561,35 +561,35 @@ export default function StudentPage() {
                     <TooltipContent>Quitar marcador</TooltipContent>
                   </Tooltip>
 
-                  <div className="w-px h-6 bg-border mx-1" />
+                  <div className="w-px h-5 sm:h-6 bg-border mx-0.5 sm:mx-1" />
 
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted" onClick={() => handleApplyHighlight('amarillo')}>
-                        <div className={`h-4 w-4 rounded-full border border-black/10 ${getThemeHighlightColor('amarillo').bg}`}></div>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 hover:bg-muted" onClick={() => handleApplyHighlight('amarillo')}>
+                        <div className={`h-3.5 w-3.5 sm:h-4 sm:w-4 rounded-full border border-black/10 ${getThemeHighlightColor('amarillo').bg}`}></div>
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>Amarillo</TooltipContent>
                   </Tooltip>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted" onClick={() => handleApplyHighlight('verde')}>
-                        <div className={`h-4 w-4 rounded-full border border-black/10 ${getThemeHighlightColor('verde').bg}`}></div>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 hover:bg-muted" onClick={() => handleApplyHighlight('verde')}>
+                        <div className={`h-3.5 w-3.5 sm:h-4 sm:w-4 rounded-full border border-black/10 ${getThemeHighlightColor('verde').bg}`}></div>
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>Verde</TooltipContent>
                   </Tooltip>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted" onClick={() => handleApplyHighlight('rojo')}>
-                        <div className={`h-4 w-4 rounded-full border border-black/10 ${getThemeHighlightColor('rojo').bg}`}></div>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 hover:bg-muted" onClick={() => handleApplyHighlight('rojo')}>
+                        <div className={`h-3.5 w-3.5 sm:h-4 sm:w-4 rounded-full border border-black/10 ${getThemeHighlightColor('rojo').bg}`}></div>
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>Rojo</TooltipContent>
                   </Tooltip>
                 </div>
 
-                <div className="flex items-center gap-0.5 ml-auto">
+                <div className="flex items-center gap-0 sm:gap-0.5 ml-auto">
                   {isSearching ? (
                     <Input
                       ref={searchInputRef}
@@ -597,14 +597,14 @@ export default function StudentPage() {
                       placeholder="Buscar..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="h-8 text-sm w-32"
+                      className="h-7 sm:h-8 text-xs sm:text-sm w-24 sm:w-32"
                       autoFocus
                       onBlur={() => !searchQuery && setIsSearching(false)}
                     />
                   ) : (
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsSearching(true)}>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8" onClick={() => setIsSearching(true)}>
                           <Search className="h-4 w-4" />
                         </Button>
                       </TooltipTrigger>
@@ -612,11 +612,11 @@ export default function StudentPage() {
                     </Tooltip>
                   )}
 
-                  <div className="w-px h-6 bg-border mx-1" />
+                  <div className="w-px h-5 sm:h-6 bg-border mx-0.5 sm:mx-1" />
 
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCopy}>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8" onClick={handleCopy}>
                         <Copy className="h-4 w-4" />
                       </Button>
                     </TooltipTrigger>
@@ -625,7 +625,7 @@ export default function StudentPage() {
 
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleSave}>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8" onClick={handleSave}>
                         <FileDown className="h-4 w-4" />
                       </Button>
                     </TooltipTrigger>
@@ -634,11 +634,11 @@ export default function StudentPage() {
 
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleExportToPdf}>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8" onClick={handleExportToPdf}>
                         <FileText className="h-4 w-4" />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Exportar PDF</TooltipContent>
+                    <TooltipContent>PDF</TooltipContent>
                   </Tooltip>
                 </div>
               </div>

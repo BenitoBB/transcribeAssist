@@ -145,4 +145,12 @@
     @apply bg-background text-foreground;
     transition: background-color 0.3s, color 0.3s;
   }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 }
