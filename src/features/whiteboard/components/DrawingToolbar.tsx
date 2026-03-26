@@ -2,7 +2,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Eraser, Palette, X, Type, Camera, Trash2 } from 'lucide-react';
+import { Eraser, Palette, X, Type, Camera, Trash2, Expand } from 'lucide-react';
 
 interface DrawingToolbarProps {
   onColorChange: (color: string) => void;
@@ -30,9 +30,9 @@ export function DrawingToolbar({
       <div className="flex items-center gap-1 pr-2 border-r">
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button 
-              variant={currentTool === 'pencil' ? 'default' : 'ghost'} 
-              size="icon" 
+            <Button
+              variant={currentTool === 'pencil' ? 'default' : 'ghost'}
+              size="icon"
               onClick={() => onToolChange('pencil')}
               className="h-8 w-8"
             >
@@ -44,9 +44,9 @@ export function DrawingToolbar({
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button 
-              variant={currentTool === 'text' ? 'default' : 'ghost'} 
-              size="icon" 
+            <Button
+              variant={currentTool === 'text' ? 'default' : 'ghost'}
+              size="icon"
               onClick={() => onToolChange('text')}
               className="h-8 w-8"
             >
@@ -58,9 +58,9 @@ export function DrawingToolbar({
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button 
-              variant={currentTool === 'eraser' ? 'default' : 'ghost'} 
-              size="icon" 
+            <Button
+              variant={currentTool === 'eraser' ? 'default' : 'ghost'}
+              size="icon"
               onClick={() => onToolChange('eraser')}
               className="h-8 w-8"
             >
@@ -82,7 +82,7 @@ export function DrawingToolbar({
               className="w-8 h-8 rounded-md cursor-pointer opacity-0"
               aria-label="Seleccionar color"
             />
-             <div
+            <div
               className="absolute top-0 left-0 w-8 h-8 rounded-md border pointer-events-none"
               style={{ backgroundColor: currentColor }}
             ></div>
@@ -92,7 +92,7 @@ export function DrawingToolbar({
           <p>Color del Pincel</p>
         </TooltipContent>
       </Tooltip>
-      
+
       {colors.map((color) => (
         <Tooltip key={color}>
           <TooltipTrigger asChild>
@@ -126,7 +126,7 @@ export function DrawingToolbar({
       <Tooltip>
         <TooltipTrigger asChild>
           <Button variant="ghost" size="icon" onClick={onSnapshotMode}>
-            <Camera className="h-4 w-4" />
+            <Expand className="h-4 w-4" />
             <span className="sr-only">Modo captura</span>
           </Button>
         </TooltipTrigger>
