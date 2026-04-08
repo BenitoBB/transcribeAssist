@@ -354,7 +354,7 @@ export function TranscriptionPanel({ command, onPositionChange, sessionId }: Tra
       <div
         ref={transcriptionDisplayRef}
         className="p-6 break-words bg-background relative"
-        style={{ ...style, minHeight: '100%', color: 'var(--foreground)' }}
+        style={{ ...style, minHeight: '100%', color: 'var(--foreground)', whiteSpace: 'pre-wrap' }}
         onMouseMove={showRuler ? handleContentMouseMove : undefined}
       >
         {isBionic ? <BionicReadingText text={transcription} /> : transcription}

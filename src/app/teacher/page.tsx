@@ -20,6 +20,7 @@ import {
   X,
   Play,
   Camera,
+  MessageSquareText,
 } from 'lucide-react';
 import { DrawingToolbar } from '@/features/whiteboard/components/DrawingToolbar';
 import { useTranscription } from '@/features/transcription/hooks/use-transcription';
@@ -35,6 +36,11 @@ import { hostSession, sendToPeers, onPeerStatusChange, onConnectionStatusChange,
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { DEFAULT_TRANSCRIPTION_TEXT } from '@/features/transcription/context/TranscriptionContext';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 
 const DrawingCanvas = dynamic(
   () => import('@/features/whiteboard/components/DrawingCanvas').then(mod => mod.DrawingCanvas),
@@ -89,6 +95,13 @@ export default function TeacherPage() {
           description: 'No se pudo conectar al servidor de señalización. Revisa tu internet.',
         });
       }
+    });
+
+    // Notificación de proximidad al micrófono
+    toast({
+      title: '🎤 Consejo de precisión',
+      description: 'Acércate al micrófono para obtener una mejor precisión en la transcripción.',
+      duration: 6000,
     });
 
     return () => {
@@ -286,6 +299,51 @@ export default function TeacherPage() {
               </TooltipTrigger>
               <TooltipContent><p>Continuar Grabación</p></TooltipContent>
             </Tooltip>
+          )}
+
+          {isRecording && (
+            <Popover>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="border-muted-foreground/30 text-muted-foreground hover:text-foreground"
+                    >
+                      <MessageSquareText className="h-4 w-4" />
+                      <span className="sr-only">Comandos de voz disponibles</span>
+                    </Button>
+                  </PopoverTrigger>
+                </TooltipTrigger>
+                <TooltipContent><p>Comandos de voz</p></TooltipContent>
+              </Tooltip>
+              <PopoverContent className="w-64 p-0" align="start">
+                <div className="p-3 border-b bg-muted/50">
+                  <p className="text-sm font-semibold flex items-center gap-1.5">
+                    <MessageSquareText className="h-4 w-4 text-primary" />
+                    Comandos de voz
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Di en voz alta para ejecutar:</p>
+                </div>
+                <div className="p-3 space-y-2 text-xs">
+                  <div>
+                    <p className="font-semibold text-muted-foreground uppercase tracking-wider text-[10px] mb-1">Grabación</p>
+                    <p className="text-foreground">&quot;Iniciar grabación&quot;</p>
+                    <p className="text-foreground">&quot;Detener grabación&quot;</p>
+                  </div>
+                  <div className="border-t pt-2">
+                    <p className="font-semibold text-muted-foreground uppercase tracking-wider text-[10px] mb-1">Pizarra</p>
+                    <p className="text-foreground">&quot;Activar pizarra&quot;</p>
+                    <p className="text-foreground">&quot;Cerrar pizarra&quot;</p>
+                  </div>
+                  <div className="border-t pt-2">
+                    <p className="font-semibold text-muted-foreground uppercase tracking-wider text-[10px] mb-1">Panel</p>
+                    <p className="text-foreground">&quot;Pizarra arriba / abajo / izquierda / derecha / centro&quot;</p>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
           )}
 
 

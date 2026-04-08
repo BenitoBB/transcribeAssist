@@ -13,6 +13,10 @@ let finalTranscription = '';
 let commandCallback: ((command: string) => void) | null = null;
 let intentionalStop = false;
 
+// --- Control de párrafos automáticos ---
+const WORDS_PER_PARAGRAPH = 50;
+let wordsSinceLastBreak = 0;
+
 // Tipos para SpeechRecognition
 declare global {
   interface Window {
@@ -97,6 +101,7 @@ export function startTranscription(resume: boolean = false): Promise<void> {
     recognition.onstart = () => {
       if (!resume) {
         finalTranscription = '';
+        wordsSinceLastBreak = 0;
       }
       intentionalStop = false;
       if (!resume) {
@@ -142,8 +147,17 @@ export function startTranscription(resume: boolean = false): Promise<void> {
           if (commandCallback) {
             commandCallback(transcript.trim());
           }
-          // Luego, añade el texto a la transcripción final
-          finalTranscription += transcript.charAt(0).toUpperCase() + transcript.slice(1) + '. ';
+          // Contar palabras del fragmento para insertar párrafos automáticos
+          const words = transcript.trim().split(/\s+/).filter(w => w.length > 0);
+          wordsSinceLastBreak += words.length;
+
+          // Insertar salto de párrafo si se alcanzó el umbral
+          if (wordsSinceLastBreak >= WORDS_PER_PARAGRAPH) {
+            finalTranscription += transcript.charAt(0).toUpperCase() + transcript.slice(1) + '.\n\n';
+            wordsSinceLastBreak = 0;
+          } else {
+            finalTranscription += transcript.charAt(0).toUpperCase() + transcript.slice(1) + '. ';
+          }
         } else {
           interimTranscription += transcript;
         }
@@ -194,6 +208,7 @@ export function stopTranscription(): void {
  */
 export function resetFinalTranscription(): void {
   finalTranscription = '';
+  wordsSinceLastBreak = 0;
   notifyTextListeners('', true);
 }
 

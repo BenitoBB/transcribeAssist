@@ -648,7 +648,7 @@ export default function StudentPage() {
                     ref={transcriptionDisplayRef}
                     className="p-6 break-words relative"
                     onMouseMove={showRuler ? handleContentMouseMove : undefined}
-                    style={{ ...style, minHeight: '100%', color: 'var(--foreground)' }}
+                    style={{ ...style, minHeight: '100%', color: 'var(--foreground)', whiteSpace: 'pre-wrap' }}
                   >
                     {renderHighlightedText(transcription)}
                     {showRuler && (
