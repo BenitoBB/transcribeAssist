@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
@@ -70,6 +70,10 @@ export default function TeacherPage() {
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connecting');
   const { toast } = useToast();
 
+  // --- Estado sync: para reenviar a alumnos nuevos ---
+  const prevPeerCountRef = useRef(0);
+  const sentCapturesRef = useRef<{ type: string; dataUrl: string; timestamp: string }[]>([]);
+
   useEffect(() => {
     const checkIsMobile = () => setIsMobile(window.innerWidth < 768);
     checkIsMobile();
@@ -109,6 +113,29 @@ export default function TeacherPage() {
       unsubStatus();
     }
   }, [toast]);
+
+  // --- Reenviar estado completo cuando un nuevo alumno se conecta ---
+  useEffect(() => {
+    if (peerCount > prevPeerCountRef.current) {
+      // Un nuevo alumno se unió: enviar transcripción actual
+      if (transcription && transcription.length > 0) {
+        // Pequeño delay para asegurar que el alumno esté listo para recibir
+        setTimeout(() => {
+          sendToPeers({ type: 'full_text', text: transcription });
+        }, 500);
+      }
+
+      // Enviar todas las capturas acumuladas
+      if (sentCapturesRef.current.length > 0) {
+        setTimeout(() => {
+          sentCapturesRef.current.forEach((capture) => {
+            sendToPeers(capture);
+          });
+        }, 800);
+      }
+    }
+    prevPeerCountRef.current = peerCount;
+  }, [peerCount, transcription]);
 
   useEffect(() => {
     const handleStateChange = (newState: 'recording' | 'stopped' | 'idle') => {
@@ -209,6 +236,12 @@ export default function TeacherPage() {
                   const canvas = await html2canvas(element, { backgroundColor: null });
                   const dataUrl = canvas.toDataURL('image/png');
                   sendToPeers({
+                    type: 'whiteboard_capture',
+                    dataUrl,
+                    timestamp: new Date().toISOString()
+                  });
+                  // Guardar la captura para reenviar a alumnos tardíos
+                  sentCapturesRef.current.push({
                     type: 'whiteboard_capture',
                     dataUrl,
                     timestamp: new Date().toISOString()
