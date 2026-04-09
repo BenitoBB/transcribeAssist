@@ -313,3 +313,17 @@ export function resetFinalTranscription(): void {
   clearBackup();
   notifyTextListeners('', true);
 }
+
+/**
+ * Reemplaza o edita una porción específica de texto dentro de la transcripción final.
+ * Útil para la edición rápida (click-to-edit).
+ */
+export function updateTranscriptionSegment(oldText: string, newText: string): void {
+  // Solo reemplazar la primera coincidencia exacta (o usar replaceAll si se prefiere)
+  if (finalTranscription.includes(oldText)) {
+    finalTranscription = finalTranscription.replace(oldText, newText);
+    backupTranscription();
+    notifyTextListeners(finalTranscription, true);
+  }
+}
+

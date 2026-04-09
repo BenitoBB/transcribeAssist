@@ -36,7 +36,8 @@ import { useTranscription } from '@/features/transcription/hooks/use-transcripti
 import { useStyle } from '@/context/StyleContext';
 import { SettingsButton } from '@/components/settings/SettingsButton';
 import { BionicReadingText } from '@/components/BionicReadingText';
-import { resetFinalTranscription } from '@/features/transcription/services/transcription.service';
+import { resetFinalTranscription, updateTranscriptionSegment } from '@/features/transcription/services/transcription.service';
+import { EditableParagraph } from '@/features/transcription/components/EditableParagraph';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -357,7 +358,17 @@ export function TranscriptionPanel({ command, onPositionChange, sessionId }: Tra
         style={{ ...style, minHeight: '100%', color: 'var(--foreground)', whiteSpace: 'pre-wrap' }}
         onMouseMove={showRuler ? handleContentMouseMove : undefined}
       >
-        {isBionic ? <BionicReadingText text={transcription} /> : transcription}
+        {transcription.split('\n\n').map((paragraph, index, arr) => (
+          <React.Fragment key={index}>
+            <EditableParagraph 
+              text={paragraph} 
+              onSave={(oldText, newText) => updateTranscriptionSegment(oldText, newText)}
+            >
+              {isBionic ? <BionicReadingText text={paragraph} /> : paragraph}
+            </EditableParagraph>
+            {index < arr.length - 1 && '\n\n'}
+          </React.Fragment>
+        ))}
         <div ref={bottomRef} />
         {showRuler && (
           <div
