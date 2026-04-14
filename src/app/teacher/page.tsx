@@ -21,7 +21,15 @@ import {
   Play,
   Camera,
   MessageSquareText,
+  Sparkles,
 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { aiProvider, AIProgressData } from '@/features/transcription/services/ai.service';
 import { DrawingToolbar } from '@/features/whiteboard/components/DrawingToolbar';
 import { useTranscription } from '@/features/transcription/hooks/use-transcription';
 import { Command, Position } from '@/features/transcription/components/TranscriptionPanel';
@@ -70,6 +78,13 @@ export default function TeacherPage() {
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connecting');
   const { toast } = useToast();
 
+  // --- Estado para Módulo de Resumen IA ---
+  const [isSummarizing, setIsSummarizing] = useState(false);
+  const [summaryText, setSummaryText] = useState<string>('');
+  const [keyWordsFound, setKeyWordsFound] = useState<string[]>([]);
+  const [isSummaryOpen, setIsSummaryOpen] = useState(false);
+  const [aiProgress, setAiProgress] = useState<AIProgressData | null>(null);
+
   // --- Estado sync: para reenviar a alumnos nuevos ---
   const prevPeerCountRef = useRef(0);
   const sentCapturesRef = useRef<{ type: string; dataUrl: string; timestamp: string }[]>([]);
@@ -78,6 +93,12 @@ export default function TeacherPage() {
     const checkIsMobile = () => setIsMobile(window.innerWidth < 768);
     checkIsMobile();
     window.addEventListener('resize', checkIsMobile);
+
+    // Suscribirse al progreso de la IA
+    aiProvider.onProgress = (data) => setAiProgress(data);
+    aiProvider.onReady = () => setAiProgress(null);
+    aiProvider.onError = () => setIsSummarizing(false);
+
     return () => window.removeEventListener('resize', checkIsMobile);
   }, []);
 
@@ -216,6 +237,72 @@ export default function TeacherPage() {
         title: "ID de la Sala Copiado",
         description: "Ahora puedes compartirlo con tus alumnos.",
       });
+    }
+  };
+
+  const handleGenerateSummary = async () => {
+    // 1. Validar que tengamos red
+    if (!navigator.onLine) {
+      toast({ title: 'Error de Red', description: 'Necesitas conexión a internet para descargar el modelo inicial.', variant: 'destructive' });
+      return;
+    }
+
+    // 2. Validar que la transcripción no sea la del mensaje por defecto o esté vacía
+    if (
+      !transcription || 
+      transcription.trim().length === 0 || 
+      transcription === DEFAULT_TRANSCRIPTION_TEXT
+    ) {
+      toast({ title: 'Aviso', description: 'Por favor, graba algo de texto primero para poder resumirlo.' });
+      return;
+    }
+    
+    // 3. Validar que haya suficiente texto (al menos ~10 palabras)
+    const wordCount = transcription.trim().split(/\s+/).length;
+    if (wordCount < 10) {
+      toast({ title: 'Aviso', description: 'La transcripción es muy corta. Se requiere más información para un resumen.' });
+      return;
+    }
+
+    setIsSummarizing(true);
+    setIsSummaryOpen(true);
+    setSummaryText('');
+    setKeyWordsFound([]);
+    
+    try {
+      // 1. Extracción Ligera de Palabras Clave (Regex Local - Costo 0% RAM)
+      const targetWords = ['tarea', 'examen', 'actividad', 'proyecto', 'importante', 'atención', 'estudio'];
+      const found = targetWords.filter(w => transcription.toLowerCase().includes(w));
+      setKeyWordsFound(found);
+
+      // 2. Resumen mediante IA (Transformers Web Worker)
+      if (!aiProvider.isReady) {
+        aiProvider.loadModel();
+        // Esperar a que el worker baje el modelo
+        while (!aiProvider.isReady) await new Promise(r => setTimeout(r, 500));
+      }
+      
+      const result = await aiProvider.summarizeText(transcription);
+      setSummaryText(result);
+      
+      // Enviar el resumen a los alumnos si hay conexión
+      if (peerCount > 0) {
+        sendToPeers({
+          type: 'ai_summary',
+          summary: result,
+          keywords: found,
+          timestamp: new Date().toISOString()
+        });
+        toast({ title: 'Resumen enviado', description: 'Los alumnos han recibido el resumen actualizado.' });
+      }
+
+    } catch (error) {
+      console.error(error);
+      toast({ title: 'Error en la IA', description: 'No se pudo generar el resumen.', variant: 'destructive' });
+      setIsSummaryOpen(false);
+    } finally {
+      setIsSummarizing(false);
+      setAiProgress(null);
     }
   };
 
@@ -379,6 +466,24 @@ export default function TeacherPage() {
             </Popover>
           )}
 
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="secondary"
+                onClick={handleGenerateSummary}
+                disabled={isSummarizing || transcription.trim().length === 0}
+                className="gap-2 shadow border bg-background/80 backdrop-blur font-semibold text-primary"
+              >
+                {isSummarizing && !aiProgress?.progress ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4" />
+                )}
+                <span className="hidden sm:inline">Resumen IA</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent><p>Sintetizar clase con Inteligencia Artificial</p></TooltipContent>
+          </Tooltip>
 
         </div>
       )}
@@ -470,6 +575,88 @@ export default function TeacherPage() {
           />
         </div>
       )}
+
+      {/* --- Módulo de Resumen IA (Dialog) --- */}
+      <Dialog open={isSummaryOpen} onOpenChange={setIsSummaryOpen}>
+        <DialogContent className="max-w-2xl bg-background/95 backdrop-blur-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Síntesis de la Clase
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="flex flex-col gap-4 mt-2">
+            {/* Palabras Clave / Entidades */}
+            {keyWordsFound.length > 0 && (
+              <div className="bg-muted/50 p-3 rounded-lg border">
+                <h4 className="text-xs font-semibold uppercase text-muted-foreground tracking-wider mb-2">Puntos Críticos Detectados</h4>
+                <div className="flex flex-wrap gap-2">
+                  {keyWordsFound.map(kw => (
+                    <span key={kw} className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700 border border-red-200 dark:bg-red-900/40 dark:text-red-400 dark:border-red-900">
+                      {kw}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Resumen Principal */}
+            <div className="flex flex-col gap-2 min-h-[150px]">
+              <h4 className="text-xs font-semibold uppercase text-muted-foreground tracking-wider">Resumen Abstractivo</h4>
+              
+              {isSummarizing ? (
+                <div className="flex-1 flex flex-col items-center justify-center border-2 border-dashed rounded-lg bg-muted/20 p-8 text-center">
+                  {(aiProgress?.status === 'init' || aiProgress?.status === 'download' || aiProgress?.status === 'progress') ? (
+                    <>
+                      <Loader2 className="h-8 w-8 text-primary animate-spin mb-4" />
+                      <p className="font-semibold text-lg">Cargando Modelo Neural...</p>
+                      
+                      {/* Barra de progreso de descarga */}
+                      <div className="w-full max-w-xs mt-3 bg-muted rounded-full overflow-hidden h-2 border">
+                        <div 
+                          className="bg-primary h-full transition-all duration-300"
+                          style={{ width: `${Math.round(aiProgress.progress || 0)}%` }}
+                        />
+                      </div>
+                      
+                      <p className="text-sm font-medium text-muted-foreground mt-2">
+                        {Math.round(aiProgress.progress || 0)}% – Descargando modelo al caché local
+                      </p>
+                      <p className="text-[10px] text-muted-foreground/60 mt-1">Este paso solo se ejecuta la primera vez</p>
+                    </>
+                  ) : aiProgress?.status === 'generating' ? (
+                    <>
+                      <Loader2 className="h-8 w-8 text-indigo-500 animate-spin mb-4" />
+                      <p className="font-semibold text-lg">Abstrayendo información...</p>
+                      
+                      {/* Barra de progreso indeterminada para generación */}
+                      <div className="w-full max-w-xs mt-3 bg-muted rounded-full overflow-hidden h-1.5 border relative">
+                         <div className="absolute top-0 left-0 h-full bg-indigo-500 w-1/3 animate-[translateX_1s_ease-in-out_infinite]" style={{ animation: "pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite" }} />
+                      </div>
+
+                      <p className="text-sm text-muted-foreground mt-2">
+                        El motor de IA está procesando el resumen
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <Loader2 className="h-8 w-8 text-primary animate-spin mb-4" />
+                      <p className="font-semibold text-lg">Preparando ecosistema...</p>
+                    </>
+                  )}
+                </div>
+              ) : summaryText ? (
+                <div className="bg-primary/5 border border-primary/20 p-4 rounded-lg shadow-inner text-sm leading-relaxed">
+                  {summaryText}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">No se pudo generar el resumen.</p>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );
