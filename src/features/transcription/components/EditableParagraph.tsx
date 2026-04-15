@@ -67,16 +67,29 @@ export function EditableParagraph({ text, onSave, children }: EditableParagraphP
 
   if (isEditing) {
     return (
-      <Textarea
-        ref={textareaRef}
-        value={editValue}
-        onChange={handleChange}
+      <div
+        ref={textareaRef as any}
+        contentEditable
         onBlur={handleBlur}
-        onKeyDown={handleKeyDown}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            saveAndClose();
+          }
+          if (e.key === 'Escape') {
+            setIsEditing(false);
+            setEditValue(text);
+          }
+        }}
+        onInput={(e) => setEditValue(e.currentTarget.innerText)}
         className={cn(
-          "w-full resize-none overflow-hidden bg-background/50 border-primary focus:ring-primary shadow-inner p-1 !my-1 text-inherit !text-base font-inherit leading-inherit whitespace-pre-wrap -ml-1 transition-all"
+          "w-full outline-none bg-background/50 border-2 border-primary rounded-md shadow-inner p-2 !my-1 text-inherit !text-base font-inherit leading-inherit whitespace-pre-wrap transition-all ring-2 ring-primary/20",
+          "min-h-[1em]"
         )}
-      />
+        suppressContentEditableWarning={true}
+      >
+        {text}
+      </div>
     );
   }
 

@@ -225,49 +225,60 @@ export default function TeacherPage() {
     <div className="relative h-screen w-screen overflow-hidden bg-background">
       {isScreenshotMode ? (
         <div className="absolute top-4 right-4 z-50 flex gap-2">
-          <Button
-            variant="default"
-            size="icon"
-            className="rounded-full h-10 w-10 shadow-lg border-2 bg-primary text-primary-foreground hover:bg-primary/90"
-            onClick={async () => {
-              const element = document.getElementById('whiteboard-container');
-              if (element) {
-                try {
-                  toast({ title: 'Capturando...', description: 'Generando imagen de la pizarra.' });
-                  const html2canvas = (await import('html2canvas')).default;
-                  const canvas = await html2canvas(element, { backgroundColor: null });
-                  const dataUrl = canvas.toDataURL('image/png');
-                  sendToPeers({
-                    type: 'whiteboard_capture',
-                    dataUrl,
-                    timestamp: new Date().toISOString()
-                  });
-                  // Guardar la captura para reenviar a alumnos tardíos
-                  sentCapturesRef.current.push({
-                    type: 'whiteboard_capture',
-                    dataUrl,
-                    timestamp: new Date().toISOString()
-                  });
-                  toast({ title: '¡Captura enviada!', description: 'La imagen ha sido compartida con los alumnos.', className: 'bg-green-600 text-white' });
-                } catch (err) {
-                  console.error(err);
-                  toast({ title: 'Error', description: 'No se pudo capturar la pizarra.', variant: 'destructive' });
-                }
-              }
-            }}
-          >
-            <Camera className="h-5 w-5" />
-            <span className="sr-only">Tomar y enviar captura</span>
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            className="rounded-full h-10 w-10 shadow-lg border-2 bg-background hover:bg-accent"
-            onClick={() => setIsScreenshotMode(false)}
-          >
-            <X className="h-5 w-5" />
-            <span className="sr-only">Salir del modo captura</span>
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="default"
+                size="icon"
+                className="rounded-full h-10 w-10 shadow-lg border-2 bg-primary text-primary-foreground hover:bg-primary/90"
+                onClick={async () => {
+                  const element = document.getElementById('whiteboard-container');
+                  if (element) {
+                    try {
+                      toast({ title: 'Capturando...', description: 'Generando imagen de la pizarra.' });
+                      const html2canvas = (await import('html2canvas')).default;
+                      const canvas = await html2canvas(element, { backgroundColor: null });
+                      const dataUrl = canvas.toDataURL('image/png');
+                      sendToPeers({
+                        type: 'whiteboard_capture',
+                        dataUrl,
+                        timestamp: new Date().toISOString()
+                      });
+                      // Guardar la captura para reenviar a alumnos tardíos
+                      sentCapturesRef.current.push({
+                        type: 'whiteboard_capture',
+                        dataUrl,
+                        timestamp: new Date().toISOString()
+                      });
+                      toast({ title: '¡Captura enviada!', description: 'La imagen ha sido compartida con los alumnos.', className: 'bg-green-600 text-white' });
+                    } catch (err) {
+                      console.error(err);
+                      toast({ title: 'Error', description: 'No se pudo capturar la pizarra.', variant: 'destructive' });
+                    }
+                  }
+                }}
+              >
+                <Camera className="h-5 w-5" />
+                <span className="sr-only">Tomar y enviar captura</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent><p>Enviar Captura a Alumnos</p></TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                className="rounded-full h-10 w-10 shadow-lg border-2 bg-background hover:bg-accent"
+                onClick={() => setIsScreenshotMode(false)}
+              >
+                <X className="h-5 w-5" />
+                <span className="sr-only">Salir del modo captura</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent><p>Salir de Modo Captura</p></TooltipContent>
+          </Tooltip>
         </div>
       ) : (
         <div className={cn(
@@ -468,6 +479,8 @@ export default function TeacherPage() {
             command={panelCommand}
             onPositionChange={setPanelPosition}
             sessionId={sessionId}
+            hideHighlighting={true}
+            showResizeIcon={true}
           />
         </div>
       )}

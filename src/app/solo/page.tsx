@@ -10,7 +10,7 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useRouter } from 'next/navigation';
-import { Pencil, Mic, MicOff, NotebookPen, X, Play } from 'lucide-react';
+import { Pencil, Mic, MicOff, NotebookPen, X, Play, Camera } from 'lucide-react';
 import { DrawingToolbar } from '@/features/whiteboard/components/DrawingToolbar';
 import { NotesPanel } from '@/features/notes/components/NotesPanel';
 import { ExitConfirmation } from '@/components/ExitConfirmation';
@@ -24,6 +24,7 @@ import {
     onTranscriptionUpdate,
 } from '@/features/transcription/services/transcription.service';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 import { DEFAULT_TRANSCRIPTION_TEXT } from '@/features/transcription/context/TranscriptionContext';
 
 const DrawingCanvas = dynamic(
@@ -46,6 +47,7 @@ export default function SoloPage() {
     const [isScreenshotMode, setIsScreenshotMode] = useState(false);
 
     const { transcription, setTranscription, isRecording, setIsRecording } = useTranscription();
+    const { toast } = useToast();
     const router = useRouter();
 
     const [panelCommand, setPanelCommand] = useState<Command>(null);
@@ -188,18 +190,59 @@ export default function SoloPage() {
     };
 
     return (
-        <div className="relative h-screen w-screen overflow-hidden bg-background">
+        <div className="relative min-h-screen w-screen overflow-y-auto bg-background">
             {isScreenshotMode ? (
-                <div className="absolute top-4 right-4 z-50">
-                    <Button
-                        variant="outline"
-                        size="icon"
-                        className="rounded-full h-10 w-10 shadow-lg border-2"
-                        onClick={() => setIsScreenshotMode(false)}
-                    >
-                        <X className="h-5 w-5" />
-                        <span className="sr-only">Salir del modo captura</span>
-                    </Button>
+                <div className="absolute top-4 right-4 z-50 flex gap-2">
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                                variant="default"
+                                size="icon"
+                                className="rounded-full h-10 w-10 shadow-lg border-2 bg-primary text-primary-foreground hover:bg-primary/90"
+                                onClick={async () => {
+                                    const element = document.getElementById('whiteboard-container');
+                                    if (element) {
+                                        try {
+                                            toast({ title: 'Capturando...', description: 'Generando imagen de la pizarra.' });
+                                            const html2canvas = (await import('html2canvas')).default;
+                                            const canvas = await html2canvas(element, { backgroundColor: null });
+                                            const dataUrl = canvas.toDataURL('image/png');
+                                            
+                                            // En sesión individual, descargamos la imagen
+                                            const link = document.createElement('a');
+                                            link.href = dataUrl;
+                                            link.download = `captura-pizarra-${new Date().getTime()}.png`;
+                                            link.click();
+                                            
+                                            toast({ title: '¡Captura descargada!', description: 'La imagen de la pizarra se ha guardado en tu equipo.', className: 'bg-green-600 text-white' });
+                                        } catch (err) {
+                                            console.error(err);
+                                            toast({ title: 'Error', description: 'No se pudo capturar la pizarra.', variant: 'destructive' });
+                                        }
+                                    }
+                                }}
+                            >
+                                <Camera className="h-5 w-5" />
+                                <span className="sr-only">Tomar y descargar captura</span>
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent><p>Descargar Captura de Pizarra</p></TooltipContent>
+                    </Tooltip>
+
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                className="rounded-full h-10 w-10 shadow-lg border-2 bg-background hover:bg-accent"
+                                onClick={() => setIsScreenshotMode(false)}
+                            >
+                                <X className="h-5 w-5" />
+                                <span className="sr-only">Salir del modo captura</span>
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent><p>Salir de Modo Captura</p></TooltipContent>
+                    </Tooltip>
                 </div>
             ) : (
                 <div className={cn(
@@ -291,7 +334,7 @@ export default function SoloPage() {
             )}
 
             {!isMobile && (
-                <div className="absolute top-0 left-0 w-full h-full pointer-events-none z-5">
+                <div id="whiteboard-container" className="absolute top-0 left-0 w-full h-full pointer-events-none z-5">
                     <DrawingCanvas
                         brushColor={brushColor}
                         tool={currentTool}
@@ -314,44 +357,73 @@ export default function SoloPage() {
             )}
 
             {!isScreenshotMode && (
-                <div className="relative w-full h-full pointer-events-none z-10 flex items-center justify-center p-4">
-                    {/* isNarrow (< 1024px): apilamos verticalmente para evitar solapamiento */}
+                <div className="relative min-h-screen w-screen overflow-y-auto bg-background flex items-center justify-center">
+                    <style jsx global>{`
+                        .custom-scrollbar::-webkit-scrollbar {
+                            width: 8px;
+                        }
+                        .custom-scrollbar::-webkit-scrollbar-track {
+                            background: transparent;
+                        }
+                        .custom-scrollbar::-webkit-scrollbar-thumb {
+                            background: rgba(var(--primary-rgb), 0.2);
+                            border-radius: 10px;
+                        }
+                        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+                            background: rgba(var(--primary-rgb), 0.4);
+                        }
+                        .custom-scrollbar {
+                            scrollbar-width: thin;
+                            scrollbar-color: rgba(var(--primary-rgb), 0.2) transparent;
+                        }
+                    `}</style>
+                    
                     <div 
                         ref={containerRef}
                         className={cn(
-                            "flex w-full max-w-7xl items-stretch justify-center pointer-events-none transition-all duration-300",
-                            isNarrow && isNotesOpen ? "flex-col h-[82vh] mt-14" : "flex-row h-[70vh] gap-0",
-                            isNotesOpen && notesSide === 'left' && !(isNarrow && isNotesOpen) ? 'flex-row-reverse' : ''
+                            "flex w-full items-stretch justify-center pointer-events-none transition-all duration-300 gap-0 p-4",
+                            isNotesOpen ? "max-w-7xl h-[60vh]" : "max-w-4xl h-[60vh]",
+                            isNarrow && isNotesOpen ? "flex-col overflow-y-auto pt-20" : "flex-row",
+                            isNotesOpen && notesSide === 'left' && !isNarrow ? 'flex-row-reverse' : ''
                         )}
                     >
+                        {/* Panel de Transcripción */}
                         <div className={cn(
-                            "min-w-0 relative flex-1 pointer-events-none",
-                            isNarrow && isNotesOpen ? "h-1/2 shrink-0" : "h-full"
+                            "relative pointer-events-auto h-full transition-all duration-300 min-w-0",
+                            isNotesOpen ? "flex-1" : "w-full"
                         )}>
                             <TranscriptionPanel
                                 command={panelCommand}
                                 onPositionChange={setPanelPosition}
                                 sessionId="Solo"
+                                showResizeIcon={false}
+                                isStatic={isNotesOpen && !isMobile}
+                                onToggleSide={() => setNotesSide(prev => prev === 'left' ? 'right' : 'left')}
                             />
                         </div>
 
+                        {/* Separador Redimensionable (Gutter) */}
                         {isNotesOpen && !isNarrow && (
                             <div
                                 onMouseDown={startResizing}
                                 className={cn(
-                                    "w-2 hover:bg-primary/20 cursor-col-resize flex items-center justify-center transition-colors group z-10 pointer-events-auto",
+                                    "w-3 hover:bg-primary/20 cursor-col-resize flex items-center justify-center transition-colors group z-50 pointer-events-auto",
                                     isResizing ? "bg-primary/30" : ""
                                 )}
                             >
-                                <div className="w-1 h-12 bg-border rounded-full group-hover:bg-primary/40 transition-colors" />
+                                <div className="w-1.5 h-16 bg-border rounded-full group-hover:bg-primary/40 transition-colors" />
                             </div>
                         )}
 
+                        {/* Panel de Notas */}
                         {isNotesOpen && (
-                            <div className={cn(
-                                "pointer-events-auto",
-                                isNarrow ? "flex-1 min-h-0 flex justify-center" : ""
-                            )}>
+                            <div 
+                                className={cn(
+                                    "relative pointer-events-auto h-full transition-all duration-300 min-w-[250px]",
+                                    isNarrow ? "w-full min-h-[400px]" : ""
+                                )}
+                                style={!isNarrow ? { width: notesWidth } : {}}
+                            >
                                 <NotesPanel
                                     studentClassName="Sesión Individual"
                                     sessionId="Solo"
@@ -362,7 +434,8 @@ export default function SoloPage() {
                                     initialContent={notesContent}
                                     onContentChange={setNotesContent}
                                     isMobile={isNarrow}
-                                    customWidth={!isNarrow ? notesWidth : undefined}
+                                    isStatic={!isMobile}
+                                    showResizeIcon={false}
                                 />
                             </div>
                         )}

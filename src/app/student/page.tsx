@@ -663,7 +663,7 @@ export default function StudentPage() {
                           <div className={`h-3.5 w-3.5 sm:h-4 sm:w-4 rounded-full border border-black/10 shadow-sm ${getThemeHighlightColor(color).bg}`}></div>
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent className="capitalize">Resaltar: {getThemeHighlightColor(color).label}</TooltipContent>
+                      <TooltipContent className="capitalize">{getThemeHighlightColor(color).label}</TooltipContent>
                     </Tooltip>
                   ))}
 
@@ -681,16 +681,23 @@ export default function StudentPage() {
                     </Tooltip>
                     <DropdownMenuContent align="start" className="w-48 p-2">
                         <div className="grid grid-cols-3 gap-2">
-                            {ALL_COLORS.map(color => (
-                                <Button
-                                    key={color}
-                                    variant="ghost"
-                                    className="h-10 w-full flex justify-center items-center p-0 rounded-md hover:bg-muted"
-                                    onClick={() => handleApplyHighlight(color)}
-                                >
-                                    <div className={`h-5 w-5 rounded-full border border-black/10 shadow-sm ${getThemeHighlightColor(color).bg}`} />
-                                </Button>
-                            ))}
+                            {ALL_COLORS.map(color => {
+                                const colorInfo = getThemeHighlightColor(color);
+                                return (
+                                    <Tooltip key={`drop-alumn-${color}`}>
+                                        <TooltipTrigger asChild>
+                                            <Button
+                                                variant="ghost"
+                                                className="h-10 w-full flex justify-center items-center p-0 rounded-md hover:bg-muted"
+                                                onClick={() => handleApplyHighlight(color)}
+                                            >
+                                                <div className={`h-5 w-5 rounded-full border border-black/10 shadow-sm ${colorInfo.bg}`} />
+                                            </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent className="capitalize">{colorInfo.label}</TooltipContent>
+                                    </Tooltip>
+                                );
+                            })}
                         </div>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -736,7 +743,7 @@ export default function StudentPage() {
                         <FileDown className="h-4 w-4" />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>.txt</TooltipContent>
+                    <TooltipContent>TXT</TooltipContent>
                   </Tooltip>
 
                   <Tooltip>

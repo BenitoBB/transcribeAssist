@@ -25,6 +25,7 @@ import {
   Maximize2,
   ChevronDown,
   Eraser,
+  ArrowLeftRight,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -41,6 +42,7 @@ import { BionicReadingText } from '@/components/BionicReadingText';
 import { resetFinalTranscription, updateTranscriptionSegment } from '@/features/transcription/services/transcription.service';
 import { EditableParagraph } from '@/features/transcription/components/EditableParagraph';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -51,6 +53,10 @@ interface TranscriptionPanelProps {
   command: Command;
   onPositionChange: (position: Position) => void;
   sessionId: string;
+  hideHighlighting?: boolean;
+  showResizeIcon?: boolean;
+  isStatic?: boolean;
+  onToggleSide?: () => void;
 }
 
 export type HighlightColor = 'amarillo' | 'verde' | 'rojo' | 'azul' | 'naranja' | 'morado' | 'rosa' | 'teal' | 'gris';
@@ -60,7 +66,15 @@ interface Highlight {
   color: HighlightColor;
 }
 
-export function TranscriptionPanel({ command, onPositionChange, sessionId }: TranscriptionPanelProps) {
+export function TranscriptionPanel({ 
+  command, 
+  onPositionChange, 
+  sessionId,
+  hideHighlighting = false,
+  showResizeIcon = false,
+  isStatic = false,
+  onToggleSide
+}: TranscriptionPanelProps) {
   const { transcription, setTranscription } = useTranscription();
   const { style, isBionic, showRuler, theme } = useStyle();
   const { toast } = useToast();
@@ -455,7 +469,7 @@ export function TranscriptionPanel({ command, onPositionChange, sessionId }: Tra
         if (h.text.trim()) matchers.push({ text: h.text.toLowerCase(), type: h.color });
       });
 
-    if (matchers.length === 0) return isBionic ? <BionicReadingText text={textToRender} /> : textToRender;
+    if (matchers.length === 0 || hideHighlighting) return isBionic ? <BionicReadingText text={textToRender} /> : textToRender;
 
     const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const regexPattern = matchers.map(m => escapeRegExp(m.text)).join('|');
@@ -494,7 +508,7 @@ export function TranscriptionPanel({ command, onPositionChange, sessionId }: Tra
   };
 
   const renderContent = () => (
-    <ScrollArea className="h-full">
+    <div className="h-full overflow-y-auto custom-scrollbar">
       <div
         ref={transcriptionDisplayRef}
         className="p-6 break-words bg-background relative"
@@ -523,7 +537,7 @@ export function TranscriptionPanel({ command, onPositionChange, sessionId }: Tra
           />
         )}
       </div>
-    </ScrollArea>
+    </div>
   );
 
   // Autoscroll cada vez que cambie la transcripción
@@ -620,36 +634,118 @@ export function TranscriptionPanel({ command, onPositionChange, sessionId }: Tra
     );
   }
 
-  // Vista para Escritorio
-  return (
-    <div
-      ref={panelRef}
-      className={`absolute pointer-events-auto z-20 ${isDragging ? 'select-none' : ''}`}
-      style={{
-        left: pos.x,
-        top: pos.y,
-        width: size.width,
-        height: size.height,
-        transition: isDragging ? 'none' : 'all 0.2s ease-out',
-      }}
-    >
-      {/* esquina redimensionable */}
-      <div
-        className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize z-30"
-        onMouseDown={handleResizeMouseDown}
-      />
-      <Card className="h-full w-full flex flex-col shadow-2xl" onDoubleClick={() => isDocked && handleSetPosition('free')}>
-        <CardHeader
-          className={`flex flex-row items-center justify-between p-3 border-b ${isDocked ? '' : 'cursor-move drag-handle'}`}
-          onMouseDown={handleMouseDown}
+  // Panel Base (el Card solo)
+  const panelCard = (
+    <Card className="h-full w-full flex flex-col shadow-2xl relative" onDoubleClick={() => !isStatic && isDocked && handleSetPosition('free')}>
+      {/* esquina redimensionable logic */}
+      {showResizeIcon && (
+        <div
+          className={cn(
+            "absolute bottom-0 right-0 w-6 h-6 z-30 flex items-center justify-center group cursor-nwse-resize"
+          )}
+          onMouseDown={handleResizeMouseDown}
         >
-          <div className="flex items-center gap-2">
-            <GripVertical className="text-muted-foreground" />
-            <CardTitle className="text-base font-semibold truncate">Transcripción</CardTitle>
-          </div>
-          <div className="flex items-center gap-1 shrink-0">
-            {/* Highlighter Tools */}
-            <div className="flex items-center gap-0.5 mr-2">
+          <Maximize2 className="h-3 w-3 text-muted-foreground group-hover:text-primary transition-colors rotate-90" />
+        </div>
+      )}
+
+      <CardHeader
+        className={cn(
+          "flex flex-row items-center justify-between p-3 border-b shrink-0 h-14 bg-muted/20",
+          !isStatic && (isDocked ? '' : 'cursor-move drag-handle')
+        )}
+        onMouseDown={!isStatic ? handleMouseDown : undefined}
+      >
+        <div className="flex items-center gap-2 overflow-hidden">
+          <CardTitle className="text-base font-semibold truncate">Transcripción</CardTitle>
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          <SettingsButton />
+
+          {!isStatic && (
+            <>
+              {/* Menú de Posición y Anclaje */}
+              <DropdownMenu>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-7 w-7">
+                        <Layout className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent>Posición del panel</TooltipContent>
+                </Tooltip>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleSetPosition('top')}>
+                    <ArrowBigUp className="h-4 w-4 mr-2" /> Anclar arriba
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleSetPosition('bottom')}>
+                    <ArrowBigDown className="h-4 w-4 mr-2" /> Anclar abajo
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleSetPosition('left')}>
+                    <ArrowBigLeft className="h-4 w-4 mr-2" /> Anclar izquierda
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleSetPosition('right')}>
+                    <ArrowBigRight className="h-4 w-4 mr-2" /> Anclar derecha
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleSetPosition('free')}>
+                    <Maximize2 className="h-4 w-4 mr-2" /> Modo flotante / Libre
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-primary" onClick={togglePiP}>
+                    <PictureInPicture2 className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger><TooltipContent><p>Pantalla Flotante (PiP)</p></TooltipContent>
+              </Tooltip>
+            </>
+          )}
+
+          {isStatic && onToggleSide && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onToggleSide}>
+                  <ArrowLeftRight className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Cambiar de lado</TooltipContent>
+            </Tooltip>
+          )}
+
+          <DropdownMenu>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-7 w-7">
+                    <Download className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+              </TooltipTrigger>
+              <TooltipContent>Exportar transcripción</TooltipContent>
+            </Tooltip>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleCopy}>
+                <Copy className="h-4 w-4 mr-2" /> Copiar al portapapeles
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleSaveTxt}>
+                <FileDown className="h-4 w-4 mr-2" /> Guardar como .txt
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportToPdf}>
+                <FileText className="h-4 w-4 mr-2" /> Exportar a PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </CardHeader>
+
+      {isStatic && (
+        <div className="p-1 sm:p-2 border-b bg-muted/30 h-11 flex items-center shrink-0 overflow-x-auto no-scrollbar">
+          {!hideHighlighting && (
+            <div className="flex items-center gap-0.5 ml-1">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -664,118 +760,82 @@ export function TranscriptionPanel({ command, onPositionChange, sessionId }: Tra
                 <TooltipContent>Quitar resaltado</TooltipContent>
               </Tooltip>
 
-              <div className="w-px h-5 bg-border mx-0.5" />
+              <div className="w-px h-5 bg-border mx-1" />
 
-              {recentColors.map(color => (
-                <Tooltip key={`tpanel-${color}`}>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-muted" onClick={() => handleApplyHighlight(color)}>
-                      <div className={`h-3 w-3 rounded-full border border-black/10 shadow-sm ${getThemeHighlightColor(color).bg}`}></div>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent className="capitalize">{getThemeHighlightColor(color).label}</TooltipContent>
-                </Tooltip>
-              ))}
+              {recentColors.map(color => {
+                const colorInfo = getThemeHighlightColor(color);
+                return (
+                  <Tooltip key={`ttoolbar-${color}`}>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-muted" onClick={() => handleApplyHighlight(color)}>
+                        <div className={`h-3.5 w-3.5 rounded-full border border-black/10 shadow-sm ${colorInfo.bg}`}></div>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent className="capitalize">{colorInfo.label}</TooltipContent>
+                  </Tooltip>
+                );
+              })}
 
               <DropdownMenu>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-7 w-7 ml-0.5">
-                        <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
                       </Button>
                     </DropdownMenuTrigger>
                   </TooltipTrigger>
-                  <TooltipContent>Más colores de resaltado</TooltipContent>
+                  <TooltipContent>Más colores</TooltipContent>
                 </Tooltip>
-                <DropdownMenuContent align="end" className="w-48 p-2">
+                <DropdownMenuContent align="start" className="w-48 p-2">
                     <div className="grid grid-cols-3 gap-2">
-                        {ALL_COLORS.map(color => (
-                            <Button
-                                key={color}
-                                variant="ghost"
-                                className="h-10 w-full flex justify-center items-center p-0 rounded-md hover:bg-muted"
-                                onClick={() => handleApplyHighlight(color)}
-                            >
-                                <div className={`h-5 w-5 rounded-full border border-black/10 shadow-sm ${getThemeHighlightColor(color).bg}`} />
-                            </Button>
-                        ))}
+                        {ALL_COLORS.map(color => {
+                            const colorInfo = getThemeHighlightColor(color);
+                            return (
+                                <Tooltip key={`ttoolbar-drop-${color}`}>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            className="h-10 w-full flex justify-center items-center p-0 rounded-md hover:bg-muted"
+                                            onClick={() => handleApplyHighlight(color)}
+                                        >
+                                            <div className={`h-5 w-5 rounded-full border border-black/10 shadow-sm ${colorInfo.bg}`} />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="capitalize">{colorInfo.label}</TooltipContent>
+                                </Tooltip>
+                            );
+                        })}
                     </div>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
+          )}
+        </div>
+      )}
 
-            <SettingsButton />
+      <CardContent className="p-0 flex-grow overflow-hidden min-h-0">
+        {renderContent()}
+      </CardContent>
+    </Card>
+  );
 
-            {/* Menú de Posición y Anclaje */}
-            <DropdownMenu>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-7 w-7">
-                      <Layout className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                </TooltipTrigger>
-                <TooltipContent>Posición del panel</TooltipContent>
-              </Tooltip>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleSetPosition('top')}>
-                  <ArrowBigUp className="h-4 w-4 mr-2" /> Anclar arriba
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleSetPosition('bottom')}>
-                  <ArrowBigDown className="h-4 w-4 mr-2" /> Anclar abajo
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleSetPosition('left')}>
-                  <ArrowBigLeft className="h-4 w-4 mr-2" /> Anclar izquierda
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleSetPosition('right')}>
-                  <ArrowBigRight className="h-4 w-4 mr-2" /> Anclar derecha
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleSetPosition('free')}>
-                  <Maximize2 className="h-4 w-4 mr-2" /> Modo flotante / Libre
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+  if (isStatic) return panelCard;
 
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7 text-primary" onClick={togglePiP}>
-                  <PictureInPicture2 className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger><TooltipContent><p>Pantalla Flotante (PiP)</p></TooltipContent>
-            </Tooltip>
-
-            <DropdownMenu>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-7 w-7">
-                      <Download className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                </TooltipTrigger>
-                <TooltipContent>Exportar transcripción</TooltipContent>
-              </Tooltip>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleCopy}>
-                  <Copy className="h-4 w-4 mr-2" /> Copiar al portapapeles
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleSaveTxt}>
-                  <FileDown className="h-4 w-4 mr-2" /> Guardar como .txt
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleExportToPdf}>
-                  <FileText className="h-4 w-4 mr-2" /> Exportar a PDF
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </CardHeader>
-
-        <CardContent className="p-0 flex-grow overflow-hidden min-h-0">
-          {renderContent()}
-        </CardContent>
-      </Card>
+  // Vista para Escritorio
+  return (
+    <div
+      ref={panelRef}
+      className={`absolute pointer-events-auto z-20 ${isDragging ? 'select-none' : ''}`}
+      style={{
+        left: pos.x,
+        top: pos.y,
+        width: size.width,
+        height: size.height,
+        transition: isDragging ? 'none' : 'all 0.2s ease-out',
+      }}
+    >
+      {panelCard}
     </div>
   );
 }
