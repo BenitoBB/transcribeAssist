@@ -65,6 +65,51 @@ export default function SoloPage() {
     const [notesSide, setNotesSide] = useState<'left' | 'right'>('right');
     const [notesContent, setNotesContent] = useState('');
 
+    // Redimensionamiento horizontal (Solo para desktop)
+    const [notesWidth, setNotesWidth] = useState(384);
+    const [isResizing, setIsResizing] = useState(false);
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    const startResizing = (e: React.MouseEvent) => {
+        setIsResizing(true);
+        e.preventDefault();
+    };
+
+    const stopResizing = () => {
+        setIsResizing(false);
+    };
+
+    const resize = (e: MouseEvent) => {
+        if (isResizing && containerRef.current) {
+            const containerRect = containerRef.current.getBoundingClientRect();
+            let newWidth;
+            if (notesSide === 'right') {
+                newWidth = containerRect.right - e.clientX;
+            } else {
+                newWidth = e.clientX - containerRect.left;
+            }
+            const minWidth = 250;
+            const maxWidth = containerRect.width * 0.6;
+            if (newWidth >= minWidth && newWidth <= maxWidth) {
+                setNotesWidth(newWidth);
+            }
+        }
+    };
+
+    useEffect(() => {
+        if (isResizing) {
+            window.addEventListener('mousemove', resize);
+            window.addEventListener('mouseup', stopResizing);
+        } else {
+            window.removeEventListener('mousemove', resize);
+            window.removeEventListener('mouseup', stopResizing);
+        }
+        return () => {
+            window.removeEventListener('mousemove', resize);
+            window.removeEventListener('mouseup', stopResizing);
+        };
+    }, [isResizing]);
+
     useEffect(() => {
         const checkBreakpoints = () => {
             setIsMobile(window.innerWidth < 768);
@@ -271,11 +316,14 @@ export default function SoloPage() {
             {!isScreenshotMode && (
                 <div className="relative w-full h-full pointer-events-none z-10 flex items-center justify-center p-4">
                     {/* isNarrow (< 1024px): apilamos verticalmente para evitar solapamiento */}
-                    <div className={cn(
-                        "flex w-full max-w-7xl gap-4 items-stretch justify-center pointer-events-none transition-all duration-300",
-                        isNarrow && isNotesOpen ? "flex-col h-[82vh] mt-14" : "flex-row h-[70vh]",
-                        isNotesOpen && notesSide === 'left' && !(isNarrow && isNotesOpen) ? 'flex-row-reverse' : ''
-                    )}>
+                    <div 
+                        ref={containerRef}
+                        className={cn(
+                            "flex w-full max-w-7xl items-stretch justify-center pointer-events-none transition-all duration-300",
+                            isNarrow && isNotesOpen ? "flex-col h-[82vh] mt-14" : "flex-row h-[70vh] gap-0",
+                            isNotesOpen && notesSide === 'left' && !(isNarrow && isNotesOpen) ? 'flex-row-reverse' : ''
+                        )}
+                    >
                         <div className={cn(
                             "min-w-0 relative flex-1 pointer-events-none",
                             isNarrow && isNotesOpen ? "h-1/2 shrink-0" : "h-full"
@@ -286,6 +334,18 @@ export default function SoloPage() {
                                 sessionId="Solo"
                             />
                         </div>
+
+                        {isNotesOpen && !isNarrow && (
+                            <div
+                                onMouseDown={startResizing}
+                                className={cn(
+                                    "w-2 hover:bg-primary/20 cursor-col-resize flex items-center justify-center transition-colors group z-10 pointer-events-auto",
+                                    isResizing ? "bg-primary/30" : ""
+                                )}
+                            >
+                                <div className="w-1 h-12 bg-border rounded-full group-hover:bg-primary/40 transition-colors" />
+                            </div>
+                        )}
 
                         {isNotesOpen && (
                             <div className={cn(
@@ -302,6 +362,7 @@ export default function SoloPage() {
                                     initialContent={notesContent}
                                     onContentChange={setNotesContent}
                                     isMobile={isNarrow}
+                                    customWidth={!isNarrow ? notesWidth : undefined}
                                 />
                             </div>
                         )}

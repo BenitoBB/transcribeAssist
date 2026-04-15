@@ -27,6 +27,12 @@
     --highlight-yellow: rgb(254, 240, 138);
     --highlight-green: rgb(187, 247, 208);
     --highlight-red: rgb(254, 202, 202);
+    --highlight-blue: rgb(191, 219, 254);
+    --highlight-orange: rgb(254, 215, 170);
+    --highlight-purple: rgb(233, 213, 255);
+    --highlight-pink: rgb(251, 207, 232);
+    --highlight-teal: rgb(153, 246, 228);
+    --highlight-gray: rgb(229, 231, 235);
   }
  
   .dark {
@@ -52,6 +58,12 @@
     --highlight-yellow: rgb(202, 138, 4);
     --highlight-green: rgb(22, 163, 74);
     --highlight-red: rgb(220, 38, 38);
+    --highlight-blue: rgb(37, 99, 235);
+    --highlight-orange: rgb(234, 88, 12);
+    --highlight-purple: rgb(147, 51, 234);
+    --highlight-pink: rgb(219, 39, 119);
+    --highlight-teal: rgb(13, 148, 136);
+    --highlight-gray: rgb(75, 85, 99);
   }
 
   .protanopia {
@@ -68,9 +80,15 @@
     --border: 240 10% 80%;
     --input: 240 10% 80%;
     --ring: 60 90% 50%;
-    --highlight-yellow: rgb(191, 219, 254); /* Azul */
-    --highlight-green: rgb(254, 215, 170); /* Naranja */
-    --highlight-red: rgb(233, 213, 255); /* Morado */
+    --highlight-yellow: rgb(191, 219, 254);
+    --highlight-green: rgb(254, 215, 170);
+    --highlight-red: rgb(233, 213, 255);
+    --highlight-blue: rgb(103, 232, 249);
+    --highlight-orange: rgb(167, 243, 208);
+    --highlight-purple: rgb(254, 202, 202);
+    --highlight-pink: rgb(217, 249, 157);
+    --highlight-teal: rgb(254, 215, 170);
+    --highlight-gray: rgb(229, 231, 235);
   }
 
   .deuteranopia {
@@ -87,9 +105,15 @@
     --border: 30 10% 80%;
     --input: 30 10% 80%;
     --ring: 210 100% 40%;
-    --highlight-yellow: rgb(191, 219, 254); /* Azul */
-    --highlight-green: rgb(254, 215, 170); /* Naranja */
-    --highlight-red: rgb(233, 213, 255); /* Morado */
+    --highlight-yellow: rgb(191, 219, 254);
+    --highlight-green: rgb(254, 215, 170);
+    --highlight-red: rgb(233, 213, 255);
+    --highlight-blue: rgb(103, 232, 249);
+    --highlight-orange: rgb(167, 243, 208);
+    --highlight-purple: rgb(254, 202, 202);
+    --highlight-pink: rgb(217, 249, 157);
+    --highlight-teal: rgb(254, 215, 170);
+    --highlight-gray: rgb(229, 231, 235);
   }
 
   .tritanopia {
@@ -134,6 +158,12 @@
     --highlight-yellow: rgb(161, 98, 7);
     --highlight-green: rgb(21, 128, 61);
     --highlight-red: rgb(185, 28, 28);
+    --highlight-blue: rgb(30, 58, 138);
+    --highlight-orange: rgb(124, 45, 18);
+    --highlight-purple: rgb(88, 28, 135);
+    --highlight-pink: rgb(131, 24, 67);
+    --highlight-teal: rgb(19, 78, 74);
+    --highlight-gray: rgb(31, 41, 55);
   }
 }
  

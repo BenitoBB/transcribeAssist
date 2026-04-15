@@ -18,6 +18,7 @@ import {
   NotebookPen,
   Eraser,
   Image as ImageIcon,
+  ChevronDown,
 } from 'lucide-react';
 import {
   Dialog,
@@ -27,7 +28,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 
-export type HighlightColor = 'amarillo' | 'verde' | 'rojo';
+export type HighlightColor = 'amarillo' | 'verde' | 'rojo' | 'azul' | 'naranja' | 'morado' | 'rosa' | 'teal' | 'gris';
 
 interface Highlight {
   text: string;
@@ -124,24 +125,94 @@ export default function StudentPage() {
   const [highlights, setHighlights] = useState<Highlight[]>([]);
   const [captures, setCaptures] = useState<{ url: string; timestamp: string }[]>([]);
 
+  // Redimensionamiento horizontal
+  const [notesWidth, setNotesWidth] = useState(384); // 384px es el w-96 original
+  const [isResizing, setIsResizing] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const startResizing = (e: React.MouseEvent) => {
+    setIsResizing(true);
+    e.preventDefault();
+  };
+
+  const stopResizing = () => {
+    setIsResizing(false);
+  };
+
+  const resize = (e: MouseEvent) => {
+    if (isResizing && containerRef.current) {
+      const containerRect = containerRef.current.getBoundingClientRect();
+      let newWidth;
+      
+      if (notesSide === 'right') {
+        newWidth = containerRect.right - e.clientX;
+      } else {
+        newWidth = e.clientX - containerRect.left;
+      }
+
+      // Limitar ancho (mínimo 250px, máximo 60% del contenedor)
+      const minWidth = 250;
+      const maxWidth = containerRect.width * 0.6;
+      
+      if (newWidth >= minWidth && newWidth <= maxWidth) {
+        setNotesWidth(newWidth);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (isResizing) {
+      window.addEventListener('mousemove', resize);
+      window.addEventListener('mouseup', stopResizing);
+    } else {
+      window.removeEventListener('mousemove', resize);
+      window.removeEventListener('mouseup', stopResizing);
+    }
+    return () => {
+      window.removeEventListener('mousemove', resize);
+      window.removeEventListener('mouseup', stopResizing);
+    };
+  }, [isResizing]);
+
   // Function to resolve highlight colors based on theme
   const getThemeHighlightColor = (baseColor: HighlightColor): { bg: string; text: string; label: string; hex: string } => {
     if (theme === 'protanopia' || theme === 'deuteranopia') {
-      if (baseColor === 'amarillo') return { bg: 'bg-blue-200', text: 'text-blue-900', label: 'Azul', hex: '#bfdbfe' };
-      if (baseColor === 'verde') return { bg: 'bg-orange-200', text: 'text-orange-900', label: 'Naranja', hex: '#fed7aa' };
-      if (baseColor === 'rojo') return { bg: 'bg-purple-200', text: 'text-purple-900', label: 'Morado', hex: '#e9d5ff' };
+      if (baseColor === 'amarillo') return { bg: 'bg-blue-200', text: 'text-blue-900', label: 'Amarillo (Azul)', hex: '#bfdbfe' };
+      if (baseColor === 'verde') return { bg: 'bg-orange-200', text: 'text-orange-900', label: 'Verde (Naranja)', hex: '#fed7aa' };
+      if (baseColor === 'rojo') return { bg: 'bg-purple-200', text: 'text-purple-900', label: 'Rojo (Morado)', hex: '#e9d5ff' };
+      if (baseColor === 'azul') return { bg: 'bg-cyan-200', text: 'text-cyan-900', label: 'Azul', hex: '#a5f3fc' };
+      if (baseColor === 'naranja') return { bg: 'bg-emerald-200', text: 'text-emerald-900', label: 'Naranja (VerdeE)', hex: '#a7f3d0' };
+      if (baseColor === 'morado') return { bg: 'bg-red-200', text: 'text-red-900', label: 'Morado (Rojo)', hex: '#fecaca' };
+      if (baseColor === 'rosa') return { bg: 'bg-lime-200', text: 'text-lime-900', label: 'Rosa (Lima)', hex: '#d9f99d' };
+      if (baseColor === 'teal') return { bg: 'bg-orange-200', text: 'text-orange-900', label: 'Teal (Naranja)', hex: '#fed7aa' };
+      if (baseColor === 'gris') return { bg: 'bg-gray-200', text: 'text-gray-900', label: 'Gris', hex: '#e5e7eb' };
     }
     if (theme === 'dark') {
       if (baseColor === 'amarillo') return { bg: 'bg-yellow-500/40', text: 'text-yellow-100', label: 'Amarillo', hex: '#ca8a04' };
       if (baseColor === 'verde') return { bg: 'bg-green-500/40', text: 'text-green-100', label: 'Verde', hex: '#16a34a' };
       if (baseColor === 'rojo') return { bg: 'bg-red-500/40', text: 'text-red-100', label: 'Rojo', hex: '#dc2626' };
+      if (baseColor === 'azul') return { bg: 'bg-blue-500/40', text: 'text-blue-100', label: 'Azul', hex: '#2563eb' };
+      if (baseColor === 'naranja') return { bg: 'bg-orange-500/40', text: 'text-orange-100', label: 'Naranja', hex: '#ea580c' };
+      if (baseColor === 'morado') return { bg: 'bg-purple-500/40', text: 'text-purple-100', label: 'Morado', hex: '#9333ea' };
+      if (baseColor === 'rosa') return { bg: 'bg-pink-500/40', text: 'text-pink-100', label: 'Rosa', hex: '#db2777' };
+      if (baseColor === 'teal') return { bg: 'bg-teal-500/40', text: 'text-teal-100', label: 'Teal', hex: '#0d9488' };
+      if (baseColor === 'gris') return { bg: 'bg-gray-500/40', text: 'text-gray-100', label: 'Gris', hex: '#4b5563' };
     }
     if (baseColor === 'amarillo') return { bg: 'bg-yellow-200', text: 'text-yellow-900', label: 'Amarillo', hex: '#fef08a' };
     if (baseColor === 'verde') return { bg: 'bg-green-200', text: 'text-green-900', label: 'Verde', hex: '#bbf7d0' };
     if (baseColor === 'rojo') return { bg: 'bg-red-200', text: 'text-red-900', label: 'Rojo', hex: '#fecaca' };
+    if (baseColor === 'azul') return { bg: 'bg-blue-200', text: 'text-blue-900', label: 'Azul', hex: '#bfdbfe' };
+    if (baseColor === 'naranja') return { bg: 'bg-orange-200', text: 'text-orange-900', label: 'Naranja', hex: '#fed7aa' };
+    if (baseColor === 'morado') return { bg: 'bg-purple-200', text: 'text-purple-900', label: 'Morado', hex: '#e9d5ff' };
+    if (baseColor === 'rosa') return { bg: 'bg-pink-200', text: 'text-pink-900', label: 'Rosa', hex: '#fbcfe8' };
+    if (baseColor === 'teal') return { bg: 'bg-teal-200', text: 'text-teal-900', label: 'Teal', hex: '#99f6e4' };
+    if (baseColor === 'gris') return { bg: 'bg-gray-200', text: 'text-gray-900', label: 'Gris', hex: '#e5e7eb' };
 
     return { bg: 'bg-yellow-200', text: 'text-yellow-900', label: 'Marcado', hex: '#fef08a' };
   };
+
+  const [recentColors, setRecentColors] = useState<HighlightColor[]>(['amarillo', 'verde', 'rojo']);
+  const ALL_COLORS: HighlightColor[] = ['amarillo', 'verde', 'rojo', 'azul', 'naranja', 'morado', 'rosa', 'teal', 'gris'];
 
   const handleApplyHighlight = (color: HighlightColor) => {
     const selection = window.getSelection();
@@ -151,6 +222,12 @@ export default function StudentPage() {
       setHighlights(prev => {
         if (prev.some(h => h.text === text && h.color === color)) return prev;
         return [...prev, { text, color }];
+      });
+      
+      // Actualizar historial
+      setRecentColors(prev => {
+          const newHistory = [color, ...prev.filter(c => c !== color)];
+          return newHistory.slice(0, 3);
       });
     }
     selection.removeAllRanges();
@@ -363,8 +440,20 @@ export default function StudentPage() {
             } else {
               // Usamos variables CSS para que sea reactivo al tema
               cls = 'px-1 rounded transition-colors';
-              const colorName = matchedTheme.type === 'amarillo' ? 'yellow' :
-                matchedTheme.type === 'verde' ? 'green' : 'red';
+              
+              const colorMapping: Record<string, string> = {
+                amarillo: 'yellow',
+                verde: 'green',
+                rojo: 'red',
+                azul: 'blue',
+                naranja: 'orange',
+                morado: 'purple',
+                rosa: 'pink',
+                teal: 'teal',
+                gris: 'gray'
+              };
+              
+              const colorName = colorMapping[matchedTheme.type as string] || 'yellow';
               styleObj = {
                 backgroundColor: `var(--highlight-${colorName})`,
                 color: 'var(--foreground)'
@@ -532,11 +621,14 @@ export default function StudentPage() {
             {startTime && <span className="text-xs text-muted-foreground">Inicio: {formatTime(startTime)}</span>}
           </div>
 
-          <div className={cn(
-            "flex w-full gap-4 items-stretch justify-center transition-all duration-300 min-h-0",
-            isMobile ? "max-w-full flex-col h-[75vh]" : "max-w-7xl h-[60vh]",
-            isNotesOpen && notesSide === 'left' && !isMobile ? 'flex-row-reverse' : !isMobile ? 'flex-row' : ''
-          )}>
+          <div 
+            ref={containerRef}
+            className={cn(
+              "flex w-full items-stretch justify-center transition-all duration-300 min-h-0",
+              isMobile ? "max-w-full flex-col h-[75vh]" : "max-w-7xl h-[60vh] gap-0",
+              isNotesOpen && notesSide === 'left' && !isMobile ? 'flex-row-reverse' : !isMobile ? 'flex-row' : ''
+            )}
+          >
             <Card className={cn(
               "min-w-0 flex flex-col shadow-lg border-2",
               isMobile && isNotesOpen ? "h-[45%] shrink-0" : "flex-1 h-full"
@@ -558,35 +650,50 @@ export default function StudentPage() {
                         <Eraser className="h-4 w-4" />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Quitar marcador</TooltipContent>
+                    <TooltipContent>Quitar resaltado</TooltipContent>
                   </Tooltip>
 
                   <div className="w-px h-5 sm:h-6 bg-border mx-0.5 sm:mx-1" />
 
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 hover:bg-muted" onClick={() => handleApplyHighlight('amarillo')}>
-                        <div className={`h-3.5 w-3.5 sm:h-4 sm:w-4 rounded-full border border-black/10 ${getThemeHighlightColor('amarillo').bg}`}></div>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Amarillo</TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 hover:bg-muted" onClick={() => handleApplyHighlight('verde')}>
-                        <div className={`h-3.5 w-3.5 sm:h-4 sm:w-4 rounded-full border border-black/10 ${getThemeHighlightColor('verde').bg}`}></div>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Verde</TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 hover:bg-muted" onClick={() => handleApplyHighlight('rojo')}>
-                        <div className={`h-3.5 w-3.5 sm:h-4 sm:w-4 rounded-full border border-black/10 ${getThemeHighlightColor('rojo').bg}`}></div>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Rojo</TooltipContent>
-                  </Tooltip>
+                  {/* Marcatextos - Historial de 3 Colores */}
+                  {recentColors.map(color => (
+                    <Tooltip key={`highlight-${color}`}>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 hover:bg-muted" onClick={() => handleApplyHighlight(color)}>
+                          <div className={`h-3.5 w-3.5 sm:h-4 sm:w-4 rounded-full border border-black/10 shadow-sm ${getThemeHighlightColor(color).bg}`}></div>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent className="capitalize">Resaltar: {getThemeHighlightColor(color).label}</TooltipContent>
+                    </Tooltip>
+                  ))}
+
+                  {/* Menú de 9 colores */}
+                  <DropdownMenu>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 ml-1">
+                            <ChevronDown className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                      </TooltipTrigger>
+                      <TooltipContent>Más colores de resaltado</TooltipContent>
+                    </Tooltip>
+                    <DropdownMenuContent align="start" className="w-48 p-2">
+                        <div className="grid grid-cols-3 gap-2">
+                            {ALL_COLORS.map(color => (
+                                <Button
+                                    key={color}
+                                    variant="ghost"
+                                    className="h-10 w-full flex justify-center items-center p-0 rounded-md hover:bg-muted"
+                                    onClick={() => handleApplyHighlight(color)}
+                                >
+                                    <div className={`h-5 w-5 rounded-full border border-black/10 shadow-sm ${getThemeHighlightColor(color).bg}`} />
+                                </Button>
+                            ))}
+                        </div>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
 
                 <div className="flex items-center gap-0 sm:gap-0.5 ml-auto">
@@ -608,7 +715,7 @@ export default function StudentPage() {
                           <Search className="h-4 w-4" />
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent>Buscar</TooltipContent>
+                      <TooltipContent>Buscar en el texto</TooltipContent>
                     </Tooltip>
                   )}
 
@@ -620,7 +727,7 @@ export default function StudentPage() {
                         <Copy className="h-4 w-4" />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Copiar</TooltipContent>
+                    <TooltipContent>Copiar texto</TooltipContent>
                   </Tooltip>
 
                   <Tooltip>
@@ -665,6 +772,18 @@ export default function StudentPage() {
               </CardContent>
             </Card>
 
+            {isNotesOpen && !isMobile && (
+              <div
+                onMouseDown={startResizing}
+                className={cn(
+                  "w-2 hover:bg-primary/20 cursor-col-resize flex items-center justify-center transition-colors group z-10",
+                  isResizing ? "bg-primary/30" : ""
+                )}
+              >
+                <div className="w-1 h-12 bg-border rounded-full group-hover:bg-primary/40 transition-colors" />
+              </div>
+            )}
+
             {isNotesOpen && (
               <NotesPanel
                 studentClassName={className}
@@ -676,6 +795,7 @@ export default function StudentPage() {
                 initialContent={notesContent}
                 onContentChange={setNotesContent}
                 isMobile={isMobile}
+                customWidth={!isMobile ? notesWidth : undefined}
               />
             )}
           </div>

@@ -13,14 +13,23 @@ import {
 import {
     Bold,
     Italic,
+    Underline,
     Copy,
     FileDown,
     FileText,
     X,
     ArrowLeftRight,
     Trash2,
-    Eraser
+    Eraser,
+    ChevronDown,
 } from 'lucide-react';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { createPortal } from 'react-dom';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useStyle } from '@/context/StyleContext';
 import { useToast } from '@/hooks/use-toast';
@@ -37,6 +46,7 @@ interface NotesPanelProps {
     initialContent: string;
     onContentChange: (content: string) => void;
     isMobile?: boolean;
+    customWidth?: number;
 }
 
 export function NotesPanel({
@@ -48,12 +58,25 @@ export function NotesPanel({
     onToggleSide,
     initialContent,
     onContentChange,
-    isMobile = false
+    isMobile = false,
+    customWidth
 }: NotesPanelProps) {
     const { style, theme } = useStyle();
     const { toast } = useToast();
     const editableRef = useRef<HTMLDivElement>(null);
     const isFirstLoad = useRef(true);
+
+    const [recentColors, setRecentColors] = React.useState<string[]>(['yellow', 'green', 'red']);
+    const [floatingMenuProps, setFloatingMenuProps] = React.useState<{ show: boolean, top: number, left: number }>({ show: false, top: 0, left: 0 });
+
+    const fontFamilies = [
+        { label: 'Inter', value: 'Inter, sans-serif' },
+        { label: 'Arial', value: 'Arial, sans-serif' },
+        { label: 'Verdana', value: 'Verdana, sans-serif' },
+        { label: 'Dislexia', value: "'Open Dyslexic', sans-serif" }
+    ];
+
+    const ALL_COLORS = ['yellow', 'green', 'red', 'blue', 'orange', 'purple', 'pink', 'teal', 'gray'];
 
     useEffect(() => {
         if (isFirstLoad.current && editableRef.current) {
@@ -62,9 +85,50 @@ export function NotesPanel({
         }
     }, [initialContent]);
 
+    // Lógica del Floating Toolbar (Tooltip de selección)
+    useEffect(() => {
+        const handleSelectionChange = () => {
+            const selection = window.getSelection();
+            if (selection && !selection.isCollapsed && editableRef.current && editableRef.current.contains(selection.anchorNode)) {
+                const range = selection.getRangeAt(0);
+                const rect = range.getBoundingClientRect();
+                const containerRect = editableRef.current.getBoundingClientRect();
+
+                // Usamos dimensiones fijas estimadas para el cálculo de colisiones con bordes
+                const TB_WIDTH = 340; 
+                const TB_HEIGHT = 45;
+
+                // Detectamos "primera línea" relativo al contenedor de notas (containerRect)
+                const isNearEditorTop = (rect.top - containerRect.top) < 60;
+                
+                // Si está cerca del borde superior del editor, lo forzamos abajo.
+                // Si no, lo ponemos arriba de la selección.
+                const topOffset = isNearEditorTop ? rect.height + 5 : -(TB_HEIGHT + 5);
+                
+                setFloatingMenuProps({
+                    show: true,
+                    top: rect.top + topOffset,
+                    left: Math.max(10, Math.min(window.innerWidth - TB_WIDTH - 10, rect.left + (rect.width / 2) - (TB_WIDTH / 2)))
+                });
+            } else {
+                setFloatingMenuProps(prev => prev.show ? { ...prev, show: false } : prev);
+            }
+        };
+
+        document.addEventListener('selectionchange', handleSelectionChange);
+        return () => document.removeEventListener('selectionchange', handleSelectionChange);
+    }, []);
+
     const handleFormat = (command: string, value?: string) => {
         if (!editableRef.current) return;
-        editableRef.current.focus();
+
+        // Evitaremos hacer focus si venimos de un botón externo para no romper selecciones flotantes, 
+        // pero normalmente designMode/execCommand pide focus.
+        if (document.activeElement !== editableRef.current) {
+            // Si el foco no está, no forzamos para comandos como fontName desde el FloatingMenu.
+            // Solo si es necesario:
+        }
+
         document.execCommand('styleWithCSS', false, 'true');
         document.execCommand(command, false, value);
         onContentChange(editableRef.current.innerHTML);
@@ -75,15 +139,33 @@ export function NotesPanel({
             if (color === 'yellow') return 'rgb(202, 138, 4)';
             if (color === 'green') return 'rgb(22, 163, 74)';
             if (color === 'red') return 'rgb(220, 38, 38)';
+            if (color === 'blue') return 'rgb(37, 99, 235)';
+            if (color === 'orange') return 'rgb(234, 88, 12)';
+            if (color === 'purple') return 'rgb(147, 51, 234)';
+            if (color === 'pink') return 'rgb(219, 39, 119)';
+            if (color === 'teal') return 'rgb(13, 148, 136)';
+            if (color === 'gray') return 'rgb(75, 85, 99)';
         }
         if (theme === 'protanopia' || theme === 'deuteranopia') {
             if (color === 'yellow') return 'rgb(191, 219, 254)';
             if (color === 'green') return 'rgb(254, 215, 170)';
             if (color === 'red') return 'rgb(233, 213, 255)';
+            if (color === 'blue') return 'rgb(103, 232, 249)';
+            if (color === 'orange') return 'rgb(167, 243, 208)';
+            if (color === 'purple') return 'rgb(254, 202, 202)';
+            if (color === 'pink') return 'rgb(217, 249, 157)';
+            if (color === 'teal') return 'rgb(254, 215, 170)';
+            if (color === 'gray') return 'rgb(229, 231, 235)';
         }
         if (color === 'yellow') return 'rgb(254, 240, 138)';
         if (color === 'green') return 'rgb(187, 247, 208)';
         if (color === 'red') return 'rgb(254, 202, 202)';
+        if (color === 'blue') return 'rgb(191, 219, 254)';
+        if (color === 'orange') return 'rgb(254, 215, 170)';
+        if (color === 'purple') return 'rgb(233, 213, 255)';
+        if (color === 'pink') return 'rgb(251, 207, 232)';
+        if (color === 'teal') return 'rgb(153, 246, 228)';
+        if (color === 'gray') return 'rgb(229, 231, 235)';
         return 'rgb(254, 240, 138)';
     };
 
@@ -93,7 +175,7 @@ export function NotesPanel({
 
         const colorVar = `var(--highlight-${colorName})`;
         const appliedColor = getHighlightColor(colorName);
-        
+
         document.execCommand('styleWithCSS', false, 'true');
         document.execCommand('backColor', false, appliedColor);
 
@@ -104,7 +186,13 @@ export function NotesPanel({
             new RegExp(`background-color:\\s*${fixedColorRegex}`, 'gi'),
             `background-color: ${colorVar}`
         );
-        
+
+        // Cuidar el historial
+        setRecentColors(prev => {
+            const newHistory = [colorName, ...prev.filter(c => c !== colorName)];
+            return newHistory.slice(0, 3);
+        });
+
         editableRef.current.innerHTML = content;
         onContentChange(content);
     };
@@ -195,7 +283,10 @@ export function NotesPanel({
     const panelTitle = studentClassName ? `Notas de ${studentClassName}` : 'Notas';
 
     return (
-        <Card className={cn("flex flex-col shadow-lg border-2 border-primary/10 h-full overflow-hidden", isMobile ? "w-full" : "w-full sm:w-96")}>
+        <Card 
+            className={cn("flex flex-col shadow-lg border-2 border-primary/10 h-full overflow-hidden shrink-0", isMobile ? "w-full" : "w-full")}
+            style={{ width: !isMobile && customWidth ? `${customWidth}px` : undefined }}
+        >
             <CardHeader className="p-3 border-b flex flex-row items-center justify-between gap-1 overflow-hidden shrink-0 h-14">
                 <div className="flex items-center gap-1.5 min-w-0">
                     <CardTitle className="text-sm font-bold truncate">
@@ -203,6 +294,49 @@ export function NotesPanel({
                     </CardTitle>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive" onMouseDown={(e) => { e.preventDefault(); handleClearAll(); }}>
+                                <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Borrar todo</TooltipContent>
+                    </Tooltip>
+                    
+                    <div className="w-px h-4 bg-border mx-0.5" />
+                    
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleCopy}>
+                                <Copy className="h-3.5 w-3.5" />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Copiar texto</TooltipContent>
+                    </Tooltip>
+
+                    <DropdownMenu>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7">
+                                        <FileDown className="h-3.5 w-3.5" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                            </TooltipTrigger>
+                            <TooltipContent>Exportar</TooltipContent>
+                        </Tooltip>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={handleExportTxt}>
+                                <FileDown className="h-4 w-4 mr-2" /> Guardar como .txt
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={handleExportPdf}>
+                                <FileText className="h-4 w-4 mr-2" /> Guardar como .pdf
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    <div className="w-px h-4 bg-border mx-0.5" />
+
                     {!isMobile && (
                         <Tooltip>
                             <TooltipTrigger asChild>
@@ -243,6 +377,15 @@ export function NotesPanel({
                         <TooltipContent>Cursiva</TooltipContent>
                     </Tooltip>
 
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8" onMouseDown={(e) => { e.preventDefault(); handleFormat('underline'); }}>
+                                <Underline className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Subrayado</TooltipContent>
+                    </Tooltip>
+
                     <div className="w-px h-5 sm:h-6 bg-border mx-0.5 sm:mx-1" />
 
                     {/* Botón de Borrador / Quitar marcado */}
@@ -257,94 +400,164 @@ export function NotesPanel({
                                 <Eraser className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                             </Button>
                         </TooltipTrigger>
-                        <TooltipContent>Quitar marcador</TooltipContent>
+                        <TooltipContent>Quitar resaltado</TooltipContent>
                     </Tooltip>
 
-                    {/* Marcatextos - Toggle: pulsar el mismo color lo quita */}
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 sm:h-8 sm:w-8"
-                                onMouseDown={(e) => { e.preventDefault(); handleToggleHighlight('yellow'); }}
-                            >
-                                <div className="h-3.5 w-3.5 sm:h-4 sm:w-4 rounded-full" style={{ backgroundColor: getHighlightColor('yellow') }} />
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Amarillo</TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 sm:h-8 sm:w-8"
-                                onMouseDown={(e) => { e.preventDefault(); handleToggleHighlight('green'); }}
-                            >
-                                <div className="h-3.5 w-3.5 sm:h-4 sm:w-4 rounded-full" style={{ backgroundColor: getHighlightColor('green') }} />
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Verde</TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 sm:h-8 sm:w-8"
-                                onMouseDown={(e) => { e.preventDefault(); handleToggleHighlight('red'); }}
-                            >
-                                <div className="h-3.5 w-3.5 sm:h-4 sm:w-4 rounded-full" style={{ backgroundColor: getHighlightColor('red') }} />
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Rojo</TooltipContent>
-                    </Tooltip>
-                </div>
+                    {/* Marcatextos - Historial de 3 Colores Recientes */}
+                    {recentColors.map(color => (
+                        <Tooltip key={color}>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 sm:h-8 sm:w-8"
+                                    onMouseDown={(e) => { e.preventDefault(); handleToggleHighlight(color); }}
+                                >
+                                    <div className="h-3.5 w-3.5 sm:h-4 sm:w-4 rounded-full border border-black/10 shadow-sm" style={{ backgroundColor: getHighlightColor(color) }} />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent className="capitalize"> {
+                                color === 'yellow' ? 'Amarillo' :
+                                    color === 'green' ? 'Verde' :
+                                        color === 'red' ? 'Rojo' :
+                                            color === 'blue' ? 'Azul' :
+                                                color === 'orange' ? 'Naranja' :
+                                                    color === 'purple' ? 'Púrpura' :
+                                                        color === 'pink' ? 'Rosa' :
+                                                            color === 'teal' ? 'Teal' : 'Gris'
+                            }</TooltipContent>
+                        </Tooltip>
+                    ))}
 
-                <div className="flex items-center gap-0 sm:gap-0.5 ml-auto">
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 hover:text-destructive" onMouseDown={(e) => { e.preventDefault(); handleClearAll(); }}>
-                                <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Borrar todo</TooltipContent>
-                    </Tooltip>
-                    <div className="w-px h-5 sm:h-6 bg-border mx-0.5 sm:mx-1" />
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8" onClick={handleCopy}>
-                                <Copy className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Copiar</TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8" onClick={handleExportTxt}>
-                                <FileDown className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>.txt</TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8" onClick={handleExportPdf}>
-                                <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>.pdf</TooltipContent>
-                    </Tooltip>
+                    {/* Menú de Selección de 9 Colores */}
+                    <DropdownMenu>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 ml-1">
+                                        <ChevronDown className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                            </TooltipTrigger>
+                            <TooltipContent>Más colores de resaltado</TooltipContent>
+                        </Tooltip>
+                        <DropdownMenuContent align="start" className="w-48 p-2">
+                            <div className="grid grid-cols-3 gap-2">
+                                {ALL_COLORS.map(color => (
+                                    <Button
+                                        key={color}
+                                        variant="ghost"
+                                        className="h-10 w-full flex justify-center items-center p-0 rounded-md hover:bg-muted"
+                                        onClick={() => handleToggleHighlight(color)}
+                                    >
+                                        <div className="h-5 w-5 rounded-full border border-black/10 shadow-sm" style={{ backgroundColor: getHighlightColor(color) }} />
+                                    </Button>
+                                ))}
+                            </div>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
             </div>
 
+
+
             <CardContent className="p-0 flex-grow overflow-hidden bg-background">
-                <ScrollArea className="h-full">
+                <ScrollArea className="h-full relative">
+                    {/* Floating Toolbar rendered via Portal to avoid clipping */}
+                    {floatingMenuProps.show && !isMobile && createPortal(
+                        <div
+                            className="fixed z-[9999] flex items-center bg-background/95 backdrop-blur-md shadow-2xl border border-primary/20 rounded-lg py-1 px-2 gap-1 animate-in fade-in zoom-in-95 duration-200"
+                            style={{
+                                top: floatingMenuProps.top,
+                                left: floatingMenuProps.left,
+                                width: 'fit-content'
+                            }}
+                            onMouseDown={(e) => e.preventDefault()}
+                        >
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="sm" className="h-7 text-xs px-2 shadow-sm border bg-muted/50 rounded-md gap-1">
+                                        Fuente <ChevronDown className="h-3 w-3" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent>
+                                    {fontFamilies.map(font => (
+                                        <DropdownMenuItem
+                                            key={font.value}
+                                            style={{ fontFamily: font.value }}
+                                            onClick={() => handleFormat('fontName', font.value)}
+                                        >
+                                            {font.label}
+                                        </DropdownMenuItem>
+                                    ))}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                            <div className="w-px h-4 bg-border mx-1" />
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleFormat('bold')}>
+                                <Bold className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleFormat('italic')}>
+                                <Italic className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleFormat('underline')}>
+                                <Underline className="h-3.5 w-3.5" />
+                            </Button>
+
+                            <div className="w-px h-4 bg-border mx-1" />
+
+                            {/* Borrador en Floating Menu */}
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                                onClick={handleRemoveFormat}
+                            >
+                                <Eraser className="h-3.5 w-3.5" />
+                            </Button>
+
+                            <div className="w-px h-4 bg-border mx-1" />
+
+                            {/* Marcatextos Historial en Floating Menu */}
+                            {recentColors.map(color => (
+                                <Button
+                                    key={`float-${color}`}
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7"
+                                    onClick={() => handleToggleHighlight(color)}
+                                >
+                                    <div className="h-3 w-3 rounded-full border border-black/10" style={{ backgroundColor: getHighlightColor(color) }} />
+                                </Button>
+                            ))}
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-7 w-6">
+                                        <ChevronDown className="h-3 w-3" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="center" className="w-40 p-2">
+                                    <div className="grid grid-cols-3 gap-1">
+                                        {ALL_COLORS.map(color => (
+                                            <Button
+                                                key={`fdrop-${color}`}
+                                                variant="ghost"
+                                                className="h-8 w-full p-0 rounded-md"
+                                                onClick={() => handleToggleHighlight(color)}
+                                            >
+                                                <div className="h-4 w-4 rounded-full border border-black/10" style={{ backgroundColor: getHighlightColor(color) }} />
+                                            </Button>
+                                        ))}
+                                    </div>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>,
+                        document.body
+                    )}
+
                     <div
                         ref={editableRef}
                         contentEditable
-                        className="editable-content p-4 outline-none min-h-[100%] break-words bg-background"
+                        className="editable-content p-4 outline-none min-h-[100%] break-words bg-background relative"
                         style={{
                             ...style,
                             color: 'var(--foreground)',
@@ -352,7 +565,6 @@ export function NotesPanel({
                         }}
                         onInput={() => {
                             if (!editableRef.current) return;
-                            // Aseguramos que cualquier pegado o edición mantenga las variables si es posible
                             onContentChange(editableRef.current.innerHTML);
                         }}
                         suppressContentEditableWarning={true}

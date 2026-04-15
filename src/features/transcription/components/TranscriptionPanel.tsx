@@ -23,6 +23,8 @@ import {
   Download,
   Layout,
   Maximize2,
+  ChevronDown,
+  Eraser,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -51,9 +53,16 @@ interface TranscriptionPanelProps {
   sessionId: string;
 }
 
+export type HighlightColor = 'amarillo' | 'verde' | 'rojo' | 'azul' | 'naranja' | 'morado' | 'rosa' | 'teal' | 'gris';
+
+interface Highlight {
+  text: string;
+  color: HighlightColor;
+}
+
 export function TranscriptionPanel({ command, onPositionChange, sessionId }: TranscriptionPanelProps) {
   const { transcription, setTranscription } = useTranscription();
-  const { style, isBionic, showRuler } = useStyle();
+  const { style, isBionic, showRuler, theme } = useStyle();
   const { toast } = useToast();
   const [rulerY, setRulerY] = useState<number>(0);
   const transcriptionDisplayRef = useRef<HTMLDivElement>(null);
@@ -112,6 +121,78 @@ export function TranscriptionPanel({ command, onPositionChange, sessionId }: Tra
   const [pos, setPos] = useState({ x: 100, y: 100 });
   const [isMobile, setIsMobile] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+
+  // Marcatextos / Highlights
+  const [highlights, setHighlights] = useState<Highlight[]>([]);
+  const [recentColors, setRecentColors] = useState<HighlightColor[]>(['amarillo', 'verde', 'rojo']);
+  const ALL_COLORS: HighlightColor[] = ['amarillo', 'verde', 'rojo', 'azul', 'naranja', 'morado', 'rosa', 'teal', 'gris'];
+
+  const getThemeHighlightColor = (baseColor: HighlightColor): { bg: string; text: string; label: string; hex: string } => {
+    if (theme === 'protanopia' || theme === 'deuteranopia') {
+      if (baseColor === 'amarillo') return { bg: 'bg-blue-200', text: 'text-blue-900', label: 'Amarillo (Azul)', hex: '#bfdbfe' };
+      if (baseColor === 'verde') return { bg: 'bg-orange-200', text: 'text-orange-900', label: 'Verde (Naranja)', hex: '#fed7aa' };
+      if (baseColor === 'rojo') return { bg: 'bg-purple-200', text: 'text-purple-900', label: 'Rojo (Morado)', hex: '#e9d5ff' };
+      if (baseColor === 'azul') return { bg: 'bg-cyan-200', text: 'text-cyan-900', label: 'Azul', hex: '#a5f3fc' };
+      if (baseColor === 'naranja') return { bg: 'bg-emerald-200', text: 'text-emerald-900', label: 'Naranja (VerdeE)', hex: '#a7f3d0' };
+      if (baseColor === 'morado') return { bg: 'bg-red-200', text: 'text-red-900', label: 'Morado (Rojo)', hex: '#fecaca' };
+      if (baseColor === 'rosa') return { bg: 'bg-lime-200', text: 'text-lime-900', label: 'Rosa (Lima)', hex: '#d9f99d' };
+      if (baseColor === 'teal') return { bg: 'bg-orange-200', text: 'text-orange-900', label: 'Teal (Naranja)', hex: '#fed7aa' };
+      if (baseColor === 'gris') return { bg: 'bg-gray-200', text: 'text-gray-900', label: 'Gris', hex: '#e5e7eb' };
+    }
+    if (theme === 'dark') {
+      if (baseColor === 'amarillo') return { bg: 'bg-yellow-500/40', text: 'text-yellow-100', label: 'Amarillo', hex: '#ca8a04' };
+      if (baseColor === 'verde') return { bg: 'bg-green-500/40', text: 'text-green-100', label: 'Verde', hex: '#16a34a' };
+      if (baseColor === 'rojo') return { bg: 'bg-red-500/40', text: 'text-red-100', label: 'Rojo', hex: '#dc2626' };
+      if (baseColor === 'azul') return { bg: 'bg-blue-500/40', text: 'text-blue-100', label: 'Azul', hex: '#2563eb' };
+      if (baseColor === 'naranja') return { bg: 'bg-orange-500/40', text: 'text-orange-100', label: 'Naranja', hex: '#ea580c' };
+      if (baseColor === 'morado') return { bg: 'bg-purple-500/40', text: 'text-purple-100', label: 'Morado', hex: '#9333ea' };
+      if (baseColor === 'rosa') return { bg: 'bg-pink-500/40', text: 'text-pink-100', label: 'Rosa', hex: '#db2777' };
+      if (baseColor === 'teal') return { bg: 'bg-teal-500/40', text: 'text-teal-100', label: 'Teal', hex: '#0d9488' };
+      if (baseColor === 'gris') return { bg: 'bg-gray-500/40', text: 'text-gray-100', label: 'Gris', hex: '#4b5563' };
+    }
+    if (baseColor === 'amarillo') return { bg: 'bg-yellow-200', text: 'text-yellow-900', label: 'Amarillo', hex: '#fef08a' };
+    if (baseColor === 'verde') return { bg: 'bg-green-200', text: 'text-green-900', label: 'Verde', hex: '#bbf7d0' };
+    if (baseColor === 'rojo') return { bg: 'bg-red-200', text: 'text-red-900', label: 'Rojo', hex: '#fecaca' };
+    if (baseColor === 'azul') return { bg: 'bg-blue-200', text: 'text-blue-900', label: 'Azul', hex: '#bfdbfe' };
+    if (baseColor === 'naranja') return { bg: 'bg-orange-200', text: 'text-orange-900', label: 'Naranja', hex: '#fed7aa' };
+    if (baseColor === 'morado') return { bg: 'bg-purple-200', text: 'text-purple-900', label: 'Morado', hex: '#e9d5ff' };
+    if (baseColor === 'rosa') return { bg: 'bg-pink-200', text: 'text-pink-900', label: 'Rosa', hex: '#fbcfe8' };
+    if (baseColor === 'teal') return { bg: 'bg-teal-200', text: 'text-teal-900', label: 'Teal', hex: '#99f6e4' };
+    if (baseColor === 'gris') return { bg: 'bg-gray-200', text: 'text-gray-900', label: 'Gris', hex: '#e5e7eb' };
+    return { bg: 'bg-yellow-200', text: 'text-yellow-900', label: 'Marcado', hex: '#fef08a' };
+  };
+
+  const handleApplyHighlight = (color: HighlightColor) => {
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed) return;
+    const text = selection.toString().trim();
+
+    if (text.length > 0) {
+      setHighlights(prev => {
+        if (prev.some(h => h.text === text && h.color === color)) return prev;
+        return [...prev, { text, color }];
+      });
+      setRecentColors(prev => {
+          const newHistory = [color, ...prev.filter(c => c !== color)];
+          return newHistory.slice(0, 3);
+      });
+    }
+    selection.removeAllRanges();
+  };
+
+  const handleRemoveHighlight = () => {
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed) return;
+    const text = selection.toString().trim().toLowerCase();
+
+    if (text.length > 0) {
+      setHighlights(prev => prev.filter(h => {
+        const hText = h.text.toLowerCase();
+        return !text.includes(hText) && !hText.includes(text);
+      }));
+    }
+    selection.removeAllRanges();
+  };
 
   const panelRef = useRef<HTMLDivElement>(null);
   const dragStartRef = useRef({ x: 0, y: 0 }); // Posición del ratón relativa al panel
@@ -350,6 +431,68 @@ export function TranscriptionPanel({ command, onPositionChange, sessionId }: Tra
   // Referencia para autoscroll
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  const applyBionic = (str: string, keyPrefix: string) => {
+    if (!isBionic) return str;
+    return str.split(/(\s+)/).map((word, k) => {
+      if (/\s+/.test(word)) return <React.Fragment key={`${keyPrefix}-${k}`}>{word}</React.Fragment>;
+      const mid = Math.ceil(word.length / 2);
+      return (
+        <React.Fragment key={`${keyPrefix}-${k}`}>
+          <span className="font-bold">{word.slice(0, mid)}</span>{word.slice(mid)}
+        </React.Fragment>
+      );
+    });
+  };
+
+  const renderHighlightedText = (textToRender: string) => {
+    if (!textToRender) return "Esperando transcripción...";
+
+    const matchers: { text: string; type: HighlightColor }[] = [];
+
+    [...highlights]
+      .sort((a, b) => b.text.length - a.text.length)
+      .forEach(h => {
+        if (h.text.trim()) matchers.push({ text: h.text.toLowerCase(), type: h.color });
+      });
+
+    if (matchers.length === 0) return isBionic ? <BionicReadingText text={textToRender} /> : textToRender;
+
+    const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regexPattern = matchers.map(m => escapeRegExp(m.text)).join('|');
+    const parts = textToRender.split(new RegExp(`(${regexPattern})`, 'gi'));
+
+    return (
+      <>
+        {parts.map((part, index) => {
+          const lowerPart = part.toLowerCase();
+          const matchedTheme = matchers.find(m => m.text === lowerPart);
+
+          if (matchedTheme) {
+            let cls = 'px-1 rounded transition-colors';
+            const colorMapping: Record<string, string> = {
+              amarillo: 'yellow', verde: 'green', rojo: 'red',
+              azul: 'blue', naranja: 'orange', morado: 'purple',
+              rosa: 'pink', teal: 'teal', gris: 'gray'
+            };
+            const colorName = colorMapping[matchedTheme.type as string] || 'yellow';
+            let styleObj: React.CSSProperties = {
+              backgroundColor: `var(--highlight-${colorName})`,
+              color: 'var(--foreground)'
+            };
+
+            return (
+              <mark key={index} className={cls} style={styleObj}>
+                {applyBionic(part, `mark-${index}`)}
+              </mark>
+            );
+          } else {
+            return <React.Fragment key={index}>{applyBionic(part, `text-${index}`)}</React.Fragment>;
+          }
+        })}
+      </>
+    );
+  };
+
   const renderContent = () => (
     <ScrollArea className="h-full">
       <div
@@ -364,7 +507,7 @@ export function TranscriptionPanel({ command, onPositionChange, sessionId }: Tra
               text={paragraph} 
               onSave={(oldText, newText) => updateTranscriptionSegment(oldText, newText)}
             >
-              {isBionic ? <BionicReadingText text={paragraph} /> : paragraph}
+              {renderHighlightedText(paragraph)}
             </EditableParagraph>
             {index < arr.length - 1 && '\n\n'}
           </React.Fragment>
@@ -505,6 +648,63 @@ export function TranscriptionPanel({ command, onPositionChange, sessionId }: Tra
             <CardTitle className="text-base font-semibold truncate">Transcripción</CardTitle>
           </div>
           <div className="flex items-center gap-1 shrink-0">
+            {/* Highlighter Tools */}
+            <div className="flex items-center gap-0.5 mr-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                    onClick={handleRemoveHighlight}
+                  >
+                    <Eraser className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Quitar resaltado</TooltipContent>
+              </Tooltip>
+
+              <div className="w-px h-5 bg-border mx-0.5" />
+
+              {recentColors.map(color => (
+                <Tooltip key={`tpanel-${color}`}>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-muted" onClick={() => handleApplyHighlight(color)}>
+                      <div className={`h-3 w-3 rounded-full border border-black/10 shadow-sm ${getThemeHighlightColor(color).bg}`}></div>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent className="capitalize">{getThemeHighlightColor(color).label}</TooltipContent>
+                </Tooltip>
+              ))}
+
+              <DropdownMenu>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 ml-0.5">
+                        <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent>Más colores de resaltado</TooltipContent>
+                </Tooltip>
+                <DropdownMenuContent align="end" className="w-48 p-2">
+                    <div className="grid grid-cols-3 gap-2">
+                        {ALL_COLORS.map(color => (
+                            <Button
+                                key={color}
+                                variant="ghost"
+                                className="h-10 w-full flex justify-center items-center p-0 rounded-md hover:bg-muted"
+                                onClick={() => handleApplyHighlight(color)}
+                            >
+                                <div className={`h-5 w-5 rounded-full border border-black/10 shadow-sm ${getThemeHighlightColor(color).bg}`} />
+                            </Button>
+                        ))}
+                    </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+
             <SettingsButton />
 
             {/* Menú de Posición y Anclaje */}
@@ -517,7 +717,7 @@ export function TranscriptionPanel({ command, onPositionChange, sessionId }: Tra
                     </Button>
                   </DropdownMenuTrigger>
                 </TooltipTrigger>
-                <TooltipContent>Ajustar panel</TooltipContent>
+                <TooltipContent>Posición del panel</TooltipContent>
               </Tooltip>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => handleSetPosition('top')}>
