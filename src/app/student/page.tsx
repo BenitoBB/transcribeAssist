@@ -771,6 +771,75 @@ export default function StudentPage() {
                   </Tooltip>
                 </div>
               </div>
+              
+              <div className="p-1 sm:p-2 border-b bg-muted/30 h-11 flex items-center shrink-0 overflow-x-auto no-scrollbar">
+                <div className="flex items-center gap-0.5 ml-1">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                        onClick={handleRemoveHighlight}
+                      >
+                        <Eraser className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Quitar resaltado</TooltipContent>
+                  </Tooltip>
+
+                  <div className="w-px h-5 bg-border mx-1" />
+
+                  {recentColors.map(color => {
+                    const colorInfo = getThemeHighlightColor(color);
+                    return (
+                      <Tooltip key={`tmobile-${color}`}>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-muted" onClick={() => handleApplyHighlight(color)}>
+                            <div className={`h-3.5 w-3.5 rounded-full border border-black/10 shadow-sm ${colorInfo.bg}`}></div>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent className="capitalize">{colorInfo.label}</TooltipContent>
+                      </Tooltip>
+                    );
+                  })}
+
+                  <DropdownMenu>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 ml-0.5">
+                            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                      </TooltipTrigger>
+                      <TooltipContent>Más colores</TooltipContent>
+                    </Tooltip>
+                    <DropdownMenuContent align="start" className="w-48 p-2">
+                        <div className="grid grid-cols-3 gap-2">
+                            {ALL_COLORS.map(color => {
+                                const colorInfo = getThemeHighlightColor(color);
+                                return (
+                                    <Tooltip key={`tmobile-drop-${color}`}>
+                                        <TooltipTrigger asChild>
+                                            <Button
+                                                variant="ghost"
+                                                className="h-10 w-full flex justify-center items-center p-0 rounded-md hover:bg-muted"
+                                                onClick={() => handleApplyHighlight(color)}
+                                            >
+                                                <div className={`h-5 w-5 rounded-full border border-black/10 shadow-sm ${colorInfo.bg}`} />
+                                            </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent className="capitalize">{colorInfo.label}</TooltipContent>
+                                    </Tooltip>
+                                );
+                            })}
+                        </div>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+
               <CardContent className="p-0 flex-grow overflow-hidden bg-background rounded-b-xl">
                 <div className="h-full w-full overflow-y-auto custom-scrollbar" onScroll={handleScroll}>
                   <div

@@ -45,14 +45,14 @@ export function EditableParagraph({ text, onSave, children }: EditableParagraphP
     e.target.style.height = `${e.target.scrollHeight}px`;
   };
 
-  const handleBlur = () => {
-    saveAndClose();
+  const handleBlur = (e: React.FocusEvent<HTMLDivElement>) => {
+    saveAndClose(e.currentTarget.innerText);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      saveAndClose();
+      saveAndClose(e.currentTarget.innerText);
     }
     if (e.key === 'Escape') {
       setIsEditing(false);
@@ -60,9 +60,11 @@ export function EditableParagraph({ text, onSave, children }: EditableParagraphP
     }
   };
 
-  const saveAndClose = () => {
-    if (editValue.trim() !== text.trim() && editValue.trim().length > 0) {
-      onSave(text, editValue);
+  const saveAndClose = (finalValue?: string) => {
+    const valueToSave = finalValue !== undefined ? finalValue : editValue;
+    if (valueToSave.trim() !== text.trim() && valueToSave.trim().length > 0) {
+      onSave(text, valueToSave);
+      setEditValue(valueToSave);
     } else {
       setEditValue(text); // Si está vacío se ignora
     }
@@ -78,7 +80,7 @@ export function EditableParagraph({ text, onSave, children }: EditableParagraphP
         onKeyDown={(e) => {
           if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            saveAndClose();
+            saveAndClose(e.currentTarget.innerText);
           }
           if (e.key === 'Escape') {
             setIsEditing(false);

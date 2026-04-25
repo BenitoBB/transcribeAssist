@@ -412,9 +412,9 @@ export default function TeacherPage() {
             </div>
           ) : (
             <>
-              <div className="flex items-center gap-2 bg-card/90 p-2 rounded-lg shadow-lg border backdrop-blur-sm">
-                <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider text-[10px]">ID de Sala:</span>
-                <span className="font-mono text-sm text-primary font-bold bg-muted px-2 py-0.5 rounded select-all">{sessionId}</span>
+              <div className="flex items-center gap-1 sm:gap-2 bg-card/90 p-1.5 sm:p-2 rounded-lg shadow-lg border backdrop-blur-sm">
+                <span className="hidden sm:inline text-sm font-medium text-muted-foreground uppercase tracking-wider text-[10px]">ID de Sala:</span>
+                <span className="font-mono text-xs sm:text-sm text-primary font-bold bg-muted px-2 py-0.5 rounded select-all">{sessionId}</span>
                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleCopySessionId}>
                   <Copy className="h-4 w-4" />
                 </Button>
