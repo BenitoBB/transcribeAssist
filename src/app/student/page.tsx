@@ -124,6 +124,7 @@ export default function StudentPage() {
 
   // Marcatextos / Highlights
   const [highlights, setHighlights] = useState<Highlight[]>([]);
+  const [pendingHighlightColor, setPendingHighlightColor] = useState<HighlightColor | null>(null);
   const [captures, setCaptures] = useState<{ url: string; timestamp: string }[]>([]);
 
   // Redimensionamiento horizontal
@@ -216,6 +217,17 @@ export default function StudentPage() {
   const ALL_COLORS: HighlightColor[] = ['amarillo', 'verde', 'rojo', 'azul', 'naranja', 'morado', 'rosa', 'teal', 'gris'];
 
   const handleApplyHighlight = (color: HighlightColor) => {
+    if (isMobile) {
+      // En móvil: si ya hay color pendiente y el mismo se vuelve a presionar, cancelar
+      if (pendingHighlightColor === color) {
+        setPendingHighlightColor(null);
+        return;
+      }
+      // Activar modo de selección: el color queda "cargado" esperando que el usuario seleccione texto
+      setPendingHighlightColor(color);
+      toast({ title: `Color activo: ${getThemeHighlightColor(color).label}`, description: 'Mantén presionado para seleccionar texto y se subrayará automáticamente.', duration: 2500 });
+      return;
+    }
     const selection = window.getSelection();
     if (!selection || selection.isCollapsed) return;
     const text = selection.toString().trim();
@@ -660,7 +672,7 @@ export default function StudentPage() {
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground"
-                        onClick={handleRemoveHighlight}
+                        onClick={() => { handleRemoveHighlight(); setPendingHighlightColor(null); }}
                       >
                         <Eraser className="h-4 w-4" />
                       </Button>
@@ -674,11 +686,21 @@ export default function StudentPage() {
                   {recentColors.map(color => (
                     <Tooltip key={`highlight-${color}`}>
                       <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 hover:bg-muted" onClick={() => handleApplyHighlight(color)}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className={cn(
+                            "h-7 w-7 sm:h-8 sm:w-8 hover:bg-muted transition-all",
+                            isMobile && pendingHighlightColor === color && "ring-2 ring-primary bg-muted"
+                          )}
+                          onClick={() => handleApplyHighlight(color)}
+                        >
                           <div className={`h-3.5 w-3.5 sm:h-4 sm:w-4 rounded-full border border-black/10 shadow-sm ${getThemeHighlightColor(color).bg}`}></div>
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent className="capitalize">{getThemeHighlightColor(color).label}</TooltipContent>
+                      <TooltipContent className="capitalize">
+                        {isMobile && pendingHighlightColor === color ? `✓ ${getThemeHighlightColor(color).label} activo` : getThemeHighlightColor(color).label}
+                      </TooltipContent>
                     </Tooltip>
                   ))}
 
@@ -771,81 +793,31 @@ export default function StudentPage() {
                   </Tooltip>
                 </div>
               </div>
-              
-              <div className="p-1 sm:p-2 border-b bg-muted/30 h-11 flex items-center shrink-0 overflow-x-auto no-scrollbar">
-                <div className="flex items-center gap-0.5 ml-1">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                        onClick={handleRemoveHighlight}
-                      >
-                        <Eraser className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Quitar resaltado</TooltipContent>
-                  </Tooltip>
-
-                  <div className="w-px h-5 bg-border mx-1" />
-
-                  {recentColors.map(color => {
-                    const colorInfo = getThemeHighlightColor(color);
-                    return (
-                      <Tooltip key={`tmobile-${color}`}>
-                        <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-muted" onClick={() => handleApplyHighlight(color)}>
-                            <div className={`h-3.5 w-3.5 rounded-full border border-black/10 shadow-sm ${colorInfo.bg}`}></div>
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent className="capitalize">{colorInfo.label}</TooltipContent>
-                      </Tooltip>
-                    );
-                  })}
-
-                  <DropdownMenu>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 ml-0.5">
-                            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                      </TooltipTrigger>
-                      <TooltipContent>Más colores</TooltipContent>
-                    </Tooltip>
-                    <DropdownMenuContent align="start" className="w-48 p-2">
-                        <div className="grid grid-cols-3 gap-2">
-                            {ALL_COLORS.map(color => {
-                                const colorInfo = getThemeHighlightColor(color);
-                                return (
-                                    <Tooltip key={`tmobile-drop-${color}`}>
-                                        <TooltipTrigger asChild>
-                                            <Button
-                                                variant="ghost"
-                                                className="h-10 w-full flex justify-center items-center p-0 rounded-md hover:bg-muted"
-                                                onClick={() => handleApplyHighlight(color)}
-                                            >
-                                                <div className={`h-5 w-5 rounded-full border border-black/10 shadow-sm ${colorInfo.bg}`} />
-                                            </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent className="capitalize">{colorInfo.label}</TooltipContent>
-                                    </Tooltip>
-                                );
-                            })}
-                        </div>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </div>
 
               <CardContent className="p-0 flex-grow overflow-hidden bg-background rounded-b-xl">
                 <div className="h-full w-full overflow-y-auto custom-scrollbar" onScroll={handleScroll}>
                   <div
                     ref={transcriptionDisplayRef}
-                    className="p-6 break-words relative"
+                    className="p-6 break-words relative select-text"
                     onMouseMove={showRuler ? handleContentMouseMove : undefined}
+                    onTouchEnd={pendingHighlightColor ? () => {
+                      const sel = window.getSelection();
+                      if (sel && !sel.isCollapsed) {
+                        const text = sel.toString().trim();
+                        if (text.length > 0) {
+                          setHighlights(prev => {
+                            if (prev.some(h => h.text === text && h.color === pendingHighlightColor)) return prev;
+                            return [...prev, { text, color: pendingHighlightColor }];
+                          });
+                          setRecentColors(prev => {
+                            const next = [pendingHighlightColor, ...prev.filter(c => c !== pendingHighlightColor)];
+                            return next.slice(0, 3);
+                          });
+                          sel.removeAllRanges();
+                        }
+                      }
+                      setPendingHighlightColor(null);
+                    } : undefined}
                     style={{ ...style, minHeight: '100%', color: 'var(--foreground)', whiteSpace: 'pre-wrap' }}
                   >
                     {renderHighlightedText(transcription)}
