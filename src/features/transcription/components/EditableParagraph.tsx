@@ -12,6 +12,7 @@ export function EditableParagraph({ text, onSave, children }: EditableParagraphP
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(text);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const lastTapRef = useRef<number>(0);
 
   // Sincronizar el valor si el texto original cambia por la API o por la red
   useEffect(() => {
@@ -96,10 +97,21 @@ export function EditableParagraph({ text, onSave, children }: EditableParagraphP
     );
   }
 
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const now = Date.now();
+    const DOUBLE_TAP_DELAY = 300;
+    if (now - lastTapRef.current < DOUBLE_TAP_DELAY) {
+      setIsEditing(true);
+      // e.preventDefault(); might interfere with selection, so we just trigger the state
+    }
+    lastTapRef.current = now;
+  };
+
   return (
     <span
       onDoubleClick={handleDoubleClick}
-      className="cursor-text hover:bg-black/5 dark:hover:bg-white/10 transition-colors rounded-sm px-1 py-0.5 -ml-1 inline-block"
+      onTouchEnd={handleTouchEnd}
+      className="cursor-text hover:bg-black/5 dark:hover:bg-white/10 transition-colors rounded-sm px-1 py-0.5 -ml-1 inline-block select-text"
       title="Doble clic para editar"
     >
       {children || editValue}
