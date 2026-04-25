@@ -507,8 +507,17 @@ export function TranscriptionPanel({
     );
   };
 
+  const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(true);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    // Permitir un margen de error de 50px para considerarlo al fondo
+    const isAtBottom = scrollHeight - scrollTop - clientHeight < 50;
+    setIsAutoScrollEnabled(isAtBottom);
+  };
+
   const renderContent = () => (
-    <div className="h-full overflow-y-auto custom-scrollbar">
+    <div className="h-full overflow-y-auto custom-scrollbar" onScroll={handleScroll}>
       <div
         ref={transcriptionDisplayRef}
         className="p-6 break-words bg-background relative"
@@ -542,10 +551,10 @@ export function TranscriptionPanel({
 
   // Autoscroll cada vez que cambie la transcripción
   useEffect(() => {
-    if (bottomRef.current) {
+    if (isAutoScrollEnabled && bottomRef.current) {
       bottomRef.current.scrollIntoView({ behavior: 'auto' });
     }
-  }, [transcription]);
+  }, [transcription, isAutoScrollEnabled]);
 
   // Vista para Móvil
   if (isMobile) {

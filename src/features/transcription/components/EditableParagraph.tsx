@@ -22,12 +22,15 @@ export function EditableParagraph({ text, onSave, children }: EditableParagraphP
 
   useEffect(() => {
     if (isEditing && textareaRef.current) {
-      // Ajustar la altura automáticamente
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
       textareaRef.current.focus();
-      // Poner el cursor al final
-      textareaRef.current.selectionStart = textareaRef.current.value.length;
+      
+      // Poner el cursor al final en un contentEditable
+      const range = document.createRange();
+      const sel = window.getSelection();
+      range.selectNodeContents(textareaRef.current);
+      range.collapse(false); // false means to the end
+      sel?.removeAllRanges();
+      sel?.addRange(range);
     }
   }, [isEditing]);
 

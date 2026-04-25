@@ -99,6 +99,7 @@ export default function StudentPage() {
 
   const [sessionId, setSessionId] = useState('');
   const transcriptionDisplayRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected');
   const hasConnected = useRef(false);
@@ -480,6 +481,20 @@ export default function StudentPage() {
     }
   }, [searchQuery, transcription]);
 
+  const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(true);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    const isAtBottom = scrollHeight - scrollTop - clientHeight < 50;
+    setIsAutoScrollEnabled(isAtBottom);
+  };
+
+  useEffect(() => {
+    if (isAutoScrollEnabled && bottomRef.current && !searchQuery.trim()) {
+      bottomRef.current.scrollIntoView({ behavior: 'auto' });
+    }
+  }, [transcription, isAutoScrollEnabled, searchQuery]);
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-4 relative overflow-hidden">
       <div className="absolute top-4 left-4 sm:top-8 sm:left-8 flex items-center gap-4">
@@ -757,7 +772,7 @@ export default function StudentPage() {
                 </div>
               </div>
               <CardContent className="p-0 flex-grow overflow-hidden bg-background rounded-b-xl">
-                <ScrollArea className="h-full w-full">
+                <div className="h-full w-full overflow-y-auto custom-scrollbar" onScroll={handleScroll}>
                   <div
                     ref={transcriptionDisplayRef}
                     className="p-6 break-words relative"
@@ -765,6 +780,7 @@ export default function StudentPage() {
                     style={{ ...style, minHeight: '100%', color: 'var(--foreground)', whiteSpace: 'pre-wrap' }}
                   >
                     {renderHighlightedText(transcription)}
+                    <div ref={bottomRef} />
                     {showRuler && (
                       <div
                         className="absolute left-0 right-0 bg-primary/20 pointer-events-none z-10 border-y border-primary/30"
@@ -775,7 +791,7 @@ export default function StudentPage() {
                       />
                     )}
                   </div>
-                </ScrollArea>
+                </div>
               </CardContent>
             </Card>
 
