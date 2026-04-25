@@ -125,6 +125,7 @@ export default function StudentPage() {
   // Marcatextos / Highlights
   const [highlights, setHighlights] = useState<Highlight[]>([]);
   const [pendingHighlightColor, setPendingHighlightColor] = useState<HighlightColor | null>(null);
+  const savedSelectionRef = useRef<Range | null>(null);
   const [captures, setCaptures] = useState<{ url: string; timestamp: string }[]>([]);
 
   // Redimensionamiento horizontal
@@ -218,16 +219,36 @@ export default function StudentPage() {
 
   const handleApplyHighlight = (color: HighlightColor) => {
     if (isMobile) {
-      // En móvil: si ya hay color pendiente y el mismo se vuelve a presionar, cancelar
+      // Intentar aplicar a la selección guardada (flujo: seleccionar texto -> tocar color)
+      if (savedSelectionRef.current) {
+        const savedRange = savedSelectionRef.current;
+        const text = savedRange.toString().trim();
+        if (text.length > 0) {
+          setHighlights(prev => {
+            if (prev.some(h => h.text === text && h.color === color)) return prev;
+            return [...prev, { text, color }];
+          });
+          setRecentColors(prev => {
+            const next = [color, ...prev.filter(c => c !== color)];
+            return next.slice(0, 3);
+          });
+          savedSelectionRef.current = null;
+          setPendingHighlightColor(null);
+          return;
+        }
+      }
+
+      // Sin selección guardada: activar modo pendiente (flujo: tocar color -> seleccionar texto)
       if (pendingHighlightColor === color) {
         setPendingHighlightColor(null);
         return;
       }
-      // Activar modo de selección: el color queda "cargado" esperando que el usuario seleccione texto
       setPendingHighlightColor(color);
-      toast({ title: `Color activo: ${getThemeHighlightColor(color).label}`, description: 'Mantén presionado para seleccionar texto y se subrayará automáticamente.', duration: 2500 });
+      toast({ title: `Color activo: ${getThemeHighlightColor(color).label}`, description: 'Mantén presionado sobre el texto para seleccionarlo y se subrayará.', duration: 2500 });
       return;
     }
+
+    // Desktop: aplicar directamente sobre la selección actual
     const selection = window.getSelection();
     if (!selection || selection.isCollapsed) return;
     const text = selection.toString().trim();
@@ -236,8 +257,6 @@ export default function StudentPage() {
         if (prev.some(h => h.text === text && h.color === color)) return prev;
         return [...prev, { text, color }];
       });
-      
-      // Actualizar historial
       setRecentColors(prev => {
           const newHistory = [color, ...prev.filter(c => c !== color)];
           return newHistory.slice(0, 3);
@@ -302,6 +321,23 @@ export default function StudentPage() {
       window.removeEventListener('resize', checkIsMobile);
     };
   }, [setTranscription, toast]);
+
+  // Guardar la selección de texto en móvil antes de que se pierda al tocar un botón
+  useEffect(() => {
+    if (!isMobile) return;
+    const handleSelectionChange = () => {
+      const sel = window.getSelection();
+      if (sel && !sel.isCollapsed && sel.rangeCount > 0) {
+        // Solo guardar si la selección está dentro del contenedor de la transcripción
+        const range = sel.getRangeAt(0);
+        if (transcriptionDisplayRef.current?.contains(range.commonAncestorContainer)) {
+          savedSelectionRef.current = range.cloneRange();
+        }
+      }
+    };
+    document.addEventListener('selectionchange', handleSelectionChange);
+    return () => document.removeEventListener('selectionchange', handleSelectionChange);
+  }, [isMobile]);
 
   const buildTextHeader = (endTime: Date): string => {
     const lines: string[] = [];
