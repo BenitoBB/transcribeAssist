@@ -244,7 +244,7 @@ export default function StudentPage() {
         return;
       }
       setPendingHighlightColor(color);
-      toast({ title: `Color activo: ${getThemeHighlightColor(color).label}`, description: 'Mantén presionado sobre el texto para seleccionarlo y se subrayará.', duration: 2500 });
+      toast({ title: `Color activo: ${getThemeHighlightColor(color).label}`, description: 'Selecciona el texto manteniendo presionado y luego haz clic en el color deseado.', duration: 2500 });
       return;
     }
 

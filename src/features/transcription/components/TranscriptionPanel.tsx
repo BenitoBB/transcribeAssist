@@ -138,8 +138,12 @@ export function TranscriptionPanel({
 
   // Marcatextos / Highlights
   const [highlights, setHighlights] = useState<Highlight[]>([]);
+  const [pendingHighlightColor, setPendingHighlightColor] = useState<HighlightColor | null>(null);
+  const savedSelectionRef = useRef<Range | null>(null);
   const [recentColors, setRecentColors] = useState<HighlightColor[]>(['amarillo', 'verde', 'rojo']);
   const ALL_COLORS: HighlightColor[] = ['amarillo', 'verde', 'rojo', 'azul', 'naranja', 'morado', 'rosa', 'teal', 'gris'];
+
+  const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(true);
 
   const getThemeHighlightColor = (baseColor: HighlightColor): { bg: string; text: string; label: string; hex: string } => {
     if (theme === 'protanopia' || theme === 'deuteranopia') {
@@ -177,6 +181,36 @@ export function TranscriptionPanel({
   };
 
   const handleApplyHighlight = (color: HighlightColor) => {
+    if (isMobile) {
+      // Intentar aplicar a la selección guardada (flujo: seleccionar texto -> tocar color)
+      if (savedSelectionRef.current) {
+        const savedRange = savedSelectionRef.current;
+        const text = savedRange.toString().trim();
+        if (text.length > 0) {
+          setHighlights(prev => {
+            if (prev.some(h => h.text === text && h.color === color)) return prev;
+            return [...prev, { text, color }];
+          });
+          setRecentColors(prev => {
+            const next = [color, ...prev.filter(c => c !== color)];
+            return next.slice(0, 3);
+          });
+          savedSelectionRef.current = null;
+          setPendingHighlightColor(null);
+          return;
+        }
+      }
+
+      // Sin selección guardada: activar modo pendiente (flujo: tocar color -> seleccionar texto)
+      if (pendingHighlightColor === color) {
+        setPendingHighlightColor(null);
+        return;
+      }
+      setPendingHighlightColor(color);
+      toast({ title: `Color activo: ${getThemeHighlightColor(color).label}`, description: 'Selecciona el texto manteniendo presionado y luego haz clic en el color deseado.', duration: 2500 });
+      return;
+    }
+
     const selection = window.getSelection();
     if (!selection || selection.isCollapsed) return;
     const text = selection.toString().trim();
@@ -195,6 +229,9 @@ export function TranscriptionPanel({
   };
 
   const handleRemoveHighlight = () => {
+    if (isMobile) {
+      setPendingHighlightColor(null);
+    }
     const selection = window.getSelection();
     if (!selection || selection.isCollapsed) return;
     const text = selection.toString().trim().toLowerCase();
@@ -267,6 +304,22 @@ export function TranscriptionPanel({
     window.addEventListener('resize', checkIsMobile);
     return () => window.removeEventListener('resize', checkIsMobile);
   }, []);
+
+  // Guardar la selección de texto en móvil antes de que se pierda al tocar un botón
+  useEffect(() => {
+    if (!isMobile) return;
+    const handleSelectionChange = () => {
+      const sel = window.getSelection();
+      if (sel && !sel.isCollapsed && sel.rangeCount > 0) {
+        const range = sel.getRangeAt(0);
+        if (transcriptionDisplayRef.current?.contains(range.commonAncestorContainer)) {
+          savedSelectionRef.current = range.cloneRange();
+        }
+      }
+    };
+    document.addEventListener('selectionchange', handleSelectionChange);
+    return () => document.removeEventListener('selectionchange', handleSelectionChange);
+  }, [isMobile]);
 
   const handleSetPosition = useCallback((newPosition: Position) => {
     setCurrentPosition(newPosition);
@@ -488,7 +541,7 @@ export function TranscriptionPanel({
               azul: 'blue', naranja: 'orange', morado: 'purple',
               rosa: 'pink', teal: 'teal', gris: 'gray'
             };
-            const colorName = colorMapping[matchedTheme.type as string] || 'yellow';
+            const colorName = colorMapping[matchedTheme.type] || 'yellow';
             let styleObj: React.CSSProperties = {
               backgroundColor: `var(--highlight-${colorName})`,
               color: 'var(--foreground)'
@@ -507,8 +560,6 @@ export function TranscriptionPanel({
     );
   };
 
-  const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(true);
-
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
     // Permitir un margen de error de 50px para considerarlo al fondo
@@ -520,9 +571,27 @@ export function TranscriptionPanel({
     <div className="h-full overflow-y-auto custom-scrollbar" onScroll={handleScroll}>
       <div
         ref={transcriptionDisplayRef}
-        className="p-6 break-words bg-background relative"
+        className="p-6 break-words bg-background relative select-text"
         style={{ ...style, minHeight: '100%', color: 'var(--foreground)', whiteSpace: 'pre-wrap' }}
         onMouseMove={showRuler ? handleContentMouseMove : undefined}
+        onTouchEnd={pendingHighlightColor ? () => {
+          const sel = window.getSelection();
+          if (sel && !sel.isCollapsed) {
+            const text = sel.toString().trim();
+            if (text.length > 0) {
+              setHighlights(prev => {
+                if (prev.some(h => h.text === text && h.color === pendingHighlightColor)) return prev;
+                return [...prev, { text, color: pendingHighlightColor }];
+              });
+              setRecentColors(prev => {
+                const next = [pendingHighlightColor, ...prev.filter(c => c !== pendingHighlightColor)];
+                return next.slice(0, 3);
+              });
+              sel.removeAllRanges();
+            }
+          }
+          setPendingHighlightColor(null);
+        } : undefined}
       >
         {transcription.split('\n\n').map((paragraph, index, arr) => (
           <React.Fragment key={index}>
@@ -611,11 +680,21 @@ export function TranscriptionPanel({
                   return (
                     <Tooltip key={`tmobile-${color}`}>
                       <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-muted" onClick={() => handleApplyHighlight(color)}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className={cn(
+                            "h-7 w-7 hover:bg-muted transition-all",
+                            isMobile && pendingHighlightColor === color && "ring-2 ring-primary bg-muted"
+                          )}
+                          onClick={() => handleApplyHighlight(color)}
+                        >
                           <div className={`h-3.5 w-3.5 rounded-full border border-black/10 shadow-sm ${colorInfo.bg}`}></div>
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent className="capitalize">{colorInfo.label}</TooltipContent>
+                      <TooltipContent className="capitalize">
+                        {isMobile && pendingHighlightColor === color ? `✓ ${colorInfo.label} activo` : colorInfo.label}
+                      </TooltipContent>
                     </Tooltip>
                   );
                 })}
