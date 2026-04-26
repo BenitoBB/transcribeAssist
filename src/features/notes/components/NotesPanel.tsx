@@ -95,6 +95,14 @@ export function NotesPanel({
         { label: 'Dislexia', value: "'Open Dyslexic', sans-serif" }
     ];
 
+    const fontSizes = [
+        { label: 'Pequeña', value: '2' },
+        { label: 'Normal', value: '3' },
+        { label: 'Grande', value: '4' },
+        { label: 'Muy grande', value: '5' },
+        { label: 'Título', value: '6' },
+    ];
+
     const ALL_COLORS = ['yellow', 'green', 'red', 'blue', 'orange', 'purple', 'pink', 'teal', 'gray'];
 
     useEffect(() => {
@@ -468,8 +476,8 @@ export function NotesPanel({
                 </div>
             </CardHeader>
 
-            <div className="p-1 sm:p-2 border-b bg-muted/30 flex items-center justify-between gap-0.5 sm:gap-1 shrink-0 overflow-x-auto no-scrollbar">
-                <div className="flex items-center gap-0 sm:gap-0.5">
+            <div className="p-1 sm:p-2 border-b bg-muted/30 shrink-0 overflow-x-auto no-scrollbar w-full touch-pan-x">
+                <div className="flex items-center gap-0 sm:gap-0.5 min-w-max px-1">
                     <Tooltip>
                         <TooltipTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8" onMouseDown={(e) => { e.preventDefault(); handleFormat('bold'); }}>
@@ -616,11 +624,29 @@ export function NotesPanel({
                                         <DropdownMenuContent>
                                             {fontFamilies.map(font => (
                                                 <DropdownMenuItem
-                                                    key={font.value}
+                                                    key={`float-font-${font.value}`}
                                                     style={{ fontFamily: font.value }}
                                                     onClick={() => handleFormat('fontName', font.value)}
                                                 >
                                                     {font.label}
+                                                </DropdownMenuItem>
+                                            ))}
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                    
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="sm" className="h-7 text-xs px-2 shadow-sm border bg-muted/50 rounded-md gap-1">
+                                                Tamaño <ChevronDown className="h-3 w-3" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent>
+                                            {fontSizes.map(size => (
+                                                <DropdownMenuItem
+                                                    key={`float-size-${size.value}`}
+                                                    onClick={() => handleFormat('fontSize', size.value)}
+                                                >
+                                                    {size.label}
                                                 </DropdownMenuItem>
                                             ))}
                                         </DropdownMenuContent>
