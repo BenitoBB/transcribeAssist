@@ -645,10 +645,10 @@ export function TranscriptionPanel({
                     <Copy className="h-4 w-4 mr-2" /> Copiar al portapapeles
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleSaveTxt}>
-                    <FileDown className="h-4 w-4 mr-2" /> Guardar como .txt
+                    <Download className="h-4 w-4 mr-2" /> Guardar como TXT
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleExportToPdf}>
-                    <FileText className="h-4 w-4 mr-2" /> Exportar a PDF
+                    <FileText className="h-4 w-4 mr-2" /> Guardar como PDF
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -892,10 +892,10 @@ export function TranscriptionPanel({
                 <Copy className="h-4 w-4 mr-2" /> Copiar al portapapeles
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleSaveTxt}>
-                <FileDown className="h-4 w-4 mr-2" /> Guardar como .txt
+                <Download className="h-4 w-4 mr-2" /> Guardar como TXT
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleExportToPdf}>
-                <FileText className="h-4 w-4 mr-2" /> Exportar a PDF
+                <FileText className="h-4 w-4 mr-2" /> Guardar como PDF
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

@@ -15,7 +15,7 @@ import {
     Italic,
     Underline,
     Copy,
-    FileDown,
+    Download,
     FileText,
     X,
     ArrowLeftRight,
@@ -437,7 +437,7 @@ export function NotesPanel({
                             <TooltipTrigger asChild>
                                 <DropdownMenuTrigger asChild>
                                     <Button variant="ghost" size="icon" className="h-7 w-7">
-                                        <FileDown className="h-3.5 w-3.5" />
+                                        <Download className="h-3.5 w-3.5" />
                                     </Button>
                                 </DropdownMenuTrigger>
                             </TooltipTrigger>
@@ -445,10 +445,10 @@ export function NotesPanel({
                         </Tooltip>
                         <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={handleExportTxt}>
-                                <FileDown className="h-4 w-4 mr-2" /> Guardar como .txt
+                                <Download className="h-4 w-4 mr-2" /> Guardar como TXT
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={handleExportPdf}>
-                                <FileText className="h-4 w-4 mr-2" /> Guardar como .pdf
+                                <FileText className="h-4 w-4 mr-2" /> Guardar como PDF
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>

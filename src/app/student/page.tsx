@@ -19,6 +19,7 @@ import {
   Eraser,
   Image as ImageIcon,
   ChevronDown,
+  Download,
 } from 'lucide-react';
 import {
   Dialog,
@@ -811,32 +812,32 @@ export default function StudentPage() {
 
                   <div className="w-px h-5 sm:h-6 bg-border mx-0.5 sm:mx-1" />
 
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8" onClick={handleCopy}>
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Copiar texto</TooltipContent>
-                  </Tooltip>
-
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8" onClick={handleSave}>
-                        <FileDown className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>TXT</TooltipContent>
-                  </Tooltip>
-
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8" onClick={handleExportToPdf}>
-                        <FileText className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>PDF</TooltipContent>
-                  </Tooltip>
+                  <DropdownMenu>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8">
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                      </TooltipTrigger>
+                      <TooltipContent>Exportar transcripción</TooltipContent>
+                    </Tooltip>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem onClick={handleCopy}>
+                        <Copy className="mr-2 h-4 w-4" />
+                        <span>Copiar al portapapeles</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleSave}>
+                        <Download className="mr-2 h-4 w-4" />
+                        <span>Guardar como TXT</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleExportToPdf}>
+                        <FileText className="mr-2 h-4 w-4" />
+                        <span>Guardar como PDF</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
 
