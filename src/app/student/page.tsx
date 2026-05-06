@@ -103,6 +103,7 @@ export default function StudentPage() {
 
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected');
   const hasConnected = useRef(false);
+  const clientId = useRef(Math.random().toString(36).substring(2, 15)).current;
   const [startTime, setStartTime] = useState<Date | null>(null);
 
   // Metadata de la clase
@@ -283,6 +284,11 @@ export default function StudentPage() {
 
   useEffect(() => {
     const unsubData = onDataReceived((data: any) => {
+      // Si el mensaje está dirigido a un cliente específico y no somos nosotros, lo ignoramos
+      if (data.targetClientId && data.targetClientId !== clientId) {
+        return;
+      }
+
       if (data.type === 'full_text') {
         setTranscription(data.text);
       }
@@ -301,6 +307,10 @@ export default function StudentPage() {
         if (!hasConnected.current) {
           hasConnected.current = true;
           setTranscription('');
+          // Pedimos al maestro que nos envíe el estado actual solo a nosotros
+          import('@/features/room/services/p2p.service').then(({ sendToPeers }) => {
+            sendToPeers({ type: 'request_sync', targetClientId: clientId });
+          });
         }
       } else if (status === 'error') {
         toast({

@@ -32,7 +32,7 @@ import {
   onStateChange,
   onTranscriptionUpdate,
 } from '@/features/transcription/services/transcription.service';
-import { hostSession, sendToPeers, onPeerStatusChange, onConnectionStatusChange, ConnectionStatus } from '@/features/room/services/p2p.service';
+import { hostSession, sendToPeers, onPeerStatusChange, onConnectionStatusChange, onDataReceived, ConnectionStatus } from '@/features/room/services/p2p.service';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { DEFAULT_TRANSCRIPTION_TEXT } from '@/features/transcription/context/TranscriptionContext';
@@ -115,28 +115,36 @@ export default function TeacherPage() {
     }
   }, [toast]);
 
-  // --- Reenviar estado completo cuando un nuevo alumno se conecta ---
+  // --- Reenviar estado solo al alumno que lo solicita (evita duplicados) ---
   useEffect(() => {
-    if (peerCount > prevPeerCountRef.current) {
-      // Un nuevo alumno se unió: enviar transcripción actual
-      if (transcription && transcription.length > 0) {
-        // Pequeño delay para asegurar que el alumno esté listo para recibir
-        setTimeout(() => {
-          sendToPeers({ type: 'full_text', text: transcription });
-        }, 500);
-      }
-
-      // Enviar todas las capturas acumuladas
-      if (sentCapturesRef.current.length > 0) {
-        setTimeout(() => {
-          sentCapturesRef.current.forEach((capture) => {
-            sendToPeers(capture);
+    const unsubData = onDataReceived((data: any) => {
+      if (data.type === 'request_sync' && data.targetClientId) {
+        // Enviar transcripción actual
+        if (transcription && transcription.length > 0) {
+          sendToPeers({ 
+            type: 'full_text', 
+            text: transcription, 
+            targetClientId: data.targetClientId 
           });
-        }, 800);
+        }
+
+        // Enviar todas las capturas acumuladas
+        if (sentCapturesRef.current.length > 0) {
+          // Pequeño delay para no saturar
+          setTimeout(() => {
+            sentCapturesRef.current.forEach((capture) => {
+              sendToPeers({ 
+                ...capture, 
+                targetClientId: data.targetClientId 
+              });
+            });
+          }, 300);
+        }
       }
-    }
-    prevPeerCountRef.current = peerCount;
-  }, [peerCount, transcription]);
+    });
+
+    return () => unsubData();
+  }, [transcription]);
 
   useEffect(() => {
     const handleStateChange = (newState: 'recording' | 'stopped' | 'idle') => {
